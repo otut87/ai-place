@@ -9,7 +9,7 @@ export function Footer() {
           <div>
             <h3 className="text-sm font-semibold text-[#222222] mb-3">도시</h3>
             <ul className="space-y-2">
-              <li><Link href="/cheonan" className="text-sm text-[#6a6a6a] hover:text-[#008f6b]">천안</Link></li>
+              <li><Link href="/cheonan/dermatology" className="text-sm text-[#6a6a6a] hover:text-[#008f6b]">천안</Link></li>
             </ul>
           </div>
 
@@ -26,7 +26,7 @@ export function Footer() {
             <h3 className="text-sm font-semibold text-[#222222] mb-3">서비스</h3>
             <ul className="space-y-2">
               <li><Link href="/guide/cheonan/dermatology" className="text-sm text-[#6a6a6a] hover:text-[#008f6b]">피부과 선택 가이드</Link></li>
-              <li><Link href="/compare/cheonan/dermatology/acne" className="text-sm text-[#6a6a6a] hover:text-[#008f6b]">여드름 치료 비교</Link></li>
+              <li><Link href="/compare/cheonan/dermatology/acne-treatment" className="text-sm text-[#6a6a6a] hover:text-[#008f6b]">여드름 치료 비교</Link></li>
             </ul>
           </div>
 
