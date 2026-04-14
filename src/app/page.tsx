@@ -85,7 +85,7 @@ export default async function HomePage() {
               {cities.map(city => (
                 <Link
                   key={city.slug}
-                  href={`/${city.slug}`}
+                  href={`/${city.slug}/dermatology`}
                   className="px-5 py-2.5 text-sm font-medium text-[#222222] border border-[#c1c1c1] rounded-lg hover:bg-[#f2f2f2] transition-colors"
                 >
                   {city.name}
