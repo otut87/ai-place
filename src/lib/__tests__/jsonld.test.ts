@@ -160,4 +160,68 @@ describe('JSON-LD Generation', () => {
       expect(jsonld.mainEntity).toHaveLength(0)
     })
   })
+
+  describe('generateArticle', () => {
+    it('should generate valid Article JSON-LD', async () => {
+      const { generateArticle } = await import('@/lib/jsonld')
+      const jsonld = generateArticle({
+        title: '천안 피부과 여드름 치료 비교',
+        description: '천안 지역 피부과의 여드름 치료 방법과 비용을 비교합니다.',
+        lastUpdated: '2026-04-14',
+        url: 'https://aiplace.kr/compare/cheonan/dermatology/acne-treatment',
+      })
+
+      expect(jsonld['@context']).toBe('https://schema.org')
+      expect(jsonld['@type']).toBe('Article')
+      expect(jsonld.headline).toBe('천안 피부과 여드름 치료 비교')
+      expect(jsonld.description).toBeTruthy()
+      expect(jsonld.dateModified).toBe('2026-04-14')
+      expect(jsonld.author['@type']).toBe('Organization')
+      expect(jsonld.author.name).toBe('AI 플레이스')
+      expect(jsonld.mainEntityOfPage).toBe('https://aiplace.kr/compare/cheonan/dermatology/acne-treatment')
+    })
+  })
+
+  describe('generateWebSite', () => {
+    it('should generate valid WebSite JSON-LD', async () => {
+      const { generateWebSite } = await import('@/lib/jsonld')
+      const jsonld = generateWebSite('https://aiplace.kr')
+
+      expect(jsonld['@context']).toBe('https://schema.org')
+      expect(jsonld['@type']).toBe('WebSite')
+      expect(jsonld.name).toBe('AI Place')
+      expect(jsonld.url).toBe('https://aiplace.kr')
+    })
+  })
+
+  // --- CRITICAL 5: @id + mainEntityOfPage ---
+  describe('LocalBusiness @id and mainEntityOfPage (CRITICAL §5.3)', () => {
+    it('should include @id with canonical URL', async () => {
+      const { generateLocalBusiness } = await import('@/lib/jsonld')
+      const jsonld = generateLocalBusiness(mockPlace, 'https://aiplace.kr/cheonan/dermatology/pretty-clinic')
+      expect(jsonld['@id']).toBe('https://aiplace.kr/cheonan/dermatology/pretty-clinic')
+    })
+
+    it('should include mainEntityOfPage', async () => {
+      const { generateLocalBusiness } = await import('@/lib/jsonld')
+      const jsonld = generateLocalBusiness(mockPlace, 'https://aiplace.kr/cheonan/dermatology/pretty-clinic')
+      expect(jsonld.mainEntityOfPage).toBe('https://aiplace.kr/cheonan/dermatology/pretty-clinic')
+    })
+  })
+
+  // --- HIGH 9: openingHoursSpecification ---
+  describe('openingHoursSpecification (HIGH §9.1)', () => {
+    it('should convert string openingHours to structured format', async () => {
+      const { generateLocalBusiness } = await import('@/lib/jsonld')
+      const jsonld = generateLocalBusiness(mockPlace, 'https://aiplace.kr/cheonan/dermatology/pretty-clinic')
+      expect(jsonld.openingHoursSpecification).toBeDefined()
+      expect(Array.isArray(jsonld.openingHoursSpecification)).toBe(true)
+      expect(jsonld.openingHoursSpecification.length).toBeGreaterThan(0)
+      const spec = jsonld.openingHoursSpecification[0]
+      expect(spec['@type']).toBe('OpeningHoursSpecification')
+      expect(spec.dayOfWeek).toBeDefined()
+      expect(spec.opens).toBeDefined()
+      expect(spec.closes).toBeDefined()
+    })
+  })
 })

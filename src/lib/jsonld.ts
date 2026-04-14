@@ -13,7 +13,41 @@ const CATEGORY_SCHEMA_MAP: Record<string, string> = {
   interior: 'HomeAndConstructionBusiness',
 }
 
-export function generateLocalBusiness(place: Place): JsonLd {
+/** openingHours 문자열을 OpeningHoursSpecification으로 변환 (§9.1) */
+const DAY_MAP: Record<string, string> = {
+  Mo: 'Monday', Tu: 'Tuesday', We: 'Wednesday', Th: 'Thursday',
+  Fr: 'Friday', Sa: 'Saturday', Su: 'Sunday',
+}
+
+function parseOpeningHours(hours: string[]): JsonLd[] {
+  const specs: JsonLd[] = []
+  for (const entry of hours) {
+    const match = entry.match(/^([A-Za-z,-]+)\s+(\d{2}:\d{2})-(\d{2}:\d{2})$/)
+    if (!match) continue
+    const [, daysPart, opens, closes] = match
+    // Handle "Mo-Fr" or "Mo" or "Mo,We,Fr"
+    const dayRangeMatch = daysPart.match(/^(\w{2})-(\w{2})$/)
+    if (dayRangeMatch) {
+      const dayKeys = Object.keys(DAY_MAP)
+      const start = dayKeys.indexOf(dayRangeMatch[1])
+      const end = dayKeys.indexOf(dayRangeMatch[2])
+      if (start >= 0 && end >= 0) {
+        for (let i = start; i <= end; i++) {
+          specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: DAY_MAP[dayKeys[i]], opens, closes })
+        }
+      }
+    } else {
+      // Single day like "Sa" or "Th"
+      const day = DAY_MAP[daysPart]
+      if (day) {
+        specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: day, opens, closes })
+      }
+    }
+  }
+  return specs
+}
+
+export function generateLocalBusiness(place: Place, pageUrl?: string): JsonLd {
   const schemaType = CATEGORY_SCHEMA_MAP[place.category] ?? 'LocalBusiness'
 
   const jsonld: JsonLd = {
@@ -27,6 +61,12 @@ export function generateLocalBusiness(place: Place): JsonLd {
       addressLocality: place.city,
       addressCountry: 'KR',
     },
+  }
+
+  // CRITICAL 5: @id + mainEntityOfPage (§5.3)
+  if (pageUrl) {
+    jsonld['@id'] = pageUrl
+    jsonld.mainEntityOfPage = pageUrl
   }
 
   if (place.nameEn) {
@@ -47,6 +87,10 @@ export function generateLocalBusiness(place: Place): JsonLd {
 
   if (place.openingHours) {
     jsonld.openingHours = place.openingHours
+    const specs = parseOpeningHours(place.openingHours)
+    if (specs.length > 0) {
+      jsonld.openingHoursSpecification = specs
+    }
   }
 
   if (place.imageUrl) {
@@ -78,9 +122,14 @@ export function generateLocalBusiness(place: Place): JsonLd {
     }
   }
 
+  if (place.lastUpdated) {
+    jsonld.dateModified = place.lastUpdated
+  }
+
   const sameAs: string[] = []
   if (place.naverPlaceUrl) sameAs.push(place.naverPlaceUrl)
   if (place.kakaoMapUrl) sameAs.push(place.kakaoMapUrl)
+  if (place.googleBusinessUrl) sameAs.push(place.googleBusinessUrl)
   if (sameAs.length > 0) {
     jsonld.sameAs = sameAs
   }
@@ -126,5 +175,40 @@ export function generateFAQPage(faqs: FAQ[]): JsonLd {
         text: faq.answer,
       },
     })),
+  }
+}
+
+/** Article schema — 비교/가이드 페이지용 (GEO §4.1 E-E-A-T) */
+export function generateArticle(opts: {
+  title: string
+  description: string
+  lastUpdated: string
+  url: string
+}): JsonLd {
+  const org = {
+    '@type': 'Organization',
+    name: 'AI 플레이스',
+    url: 'https://aiplace.kr',
+  }
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: opts.title,
+    description: opts.description,
+    dateModified: opts.lastUpdated,
+    author: org,
+    publisher: org,
+    mainEntityOfPage: opts.url,
+  }
+}
+
+/** WebSite schema — 메인 페이지용 */
+export function generateWebSite(baseUrl: string): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'AI Place',
+    url: baseUrl,
+    description: 'AI가 추천하는 로컬 업체 디렉토리',
   }
 }

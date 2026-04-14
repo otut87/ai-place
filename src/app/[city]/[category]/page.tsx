@@ -5,8 +5,9 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PlaceCard } from "@/components/place-card"
 import { safeJsonLd } from "@/lib/utils"
-import { getPlaces, getCities, getCategories } from "@/lib/data"
+import { getPlaces, getCities, getCategories, getComparisonTopics, getGuidePage, getCategoryFaqs } from "@/lib/data"
 import { generateItemList, generateFAQPage } from "@/lib/jsonld"
+import { generateBreadcrumbList } from "@/lib/seo"
 
 interface Props {
   params: Promise<{ city: string; category: string }>
@@ -55,9 +56,20 @@ export default async function ListingPage({ params }: Props) {
     `${cityObj.name} ${catObj.name} 추천 목록`,
   )
 
-  // 전체 FAQ 모아서 FAQPage 스키마 생성
-  const allFaqs = places.flatMap(p => p.faqs)
-  const faqJsonLd = allFaqs.length > 0 ? generateFAQPage(allFaqs) : null
+  // 카테고리 레벨 FAQ (개별 업체 FAQ가 아닌 카테고리 질문)
+  const categoryFaqs = await getCategoryFaqs(city, category)
+  const faqJsonLd = categoryFaqs.length > 0 ? generateFAQPage(categoryFaqs) : null
+
+  // CRITICAL 3: BreadcrumbList JSON-LD
+  const baseUrl = 'https://aiplace.kr'
+  const breadcrumbJsonLd = generateBreadcrumbList([
+    { name: '홈', url: baseUrl },
+    { name: `${cityObj.name} ${catObj.name}`, url: `${baseUrl}/${city}/${category}` },
+  ])
+
+  // 관련 콘텐츠 (비교/가이드)
+  const comparisonTopics = await getComparisonTopics(city, category)
+  const guide = await getGuidePage(city, category)
 
   return (
     <>
@@ -105,14 +117,42 @@ export default async function ListingPage({ params }: Props) {
               </div>
             )}
 
-            {/* FAQ Section */}
-            {allFaqs.length > 0 && (
+            {/* 관련 콘텐츠 (Phase 2 cross-links) */}
+            {(guide || comparisonTopics.length > 0) && (
+              <section className="mt-16">
+                <h2 className="text-[22px] font-semibold text-[#222222] leading-tight tracking-[-0.44px]">
+                  관련 콘텐츠
+                </h2>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {guide && (
+                    <Link
+                      href={`/guide/${city}/${category}`}
+                      className="px-5 py-2.5 text-sm font-medium text-white bg-[#00a67c] rounded-lg hover:bg-[#008f6b] transition-colors"
+                    >
+                      {cityObj.name} {catObj.name} 선택 가이드
+                    </Link>
+                  )}
+                  {comparisonTopics.map(topic => (
+                    <Link
+                      key={topic.slug}
+                      href={`/compare/${city}/${category}/${topic.slug}`}
+                      className="px-5 py-2.5 text-sm font-medium text-[#222222] border border-[#c1c1c1] rounded-lg hover:bg-[#f2f2f2] transition-colors"
+                    >
+                      {topic.name}
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* FAQ Section — 카테고리 레벨 */}
+            {categoryFaqs.length > 0 && (
               <section className="mt-20">
                 <h2 className="text-[22px] font-semibold text-[#222222] leading-tight tracking-[-0.44px]">
                   자주 묻는 질문
                 </h2>
                 <div className="mt-6 divide-y divide-[#c1c1c1]/50">
-                  {allFaqs.map((faq) => (
+                  {categoryFaqs.map((faq) => (
                     <details key={faq.question} className="group py-4">
                       <summary className="flex items-center justify-between cursor-pointer list-none text-base font-medium text-[#222222]">
                         {faq.question}
@@ -146,6 +186,7 @@ export default async function ListingPage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }}
         />
       )}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
     </>
   )
 }

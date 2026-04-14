@@ -6,6 +6,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { getPlaceBySlug, getPlaces, getCities, getCategories } from "@/lib/data"
 import { generateLocalBusiness, generateFAQPage } from "@/lib/jsonld"
+import { generateBreadcrumbList } from "@/lib/seo"
 import { safeJsonLd } from "@/lib/utils"
 
 interface Props {
@@ -28,14 +29,31 @@ export async function generateStaticParams() {
   return params
 }
 
+// HIGH 6-7: title에 도시+카테고리 포함, description 키워드 앞배치 (§9.1)
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { city, category, slug } = await params
   const place = await getPlaceBySlug(city, category, slug)
   if (!place) return {}
 
+  const cities = await getCities()
+  const categories = await getCategories()
+  const cityObj = cities.find(c => c.slug === city)
+  const catObj = categories.find(c => c.slug === category)
+
+  const title = `${place.name} - ${cityObj?.name ?? city} ${catObj?.name ?? category}`
+  const description = `${cityObj?.name} ${catObj?.name} ${place.name} — ${place.services.map(s => s.name).join(', ')}. 주소: ${place.address}. ${place.rating ? `평점 ${place.rating}점.` : ''}`
+
   return {
-    title: place.name,
-    description: place.description,
+    title,
+    description,
+    alternates: {
+      canonical: `/${city}/${category}/${slug}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `/${city}/${category}/${slug}`,
+    },
   }
 }
 
@@ -54,8 +72,19 @@ export default async function ProfilePage({ params }: Props) {
   const cityObj = cities.find(c => c.slug === city)
   const catObj = categories.find(c => c.slug === category)
 
-  const localBusinessJsonLd = generateLocalBusiness(place)
+  const baseUrl = 'https://aiplace.kr'
+  const pageUrl = `${baseUrl}/${city}/${category}/${slug}`
+
+  // CRITICAL 5: @id + mainEntityOfPage
+  const localBusinessJsonLd = generateLocalBusiness(place, pageUrl)
   const faqJsonLd = place.faqs.length > 0 ? generateFAQPage(place.faqs) : null
+
+  // CRITICAL 3: BreadcrumbList JSON-LD
+  const breadcrumbJsonLd = generateBreadcrumbList([
+    { name: '홈', url: baseUrl },
+    { name: `${cityObj?.name ?? city} ${catObj?.name ?? category}`, url: `${baseUrl}/${city}/${category}` },
+    { name: place.name, url: pageUrl },
+  ])
 
   return (
     <>
@@ -89,7 +118,7 @@ export default async function ProfilePage({ params }: Props) {
               )}
             </div>
 
-            {/* Name + Rating */}
+            {/* H1 + Rating */}
             <h1 className="text-[28px] font-bold text-[#222222] leading-[1.43]">{place.name}</h1>
             {place.rating != null && (
               <div className="mt-2 flex items-center gap-2">
@@ -99,7 +128,16 @@ export default async function ProfilePage({ params }: Props) {
                 )}
               </div>
             )}
-            <p className="mt-3 text-base text-[#6a6a6a] leading-relaxed">{place.description}</p>
+
+            {/* HIGH 8: Direct Answer Block (§4.4 — H1 직하 40-60자 자기완결 답변) */}
+            <p className="mt-3 text-base text-[#222222] font-medium leading-relaxed">
+              {place.name}은(는) {place.address}에 위치한 {catObj?.name ?? '피부과'}입니다. {place.services.slice(0, 3).map(s => s.name).join(', ')} 등을 전문으로 합니다.
+            </p>
+
+            {/* CRITICAL 4: Last Updated (§4.2 Freshness) */}
+            {place.lastUpdated && (
+              <p className="mt-1 text-xs text-[#6a6a6a]">최종 업데이트: {place.lastUpdated}</p>
+            )}
 
             {/* CTA Buttons */}
             <div className="mt-6 flex gap-3">
@@ -121,7 +159,9 @@ export default async function ProfilePage({ params }: Props) {
 
             {/* Info Section */}
             <section id="info" className="mt-12 p-6 bg-[#f2f2f2] rounded-[14px]">
-              <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-4">기본 정보</h2>
+              <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">기본 정보</h2>
+              {/* HIGH 8: Direct Answer Block under H2 */}
+              <p className="text-sm text-[#222222] mb-4">{place.address}에 위치하며, {place.openingHours ? `${place.openingHours[0]} 등의 시간에 진료합니다.` : '진료 시간은 전화로 확인해주세요.'}</p>
               <dl className="space-y-3">
                 <div className="flex gap-3">
                   <dt className="text-sm font-medium text-[#6a6a6a] w-20 shrink-0">주소</dt>
@@ -145,7 +185,9 @@ export default async function ProfilePage({ params }: Props) {
             {/* Services */}
             {place.services.length > 0 && (
               <section id="services" className="mt-10">
-                <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-4">제공 서비스</h2>
+                <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">제공 서비스</h2>
+                {/* HIGH 8: Direct Answer Block */}
+                <p className="text-sm text-[#222222] mb-4">{place.name}에서는 {place.services.map(s => s.name).join(', ')} 등 {place.services.length}개 서비스를 제공합니다.</p>
                 <div className="space-y-3">
                   {place.services.map((svc) => (
                     <div key={svc.name} className="flex items-center justify-between py-3 border-b border-[#c1c1c1]/50 last:border-0">
@@ -181,7 +223,8 @@ export default async function ProfilePage({ params }: Props) {
             {/* FAQ */}
             {place.faqs.length > 0 && (
               <section id="faq" className="mt-12">
-                <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-4">자주 묻는 질문</h2>
+                <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">자주 묻는 질문</h2>
+                <p className="text-sm text-[#222222] mb-4">{place.name}에 대해 자주 묻는 질문 {place.faqs.length}개입니다.</p>
                 <div className="divide-y divide-[#c1c1c1]/50">
                   {place.faqs.map((faq) => (
                     <details key={faq.question} className="group py-4">
@@ -201,22 +244,20 @@ export default async function ProfilePage({ params }: Props) {
                 </div>
               </section>
             )}
+
+            {/* 의료광고법 면책 */}
+            <p className="mt-8 text-xs text-[#6a6a6a]">
+              ※ 본 페이지는 정보 제공 목적이며, 실제 비용은 상담 후 확정됩니다. 의료 결정은 전문의와 상담하세요.
+            </p>
           </div>
         </article>
       </main>
 
       <Footer />
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLd(localBusinessJsonLd) }}
-      />
-      {faqJsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }}
-        />
-      )}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(localBusinessJsonLd) }} />
+      {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }} />}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
     </>
   )
 }

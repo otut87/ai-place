@@ -2,7 +2,7 @@
 // robots.txt, sitemap, BreadcrumbList 생성
 // GEO 딥리서치 §5.1, §5.3, §5.4 기반
 
-import { getAllPlaces, getCities, getCategories } from './data'
+import { getAllPlaces, getCities, getCategories, getAllComparisonTopics, getAllGuidePages } from './data'
 
 /**
  * robots.txt 생성
@@ -125,6 +125,28 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
       lastModified: now,
       changeFrequency: 'monthly',
       priority: 0.8,
+    })
+  }
+
+  // 비교 페이지
+  const comparisonTopics = await getAllComparisonTopics()
+  for (const topic of comparisonTopics) {
+    entries.push({
+      url: `${baseUrl}/compare/${topic.city}/${topic.category}/${topic.slug}`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    })
+  }
+
+  // 가이드 페이지
+  const guidePagesList = await getAllGuidePages()
+  for (const guide of guidePagesList) {
+    entries.push({
+      url: `${baseUrl}/guide/${guide.city}/${guide.category}`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.9,
     })
   }
 

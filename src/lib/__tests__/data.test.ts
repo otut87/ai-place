@@ -89,4 +89,175 @@ describe('Data Repository', () => {
       expect(slugs.length).toBe(uniqueSlugs.size)
     })
   })
+
+  describe('expanded FAQs (GEO §4.3 — 최소 5개/업체)', () => {
+    it('should have at least 5 FAQs per place', async () => {
+      const { getPlaces } = await import('@/lib/data')
+      const places = await getPlaces('cheonan', 'dermatology')
+      places.forEach(place => {
+        expect(place.faqs.length).toBeGreaterThanOrEqual(5)
+      })
+    })
+
+    it('should have FAQs in real search query format', async () => {
+      const { getPlaces } = await import('@/lib/data')
+      const places = await getPlaces('cheonan', 'dermatology')
+      places.forEach(place => {
+        place.faqs.forEach(faq => {
+          // 질문은 ?로 끝나야 함
+          expect(faq.question).toMatch(/\?$/)
+          // 답변은 최소 20자 이상 (구체적 답변)
+          expect(faq.answer.length).toBeGreaterThanOrEqual(20)
+        })
+      })
+    })
+  })
+
+  describe('getComparisonTopics', () => {
+    it('should return topics for cheonan/dermatology', async () => {
+      const { getComparisonTopics } = await import('@/lib/data')
+      const topics = await getComparisonTopics('cheonan', 'dermatology')
+      expect(topics.length).toBe(3)
+      topics.forEach(t => {
+        expect(t.slug).toBeTruthy()
+        expect(t.name).toBeTruthy()
+        expect(t.city).toBe('cheonan')
+        expect(t.category).toBe('dermatology')
+      })
+    })
+
+    it('should return empty for unknown city', async () => {
+      const { getComparisonTopics } = await import('@/lib/data')
+      const topics = await getComparisonTopics('nonexistent', 'dermatology')
+      expect(topics).toEqual([])
+    })
+  })
+
+  describe('getComparisonPage', () => {
+    it('should return full comparison data', async () => {
+      const { getComparisonPage } = await import('@/lib/data')
+      const page = await getComparisonPage('cheonan', 'dermatology', 'acne-treatment')
+      expect(page).toBeDefined()
+      expect(page!.topic.slug).toBe('acne-treatment')
+      expect(page!.summary.length).toBeGreaterThanOrEqual(30)
+      expect(page!.entries.length).toBeGreaterThanOrEqual(2)
+      expect(page!.statistics.length).toBeGreaterThanOrEqual(3)
+      expect(page!.faqs.length).toBeGreaterThanOrEqual(5)
+      expect(page!.sources.length).toBeGreaterThanOrEqual(2)
+      expect(page!.lastUpdated).toBeTruthy()
+    })
+
+    it('should return undefined for unknown topic', async () => {
+      const { getComparisonPage } = await import('@/lib/data')
+      const page = await getComparisonPage('cheonan', 'dermatology', 'nonexistent')
+      expect(page).toBeUndefined()
+    })
+
+    it('entries should have required fields', async () => {
+      const { getComparisonPage } = await import('@/lib/data')
+      const page = await getComparisonPage('cheonan', 'dermatology', 'acne-treatment')
+      page!.entries.forEach(entry => {
+        expect(entry.placeSlug).toBeTruthy()
+        expect(entry.placeName).toBeTruthy()
+        expect(entry.methods.length).toBeGreaterThan(0)
+        expect(entry.priceRange).toBeTruthy()
+        expect(entry.pros.length).toBeGreaterThan(0)
+      })
+    })
+  })
+
+  describe('getGuidePage', () => {
+    it('should return guide data for cheonan/dermatology', async () => {
+      const { getGuidePage } = await import('@/lib/data')
+      const guide = await getGuidePage('cheonan', 'dermatology')
+      expect(guide).toBeDefined()
+      expect(guide!.title).toBeTruthy()
+      expect(guide!.summary.length).toBeGreaterThanOrEqual(30)
+      expect(guide!.sections.length).toBeGreaterThanOrEqual(5)
+      expect(guide!.statistics.length).toBeGreaterThanOrEqual(3)
+      expect(guide!.faqs.length).toBeGreaterThanOrEqual(5)
+      expect(guide!.sources.length).toBeGreaterThanOrEqual(2)
+    })
+
+    it('should return undefined for unknown city', async () => {
+      const { getGuidePage } = await import('@/lib/data')
+      const guide = await getGuidePage('nonexistent', 'dermatology')
+      expect(guide).toBeUndefined()
+    })
+
+    it('guide sections should have headings and content', async () => {
+      const { getGuidePage } = await import('@/lib/data')
+      const guide = await getGuidePage('cheonan', 'dermatology')
+      guide!.sections.forEach(section => {
+        expect(section.heading).toBeTruthy()
+        expect(section.content.length).toBeGreaterThanOrEqual(20)
+      })
+    })
+  })
+
+  describe('getAllComparisonTopics', () => {
+    it('should return all topics', async () => {
+      const { getAllComparisonTopics } = await import('@/lib/data')
+      const topics = await getAllComparisonTopics()
+      expect(topics.length).toBe(3)
+    })
+  })
+
+  describe('getAllGuidePages', () => {
+    it('should return all guides', async () => {
+      const { getAllGuidePages } = await import('@/lib/data')
+      const guides = await getAllGuidePages()
+      expect(guides.length).toBe(1)
+    })
+  })
+
+  describe('getCategoryFaqs', () => {
+    it('should return category-level FAQs for cheonan/dermatology', async () => {
+      const { getCategoryFaqs } = await import('@/lib/data')
+      const faqs = await getCategoryFaqs('cheonan', 'dermatology')
+      expect(faqs.length).toBeGreaterThanOrEqual(5)
+      expect(faqs.length).toBeLessThanOrEqual(7)
+    })
+
+    it('should contain category-level questions, not business-specific', async () => {
+      const { getCategoryFaqs } = await import('@/lib/data')
+      const faqs = await getCategoryFaqs('cheonan', 'dermatology')
+      faqs.forEach(faq => {
+        expect(faq.question).toMatch(/\?$/)
+        expect(faq.answer.length).toBeGreaterThanOrEqual(20)
+        // 개별 업체명이 질문에 포함되면 안 됨 (카테고리 레벨)
+        expect(faq.question).not.toMatch(/예단|클린스킨|피부사랑|봄피부과|하늘피부과/)
+      })
+    })
+
+    it('should return empty for unknown city/category', async () => {
+      const { getCategoryFaqs } = await import('@/lib/data')
+      const faqs = await getCategoryFaqs('nonexistent', 'dermatology')
+      expect(faqs).toEqual([])
+    })
+  })
+
+  // --- CRITICAL 1: sameAs URLs ---
+  describe('sameAs URLs (CRITICAL §5.3)', () => {
+    it('all places should have at least one sameAs URL', async () => {
+      const { getPlaces } = await import('@/lib/data')
+      const places = await getPlaces('cheonan', 'dermatology')
+      places.forEach(place => {
+        const hasSameAs = place.naverPlaceUrl || place.kakaoMapUrl
+        expect(hasSameAs).toBeTruthy()
+      })
+    })
+  })
+
+  // --- CRITICAL 4: lastUpdated field ---
+  describe('lastUpdated field (CRITICAL §4.2)', () => {
+    it('all places should have lastUpdated', async () => {
+      const { getPlaces } = await import('@/lib/data')
+      const places = await getPlaces('cheonan', 'dermatology')
+      places.forEach(place => {
+        expect(place.lastUpdated).toBeTruthy()
+        expect(place.lastUpdated).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      })
+    })
+  })
 })

@@ -48,8 +48,78 @@ export interface Place {
   tags: string[]            // ["여드름", "레이저", "보톡스"]
   naverPlaceUrl?: string    // 네이버 플레이스 URL (sameAs)
   kakaoMapUrl?: string      // 카카오맵 URL (sameAs)
+  googleBusinessUrl?: string // Google Business Profile URL (sameAs)
+  lastUpdated?: string      // "2026-04-14" (ISO 8601, Freshness §4.2)
   latitude?: number
   longitude?: number
+}
+
+// --- Phase 2: 비교/가이드 콘텐츠 타입 ---
+
+/** 통계 항목 (GEO lever: Statistics Addition §2.2) */
+export interface StatisticItem {
+  label: string             // "평균 여드름 치료 비용"
+  value: string             // "7.5만원"
+  note?: string             // "AI플레이스 자체 조사 기준"
+}
+
+/** 출처 (GEO lever: Cite Sources §2.2) */
+export interface Source {
+  name: string              // "건강보험심사평가원"
+  url?: string
+  year?: number
+}
+
+/** 비교 주제 */
+export interface ComparisonTopic {
+  slug: string              // "acne-treatment"
+  name: string              // "여드름 치료"
+  city: string
+  category: string
+}
+
+/** 비교 항목 — 업체별 특정 주제 데이터 */
+export interface ComparisonEntry {
+  placeSlug: string
+  placeName: string
+  rating?: number
+  reviewCount?: number
+  methods: string[]         // ["압출+레이저 병행", "PDT 치료"]
+  priceRange: string        // "5-10만원"
+  specialties: string[]
+  pros: string[]
+  cons: string[]
+}
+
+/** 비교 페이지 전체 데이터 */
+export interface ComparisonPage {
+  topic: ComparisonTopic
+  summary: string           // Direct Answer Block (40-60자)
+  entries: ComparisonEntry[]
+  statistics: StatisticItem[]
+  faqs: FAQ[]
+  sources: Source[]
+  lastUpdated: string       // ISO 8601
+}
+
+/** 가이드 섹션 */
+export interface GuideSection {
+  heading: string
+  content: string
+  items?: string[]
+}
+
+/** 가이드 페이지 데이터 */
+export interface GuidePage {
+  city: string
+  category: string
+  title: string
+  summary: string           // Direct Answer Block
+  sections: GuideSection[]
+  statistics: StatisticItem[]
+  faqs: FAQ[]
+  sources: Source[]
+  lastUpdated: string
 }
 
 // --- AI 인용 테스트 관련 타입 ---

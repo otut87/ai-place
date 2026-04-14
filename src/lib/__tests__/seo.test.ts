@@ -50,8 +50,12 @@ describe('sitemap generation', () => {
     expect(listing).toBeDefined()
     expect(listing?.changeFrequency).toBe('weekly')
 
-    // 프로필 페이지들
-    const profiles = entries.filter(e => e.url.match(/\/cheonan\/dermatology\/[^/]+$/))
+    // 프로필 페이지들 (compare/guide 제외)
+    const profiles = entries.filter(e =>
+      e.url.match(/\/cheonan\/dermatology\/[^/]+$/) &&
+      !e.url.includes('/compare/') &&
+      !e.url.includes('/guide/')
+    )
     expect(profiles.length).toBe(5)
   })
 
@@ -65,7 +69,7 @@ describe('sitemap generation', () => {
     const listing = entries.find(e => e.url.endsWith('/cheonan/dermatology'))
     expect(listing?.priority).toBe(0.9)
 
-    const profile = entries.find(e => e.url.includes('/yedanpibu'))
+    const profile = entries.find(e => e.url.includes('/soo-derm'))
     expect(profile?.priority).toBe(0.8)
   })
 
@@ -75,6 +79,30 @@ describe('sitemap generation', () => {
 
     entries.forEach(entry => {
       expect(entry.lastModified).toBeDefined()
+    })
+  })
+
+  it('should include comparison page URLs', async () => {
+    const { generateSitemapEntries } = await import('@/lib/seo')
+    const entries = await generateSitemapEntries('https://aiplace.kr')
+
+    const compEntries = entries.filter(e => e.url.includes('/compare/'))
+    expect(compEntries.length).toBe(3)
+    compEntries.forEach(e => {
+      expect(e.priority).toBe(0.85)
+      expect(e.changeFrequency).toBe('weekly')
+    })
+  })
+
+  it('should include guide page URLs', async () => {
+    const { generateSitemapEntries } = await import('@/lib/seo')
+    const entries = await generateSitemapEntries('https://aiplace.kr')
+
+    const guideEntries = entries.filter(e => e.url.includes('/guide/'))
+    expect(guideEntries.length).toBe(1)
+    guideEntries.forEach(e => {
+      expect(e.priority).toBe(0.9)
+      expect(e.changeFrequency).toBe('weekly')
     })
   })
 })
