@@ -6,33 +6,46 @@
 
 ---
 
-## 현재 상태 (2026-04-14 완료)
+## 현재 상태 (2026-04-15 업데이트)
 
-- aiplace.kr 라이브 (25 SSG 페이지)
+- aiplace.kr 라이브 (**25 SSG 페이지** — 키워드 8개 포함)
 - 실존 업체 5곳 (AI 베이스라인 미노출 타겟)
+- sameAs URL 전부 실제 검증 완료 (네이버/카카오맵)
 - IndexNow 제출 완료 (20 URL, 200 OK)
-- Google/Bing/Naver 등록 + sitemap 제출
-- GA4 + AI referrer 추적 활성화
-- 베이스라인: 90건 (AI Place 인용 0건)
+- Google/Bing/Naver 등록 + sitemap 제출 + GSC 수동 색인 요청
+- GA4 (G-N4BFWL3G7Z) + AI referrer 추적 + 전화 클릭 이벤트 활성화
+- 베이스라인: ChatGPT 45건 + Claude 45건 = 90건 (AI Place 인용 0건)
+- Gemini 베이스라인: 일일 한도(20회) 소진으로 **내일 재측정 필요**
+
+### 오늘 (4/15) 완료한 것
+- [x] Google Search Console에서 20개 URL 수동 색인 요청
+- [x] sameAs URL 실제 검증 (5곳 전부 네이버/카카오 URL 교체)
+- [x] Bing Webmaster에서 sitemap 재제출 확인
+- [x] Gemini 모델 gemini-2.0-flash → gemini-2.5-flash 업데이트
+- [x] Gemini rate limit 재시도 로직 추가 (15s 딜레이)
+- [x] phone_click 이벤트에 referrer 추가 (B→C 전환 추적)
+- [x] Footer 404 링크 수정 (/cheonan, /compare/.../acne)
+- [x] manifest.webmanifest + icon.svg + apple-touch-icon 추가
+- [x] P0: Article author Person schema (E-E-A-T)
+- [x] P1: 키워드 랜딩 페이지 8개 배포 + IndexNow 재제출
 
 ---
 
-## Week 1 (4/15 ~ 4/21) — 인덱싱 가속 + 잔여 작업
+## Week 1 (4/15 ~ 4/21) — 잔여 개발 작업
 
-### 즉시 (4/15)
-- [x] Google Search Console에서 20개 URL 수동 색인 요청 (2026-04-15 완료)
-- [x] sameAs URL 실제 검증 (2026-04-15 완료 — 5곳 전부 실제 네이버/카카오 URL 교체)
-- [x] Bing Webmaster에서 sitemap 재제출 확인 (2026-04-15 완료)
+### 내일 (4/16)
+- [ ] Gemini 베이스라인 측정 (`npx tsx scripts/baseline-test.ts --engine=gemini --repeat=1`)
+- [ ] Google Places API 연동 시작
+  - Google Cloud Console에서 Places API 활성화
+  - `googlePlaceId` 필드 + `ReviewSummary` 타입 추가
+  - Place Details API로 rating, reviews 가져오기
+  - 프로필 페이지에 리뷰 섹션 + Review schema 추가
+  - `PlaceImage` 타입 추가 (이미지 alt 구조화 준비)
 
-### 개발 작업 (4/15 ~ 4/18)
+### 4/17 ~ 4/18
 - [ ] P3: Supabase 스키마 설계 (마이그레이션 SQL)
 - [ ] P3: data.supabase.ts 초안 (data.ts와 동일 시그니처)
 - [ ] P3: 시드 스크립트 (data.ts → Supabase 이관)
-- [ ] Google Places API 연동 — 리뷰/평점 데이터 보강
-  - Google Cloud Console에서 Places API 활성화
-  - Place Details API로 rating, reviewCount, reviews 가져오기
-  - 리뷰 요약 구조화 (ReviewSummary 타입)
-  - 프로필 페이지에 리뷰 섹션 + Review schema 추가
 
 ### 금요일 (4/18)
 - [ ] Bing Webmaster에서 인덱싱 상태 확인
@@ -46,11 +59,14 @@
 ### 월요일 (4/22)
 - [ ] 베이스라인 재측정 (1차)
   ```bash
+  set -a && source .env.local && set +a
   npx tsx scripts/baseline-test.ts --engine=chatgpt --repeat=3
   npx tsx scripts/baseline-test.ts --engine=claude --repeat=3
+  npx tsx scripts/baseline-test.ts --engine=gemini --repeat=1
   ```
 - [ ] 결과 비교: Before (4/14) vs After (4/22)
 - [ ] Bing Webmaster AI Performance 탭 확인
+- [ ] GA4 AI referrer 트래픽 확인
 
 ### 판단 기준 (1차)
 | 결과 | 의사결정 |
@@ -109,14 +125,24 @@
 ### 엔진
 - ChatGPT (gpt-4o-search-preview)
 - Claude (claude-sonnet)
-- Gemini (gemini-2.5-flash + google_search grounding) — 무료 500회/일
+- Gemini (gemini-2.5-flash + google_search grounding) — 무료 20회/일
 
 ### 반복
-- 프롬프트당 3회, 새 세션
+- ChatGPT/Claude: 프롬프트당 3회
+- Gemini: 프롬프트당 1회 (일일 한도 20회)
 
 ### 기록
 - Supabase citation_results 테이블에 자동 저장
 - response 전문, cited_sources (URL), cited_places (업체명), aiplace_cited (boolean)
+
+### 실행 명령
+```bash
+cd c:/dev/ai-place
+set -a && source .env.local && set +a
+npx tsx scripts/baseline-test.ts --engine=chatgpt --repeat=3
+npx tsx scripts/baseline-test.ts --engine=claude --repeat=3
+npx tsx scripts/baseline-test.ts --engine=gemini --repeat=1
+```
 
 ---
 
@@ -125,6 +151,7 @@
 ### 목적
 현재 수동 입력된 rating/reviewCount를 Google 공식 데이터로 보강.
 리뷰 요약을 구조화하여 AI가 인용할 수 있는 형태로 제공.
+사진 데이터로 프로필 페이지 이미지 확보.
 
 ### 구현 범위
 1. Google Cloud Console에서 Places API (New) 활성화
@@ -141,13 +168,23 @@
      lastChecked: string
    }
    ```
-4. 프로필 페이지에 리뷰 요약 섹션 + Review JSON-LD schema
-5. Place type에 `googlePlaceId?: string` 필드 추가
+4. `PlaceImage` 타입 추가 (types.ts)
+   ```typescript
+   export interface PlaceImage {
+     url: string
+     alt: string               // "천안 피부과 닥터에버스의원 진료실 내부"
+     type: 'exterior' | 'interior' | 'treatment' | 'staff' | 'equipment'
+   }
+   ```
+5. 프로필 페이지에 리뷰 요약 섹션 + Review JSON-LD schema
+6. Place type에 `googlePlaceId?: string`, `images?: PlaceImage[]` 필드 추가
 
 ### 비용
 - Places API (New): 월 $200 무료 크레딧
 - Place Details (Basic): $0.017/요청
+- Place Photos: $0.007/요청
 - 5곳 × 월 4회 갱신 = 20요청/월 ≈ $0.34
+- 5곳 × 5장 사진 = 25요청 ≈ $0.18
 
 ### 주의사항
 - 리뷰 텍스트 직접 복사 금지 (Google ToS) → 패러프레이즈
@@ -156,12 +193,32 @@
 
 ---
 
+## 전환 추적 (C 검증)
+
+### GA4 이벤트
+| 이벤트 | 트리거 | 파라미터 |
+|--------|--------|----------|
+| `ai_referral` | AI 사이트에서 유입 시 (자동) | ai_source, referrer_url, landing_page |
+| `phone_click` | 전화하기 버튼 클릭 | business_name, page_path, referrer |
+
+### AI referrer 감지 도메인
+chatgpt.com, chat.openai.com, perplexity.ai, claude.ai, gemini.google.com, copilot.microsoft.com
+
+### GA4 확인 방법
+1. GA4 → 실시간 → 이벤트 확인
+2. GA4 → 탐색 보고서 → 세션 소스/매체 필터: perplexity.ai, chatgpt.com
+
+---
+
 ## 파일 참조
 
 | 파일 | 용도 |
 |------|------|
-| `scripts/baseline-test.ts` | AI 베이스라인 측정 |
-| `scripts/indexnow.ts` | IndexNow URL 제출 |
+| `scripts/baseline-test.ts` | AI 베이스라인 측정 (ChatGPT/Claude/Gemini) |
+| `scripts/indexnow.ts` | IndexNow URL 제출 (20개 URL) |
 | `scripts/seed-places.ts` | Supabase 시드 데이터 |
 | `docs/GEO-SEO-AEO-딥리서치.md` | GEO 전략 리서치 |
 | `supabase/migrations/001_initial_schema.sql` | DB 스키마 |
+| `src/components/analytics.tsx` | GA4 + AI referrer + phone_click |
+| `src/components/phone-button.tsx` | 전화 클릭 추적 버튼 |
+| `public/llms.txt` | LLM용 사이트 가이드 |
