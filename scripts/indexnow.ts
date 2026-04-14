@@ -26,6 +26,15 @@ const urls = [
   `${BASE_URL}/compare/cheonan/dermatology/anti-aging`,
   // 가이드
   `${BASE_URL}/guide/cheonan/dermatology`,
+  // 키워드 랜딩
+  `${BASE_URL}/cheonan/dermatology/k/acne`,
+  `${BASE_URL}/cheonan/dermatology/k/botox`,
+  `${BASE_URL}/cheonan/dermatology/k/lifting`,
+  `${BASE_URL}/cheonan/dermatology/k/blemish`,
+  `${BASE_URL}/cheonan/dermatology/k/night-clinic`,
+  `${BASE_URL}/cheonan/dermatology/k/recommend`,
+  `${BASE_URL}/cheonan/dermatology/k/hair-loss`,
+  `${BASE_URL}/cheonan/dermatology/k/scar`,
   // SEO
   `${BASE_URL}/sitemap.xml`,
 ]
