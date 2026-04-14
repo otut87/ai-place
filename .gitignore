@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# API keys / secrets
+docs/api-key.md
+
 # vercel
 .vercel
 
