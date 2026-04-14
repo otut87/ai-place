@@ -85,25 +85,36 @@ async function callClaude(prompt: string): Promise<string> {
   return textBlock?.text ?? ''
 }
 
-async function callGemini(prompt: string): Promise<string> {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${ENV.geminiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        tools: [{ google_search: {} }],
-      }),
-    },
-  )
-  if (!res.ok) {
+async function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)) }
+
+async function callGemini(prompt: string, retries = 3): Promise<string> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${ENV.geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          tools: [{ google_search: {} }],
+        }),
+      },
+    )
+    if (res.ok) {
+      const data = await res.json()
+      const parts = data.candidates?.[0]?.content?.parts ?? []
+      return parts.map((p: { text?: string }) => p.text ?? '').join('\n')
+    }
+    if ((res.status === 429 || res.status === 503) && attempt < retries) {
+      const wait = Math.min(15000 * (attempt + 1), 60000)
+      console.log(`    Rate limit (${res.status}), ${wait/1000}s 대기 후 재시도...`)
+      await sleep(wait)
+      continue
+    }
     const err = await res.text()
     throw new Error(`Gemini API error ${res.status}: ${err}`)
   }
-  const data = await res.json()
-  const parts = data.candidates?.[0]?.content?.parts ?? []
-  return parts.map((p: { text?: string }) => p.text ?? '').join('\n')
+  throw new Error('Gemini: max retries exceeded')
 }
 
 async function callEngine(engine: Engine, prompt: string): Promise<string> {
@@ -213,8 +224,9 @@ async function main() {
           console.log(`    소스: ${sourcesStr}`)
           console.log(`    업체: ${placesStr}`)
 
-          // Rate limit 대비 1초 대기
-          await new Promise(r => setTimeout(r, 1000))
+          // Rate limit 대비 대기 (Gemini 무료 티어: 분당 5회)
+          const delay = engine === 'gemini' ? 15000 : 1000
+          await sleep(delay)
         } catch (err) {
           console.error(`    오류: ${(err as Error).message}`)
         }
