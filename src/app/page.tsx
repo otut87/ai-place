@@ -3,7 +3,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PlaceCard } from "@/components/place-card"
 import { StatisticsBox } from "@/components/statistics-box"
-import { getCities, getCategories, getPlaces, getAllPlaces, getAllComparisonTopics, getAllGuidePages } from "@/lib/data"
+import { getCities, getCategories, getPlaces, getAllPlaces, getAllComparisonTopics, getAllGuidePages, getAllKeywordPages } from "@/lib/data"
 import { generateFAQPage, generateWebSite } from "@/lib/jsonld"
 import { safeJsonLd } from "@/lib/utils"
 import type { FAQ, StatisticItem, Source } from "@/lib/types"
@@ -15,6 +15,7 @@ export default async function HomePage() {
   const allPlaces = await getAllPlaces()
   const comparisonTopics = await getAllComparisonTopics()
   const guidePages = await getAllGuidePages()
+  const keywordPages = await getAllKeywordPages()
 
   // GEO: 통계 수치 (§2.2 Princeton — Statistics Addition)
   const avgRating = allPlaces.reduce((sum, p) => sum + (p.rating ?? 0), 0) / allPlaces.length
@@ -153,6 +154,27 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Keyword Landing Pages — 자주 찾는 질문 */}
+        {keywordPages.length > 0 && (
+          <section className="py-20 px-6">
+            <div className="mx-auto max-w-[1200px]">
+              <h2 className="text-[28px] font-bold text-[#222222] leading-[1.43]">자주 찾는 질문</h2>
+              <p className="mt-2 text-base text-[#222222]">AI에게 자주 묻는 질문별 추천 페이지입니다.</p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                {keywordPages.map(kw => (
+                  <Link
+                    key={kw.slug}
+                    href={`/${kw.city}/${kw.category}/k/${kw.slug}`}
+                    className="px-5 py-2.5 text-sm font-medium text-[#222222] border border-[#c1c1c1] rounded-lg hover:bg-[#f2f2f2] transition-colors"
+                  >
+                    {kw.targetQuery}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* How it works */}
         <section className="py-20 px-6">

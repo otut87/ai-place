@@ -122,6 +122,21 @@ export interface GuidePage {
   lastUpdated: string
 }
 
+/** 키워드 랜딩 페이지 — AI 검색 쿼리 1:1 매칭 */
+export interface KeywordPage {
+  slug: string              // "acne" (URL용)
+  city: string
+  category: string
+  targetQuery: string       // "천안 여드름 피부과 추천"
+  title: string
+  summary: string           // Direct Answer Block
+  relatedPlaceSlugs: string[]
+  faqs: FAQ[]
+  statistics: StatisticItem[]
+  sources: Source[]
+  lastUpdated: string
+}
+
 // --- AI 인용 테스트 관련 타입 ---
 
 /** AI 엔진 종류 */

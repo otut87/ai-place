@@ -260,4 +260,41 @@ describe('Data Repository', () => {
       })
     })
   })
+
+  // --- P1: KeywordPage ---
+  describe('getKeywordPage', () => {
+    it('should return keyword page data', async () => {
+      const { getKeywordPage } = await import('@/lib/data')
+      const page = await getKeywordPage('cheonan', 'dermatology', 'acne')
+      expect(page).toBeDefined()
+      expect(page!.title).toBeTruthy()
+      expect(page!.summary.length).toBeGreaterThanOrEqual(30)
+      expect(page!.relatedPlaceSlugs.length).toBeGreaterThanOrEqual(2)
+      expect(page!.faqs.length).toBeGreaterThanOrEqual(5)
+      expect(page!.statistics.length).toBeGreaterThanOrEqual(3)
+    })
+
+    it('should return undefined for unknown keyword', async () => {
+      const { getKeywordPage } = await import('@/lib/data')
+      const page = await getKeywordPage('cheonan', 'dermatology', 'nonexistent')
+      expect(page).toBeUndefined()
+    })
+  })
+
+  describe('getAllKeywordPages', () => {
+    it('should return all keyword pages', async () => {
+      const { getAllKeywordPages } = await import('@/lib/data')
+      const pages = await getAllKeywordPages()
+      expect(pages.length).toBeGreaterThanOrEqual(5)
+    })
+
+    it('keyword pages should target real search queries', async () => {
+      const { getAllKeywordPages } = await import('@/lib/data')
+      const pages = await getAllKeywordPages()
+      pages.forEach(page => {
+        expect(page.targetQuery).toBeTruthy()
+        expect(page.targetQuery).toMatch(/천안/)
+      })
+    })
+  })
 })

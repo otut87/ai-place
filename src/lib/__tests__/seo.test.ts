@@ -105,6 +105,18 @@ describe('sitemap generation', () => {
       expect(e.changeFrequency).toBe('weekly')
     })
   })
+
+  it('should include keyword page URLs', async () => {
+    const { generateSitemapEntries } = await import('@/lib/seo')
+    const entries = await generateSitemapEntries('https://aiplace.kr')
+
+    const kwEntries = entries.filter(e => e.url.includes('/k/'))
+    expect(kwEntries.length).toBeGreaterThanOrEqual(5)
+    kwEntries.forEach(e => {
+      expect(e.priority).toBe(0.85)
+      expect(e.changeFrequency).toBe('weekly')
+    })
+  })
 })
 
 describe('BreadcrumbList JSON-LD', () => {

@@ -176,8 +176,8 @@ describe('JSON-LD Generation', () => {
       expect(jsonld.headline).toBe('천안 피부과 여드름 치료 비교')
       expect(jsonld.description).toBeTruthy()
       expect(jsonld.dateModified).toBe('2026-04-14')
-      expect(jsonld.author['@type']).toBe('Organization')
-      expect(jsonld.author.name).toBe('AI 플레이스')
+      expect(jsonld.author['@type']).toBe('Person')
+      expect(jsonld.author.name).toBeTruthy()
       expect(jsonld.mainEntityOfPage).toBe('https://aiplace.kr/compare/cheonan/dermatology/acne-treatment')
     })
   })
@@ -191,6 +191,32 @@ describe('JSON-LD Generation', () => {
       expect(jsonld['@type']).toBe('WebSite')
       expect(jsonld.name).toBe('AI Place')
       expect(jsonld.url).toBe('https://aiplace.kr')
+    })
+  })
+
+  // --- P0: Person author in Article schema ---
+  describe('generateArticle Person author (P0 §4.1 E-E-A-T)', () => {
+    it('should use Person type for author', async () => {
+      const { generateArticle } = await import('@/lib/jsonld')
+      const jsonld = generateArticle({
+        title: 'Test',
+        description: 'Test desc',
+        lastUpdated: '2026-04-14',
+        url: 'https://aiplace.kr/test',
+      })
+      expect(jsonld.author['@type']).toBe('Person')
+      expect(jsonld.author.name).toBeTruthy()
+    })
+
+    it('should keep Organization as publisher', async () => {
+      const { generateArticle } = await import('@/lib/jsonld')
+      const jsonld = generateArticle({
+        title: 'Test',
+        description: 'Test desc',
+        lastUpdated: '2026-04-14',
+        url: 'https://aiplace.kr/test',
+      })
+      expect(jsonld.publisher['@type']).toBe('Organization')
     })
   })
 

@@ -2,7 +2,7 @@
 // robots.txt, sitemap, BreadcrumbList 생성
 // GEO 딥리서치 §5.1, §5.3, §5.4 기반
 
-import { getAllPlaces, getCities, getCategories, getAllComparisonTopics, getAllGuidePages } from './data'
+import { getAllPlaces, getCities, getCategories, getAllComparisonTopics, getAllGuidePages, getAllKeywordPages } from './data'
 
 /**
  * robots.txt 생성
@@ -147,6 +147,17 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.9,
+    })
+  }
+
+  // 키워드 랜딩 페이지
+  const keywordPagesList = await getAllKeywordPages()
+  for (const kw of keywordPagesList) {
+    entries.push({
+      url: `${baseUrl}/${kw.city}/${kw.category}/k/${kw.slug}`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.85,
     })
   }
 

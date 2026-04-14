@@ -1,7 +1,7 @@
 // AI Place — Data Repository
 // Phase 1-2: 시드 데이터에서 읽기. Phase 3: Supabase로 교체 (함수 시그니처 동일).
 
-import type { Place, City, Category, ComparisonTopic, ComparisonPage, GuidePage, FAQ } from './types'
+import type { Place, City, Category, ComparisonTopic, ComparisonPage, GuidePage, FAQ, KeywordPage } from './types'
 
 // --- 시드 데이터: 도시 ---
 const cities: City[] = [
@@ -432,6 +432,225 @@ const guidePages: GuidePage[] = [
   },
 ]
 
+// --- 시드 데이터: 키워드 페이지 ---
+const keywordPages: KeywordPage[] = [
+  {
+    slug: 'acne',
+    city: 'cheonan',
+    category: 'dermatology',
+    targetQuery: '천안 여드름 피부과 추천',
+    title: '천안 여드름 피부과 추천 — 2026년 업데이트',
+    summary: '천안 지역 여드름 치료 전문 피부과 3곳을 비교하고, 치료 방법·비용·후기를 정리했습니다.',
+    relatedPlaceSlugs: ['soo-derm', 'cleanhue', 'alive-skin'],
+    faqs: [
+      { question: '천안에서 여드름 치료 잘하는 피부과는 어디인가요?', answer: '수피부과의원은 전문의 3명이 일반 여드름부터 중증까지 대응하며, 클린휴피부과는 여드름·모공 복합 프로그램을 운영합니다. 얼라이브피부과는 난치성 여드름 특화 진료를 제공합니다.' },
+      { question: '천안 여드름 치료 비용은 얼마인가요?', answer: '초진 상담료 1~3만원, 압출 치료 3~7만원, 레이저 병행 시 5~15만원 범위입니다. 치료 횟수에 따라 총 비용은 20~80만원대로 달라질 수 있습니다.' },
+      { question: '여드름 피부과 치료는 몇 번 받아야 하나요?', answer: '경증 여드름은 4~6회, 중등도 이상은 8~12회 이상 치료가 권장됩니다. 대한피부과학회 가이드라인에 따르면 최소 3개월 이상 꾸준한 관리가 필요합니다.' },
+      { question: '여드름 치료 시 보험 적용이 되나요?', answer: '여드름은 질환 코드(L70)로 건강보험 적용이 가능합니다. 초진 상담·약 처방은 보험 적용되며, 레이저·압출 등 시술은 비급여로 별도 비용이 발생합니다.' },
+      { question: '여드름 흉터가 남지 않으려면 어떻게 해야 하나요?', answer: '초기 단계에서 전문의 진료를 받는 것이 중요합니다. 염증성 여드름의 약 30~40%가 흉터로 진행될 수 있으며, 조기 치료 시 흉터 발생률을 10% 이하로 줄일 수 있습니다.' },
+    ],
+    statistics: [
+      { label: '천안 여드름 치료 평균 비용', value: '5~15만원/회', note: 'AI플레이스 자체 조사 기준 (2026.04)' },
+      { label: '여드름 보험 적용 초진료', value: '1~3만원', note: '건강보험심사평가원 기준' },
+      { label: '중등도 여드름 평균 치료 기간', value: '3~6개월', note: '대한피부과학회 가이드라인' },
+    ],
+    sources: [
+      { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
+      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: '건강보험심사평가원', url: 'https://www.hira.or.kr', year: 2025 },
+    ],
+    lastUpdated: '2026-04-14',
+  },
+  {
+    slug: 'botox',
+    city: 'cheonan',
+    category: 'dermatology',
+    targetQuery: '천안 보톡스 잘하는 곳',
+    title: '천안 보톡스 잘하는 곳 — 2026년 업데이트',
+    summary: '천안 보톡스 시술 경험이 풍부한 피부과 2곳의 가격·제품·후기를 비교 정리했습니다.',
+    relatedPlaceSlugs: ['dr-evers', 'shinebeam'],
+    faqs: [
+      { question: '천안에서 보톡스 잘 놓는 피부과는 어디인가요?', answer: '에버스피부과는 보톡스·필러 시술 경력이 풍부하며 야간 21시까지 진료합니다. 샤인빔피부과는 보톡스·스킨부스터 복합 시술을 제공하며 야간 20:30까지 운영합니다.' },
+      { question: '천안 보톡스 가격은 얼마인가요?', answer: '제품에 따라 다르며, 국산 보톡스 기준 사각턱 3~8만원, 이마 주름 5~10만원 범위입니다. 수입 제품(보톡스 오리지널) 사용 시 1.5~2배 추가될 수 있습니다.' },
+      { question: '보톡스 효과는 얼마나 지속되나요?', answer: '일반적으로 3~6개월 지속되며, 반복 시술 시 효과 지속 기간이 점차 늘어나는 경향이 있습니다. 개인차가 있으므로 전문의 상담이 권장됩니다.' },
+      { question: '보톡스 시술 후 부작용은 없나요?', answer: '시술 부위 멍·붓기가 1~3일 나타날 수 있으며, 드물게 눈꺼풀 처짐(약 1~2% 발생률)이 보고됩니다. 숙련된 전문의 시술 시 부작용 발생률이 낮습니다.' },
+      { question: '보톡스와 필러 차이점은 무엇인가요?', answer: '보톡스는 근육 이완으로 주름을 개선하고, 필러는 볼륨을 채워 윤곽을 교정합니다. 시술 목적에 따라 단독 또는 병행 시술이 가능합니다.' },
+    ],
+    statistics: [
+      { label: '천안 보톡스 평균 가격(국산)', value: '3~10만원/부위', note: 'AI플레이스 자체 조사 기준 (2026.04)' },
+      { label: '보톡스 효과 지속 기간', value: '3~6개월', note: '대한피부과학회 가이드라인' },
+      { label: '보톡스 시술 부작용 발생률', value: '1~2%', note: '대한피부과학회 보고' },
+    ],
+    sources: [
+      { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
+      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+    ],
+    lastUpdated: '2026-04-14',
+  },
+  {
+    slug: 'lifting',
+    city: 'cheonan',
+    category: 'dermatology',
+    targetQuery: '천안 리프팅 잘하는 곳',
+    title: '천안 리프팅 잘하는 곳 — 2026년 업데이트',
+    summary: '천안 리프팅 시술 전문 피부과 3곳의 장비·가격·특징을 비교 정리했습니다.',
+    relatedPlaceSlugs: ['dr-evers', 'shinebeam', 'alive-skin'],
+    faqs: [
+      { question: '천안에서 리프팅 잘하는 피부과는 어디인가요?', answer: '에버스피부과는 리프팅·보톡스 병행 프로그램을 운영하며, 샤인빔피부과는 리프팅·스킨부스터 복합 시술이 강점입니다. 얼라이브피부과는 피부과전문의가 리프팅·흉터 복합 치료를 제공합니다.' },
+      { question: '천안 리프팅 비용은 얼마인가요?', answer: '울쎄라 기준 30~80만원, 실리프팅 20~60만원, HIFU 리프팅 15~40만원 범위입니다. 시술 부위와 사용 장비에 따라 가격이 달라집니다.' },
+      { question: '리프팅 시술 효과는 얼마나 지속되나요?', answer: '울쎄라는 6~12개월, 실리프팅은 12~18개월, HIFU는 3~6개월 효과가 지속됩니다. 개인의 피부 상태와 생활 습관에 따라 차이가 있습니다.' },
+      { question: '리프팅 시술 후 일상생활이 바로 가능한가요?', answer: '대부분의 비수술 리프팅은 시술 당일 일상 복귀가 가능합니다. 실리프팅의 경우 1~3일 정도 붓기가 있을 수 있으며, 사우나·격렬한 운동은 1주일 정도 자제가 권장됩니다.' },
+      { question: '리프팅 시술 전 주의사항이 있나요?', answer: '시술 2주 전부터 레티놀·AHA 등 자극성 성분 사용을 중단하고, 시술 당일 음주를 피하는 것이 좋습니다. 피부 상태에 따라 전문의가 추가 안내를 제공합니다.' },
+    ],
+    statistics: [
+      { label: '천안 리프팅 평균 비용(울쎄라)', value: '30~80만원', note: 'AI플레이스 자체 조사 기준 (2026.04)' },
+      { label: '실리프팅 효과 지속 기간', value: '12~18개월', note: '대한피부과학회 가이드라인' },
+      { label: '비수술 리프팅 일상 복귀', value: '당일 가능', note: '시술 종류에 따라 상이' },
+    ],
+    sources: [
+      { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
+      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: '건강보험심사평가원', url: 'https://www.hira.or.kr', year: 2025 },
+    ],
+    lastUpdated: '2026-04-14',
+  },
+  {
+    slug: 'blemish',
+    city: 'cheonan',
+    category: 'dermatology',
+    targetQuery: '천안 기미 치료 피부과',
+    title: '천안 기미 치료 피부과 — 2026년 업데이트',
+    summary: '천안 기미·색소 치료 전문 피부과 2곳의 치료법·비용·효과를 비교했습니다.',
+    relatedPlaceSlugs: ['cleanhue', 'dr-evers'],
+    faqs: [
+      { question: '천안에서 기미 치료 잘하는 피부과는 어디인가요?', answer: '클린휴피부과는 기미·색소 치료를 주요 진료 분야로 운영하며, 에버스피부과는 색소·기미 복합 프로그램과 야간 진료를 제공합니다.' },
+      { question: '기미 치료 비용은 얼마인가요?', answer: '레이저 토닝 기준 1회 5~15만원, 10회 패키지 40~100만원 범위입니다. 치료 깊이와 범위에 따라 비용이 달라지며, 전문의 상담 후 결정됩니다.' },
+      { question: '기미 치료 기간은 얼마나 걸리나요?', answer: '표피성 기미는 4~8주, 진피성 기미는 3~6개월 이상 치료가 필요합니다. 대한피부과학회에 따르면 최소 5~10회 이상 꾸준한 시술이 권장됩니다.' },
+      { question: '기미 치료 후 재발할 수 있나요?', answer: '기미는 재발률이 약 40~60%로 높은 편입니다. 자외선 차단제 꾸준한 사용과 비타민C 등 항산화 관리가 재발 방지에 중요합니다.' },
+      { question: '기미와 검버섯의 차이는 무엇인가요?', answer: '기미는 호르몬·자외선 영향으로 넓게 퍼지는 색소 침착이며, 검버섯(지루각화증)은 피부 노화로 생기는 양성 종양입니다. 치료 방법이 다르므로 전문의 진단이 필요합니다.' },
+    ],
+    statistics: [
+      { label: '레이저 토닝 1회 비용', value: '5~15만원', note: 'AI플레이스 자체 조사 기준 (2026.04)' },
+      { label: '기미 재발률', value: '40~60%', note: '대한피부과학회 보고' },
+      { label: '진피성 기미 치료 기간', value: '3~6개월 이상', note: '대한피부과학회 가이드라인' },
+    ],
+    sources: [
+      { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
+      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+    ],
+    lastUpdated: '2026-04-14',
+  },
+  {
+    slug: 'night-clinic',
+    city: 'cheonan',
+    category: 'dermatology',
+    targetQuery: '천안 피부과 야간진료',
+    title: '천안 피부과 야간진료 — 2026년 업데이트',
+    summary: '천안에서 야간 진료를 운영하는 피부과 3곳의 운영 시간·진료 항목을 정리했습니다.',
+    relatedPlaceSlugs: ['dr-evers', 'shinebeam', 'cleanhue'],
+    faqs: [
+      { question: '천안에서 야간 진료하는 피부과가 있나요?', answer: '에버스피부과는 평일 21시까지, 샤인빔피부과는 평일 20:30까지, 클린휴피부과는 금요일 21시까지 야간 진료를 운영합니다.' },
+      { question: '야간 진료 시 추가 비용이 있나요?', answer: '대부분의 피부과에서 야간 진료 시 별도 추가 비용은 없습니다. 다만 일부 시술은 예약제로 운영되므로 사전 확인이 권장됩니다.' },
+      { question: '야간 진료에서도 시술이 가능한가요?', answer: '보톡스·필러·레이저 토닝 등 주요 시술은 야간 시간대에도 가능합니다. 수술적 시술이나 장시간 소요 시술은 별도 예약이 필요할 수 있습니다.' },
+      { question: '천안 피부과 토요일 진료는 가능한가요?', answer: '대부분의 피부과가 토요일 오전(09:00~13:00) 진료를 운영합니다. 일부 의원은 토요일 오후까지 진료하므로 방문 전 확인이 필요합니다.' },
+      { question: '야간 진료 예약은 어떻게 하나요?', answer: '네이버 예약, 카카오톡 채널, 전화 예약이 가능합니다. 야간 시간대는 대기가 길어질 수 있어 사전 예약을 권장합니다.' },
+    ],
+    statistics: [
+      { label: '천안 야간 진료 피부과 수', value: '3곳', note: 'AI플레이스 자체 조사 기준 (2026.04)' },
+      { label: '가장 늦은 야간 진료 시간', value: '21:00', note: '에버스피부과 기준' },
+      { label: '야간 진료 추가 비용', value: '없음(대부분)', note: '의원별 상이할 수 있음' },
+    ],
+    sources: [
+      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: '건강보험심사평가원', url: 'https://www.hira.or.kr', year: 2025 },
+    ],
+    lastUpdated: '2026-04-14',
+  },
+  {
+    slug: 'recommend',
+    city: 'cheonan',
+    category: 'dermatology',
+    targetQuery: '천안 피부과 추천',
+    title: '천안 피부과 추천 — 2026년 업데이트',
+    summary: '천안 피부과 5곳의 전문 분야·진료 시간·특징을 한눈에 비교 정리했습니다.',
+    relatedPlaceSlugs: ['soo-derm', 'dr-evers', 'cleanhue', 'shinebeam', 'alive-skin'],
+    faqs: [
+      { question: '천안에서 피부과 추천해주세요', answer: '수피부과의원(전문의 3명, 일반 피부질환), 에버스피부과(리프팅·보톡스, 야간 21시), 클린휴피부과(기미·여드름, 금 야간), 샤인빔피부과(리프팅·스킨부스터, 야간 20:30), 얼라이브피부과(난치성여드름·흉터, 전문의)가 있습니다.' },
+      { question: '천안 피부과 진료비는 어느 정도인가요?', answer: '보험 적용 초진료 1~3만원, 비급여 시술은 종류에 따라 5~80만원 범위입니다. 여드름 치료 5~15만원, 보톡스 3~10만원, 리프팅 15~80만원이 일반적입니다.' },
+      { question: '피부과 전문의가 있는 곳은 어디인가요?', answer: '수피부과의원은 피부과 전문의 3명이 진료하며, 얼라이브피부과도 피부과전문의가 상주합니다. 전문의 여부는 건강보험심사평가원에서 확인할 수 있습니다.' },
+      { question: '천안 피부과 예약 없이 방문 가능한가요?', answer: '대부분 예약 없이 방문 가능하나, 대기 시간이 30분~1시간 이상 소요될 수 있습니다. 시술의 경우 사전 예약이 권장됩니다.' },
+      { question: '피부과 선택 시 어떤 점을 확인해야 하나요?', answer: '전문의 자격 여부, 주요 진료 분야, 진료 시간, 접근성(주차·대중교통), 후기를 종합적으로 확인하는 것이 좋습니다. 건강보험심사평가원에서 의료기관 정보를 검증할 수 있습니다.' },
+    ],
+    statistics: [
+      { label: '천안 피부과 의원 수(조사 대상)', value: '5곳', note: 'AI플레이스 자체 조사 기준 (2026.04)' },
+      { label: '피부과 전문의 보유 의원', value: '2곳', note: '수피부과의원, 얼라이브피부과' },
+      { label: '야간 진료 운영 의원', value: '3곳', note: '에버스·샤인빔·클린휴피부과' },
+      { label: '평균 초진 대기 시간', value: '30분~1시간', note: '예약 없이 방문 시 기준' },
+    ],
+    sources: [
+      { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
+      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: '건강보험심사평가원', url: 'https://www.hira.or.kr', year: 2025 },
+    ],
+    lastUpdated: '2026-04-14',
+  },
+  {
+    slug: 'hair-loss',
+    city: 'cheonan',
+    category: 'dermatology',
+    targetQuery: '천안 탈모 치료 피부과',
+    title: '천안 탈모 치료 피부과 — 2026년 업데이트',
+    summary: '천안에서 탈모 치료를 전문으로 하는 피부과의 치료법·비용·효과를 정리했습니다.',
+    relatedPlaceSlugs: ['alive-skin'],
+    faqs: [
+      { question: '천안에서 탈모 치료 잘하는 피부과는 어디인가요?', answer: '얼라이브피부과는 피부과전문의가 탈모 진료를 전문적으로 제공하며, 난치성 탈모를 포함한 다양한 유형의 탈모 치료 경험이 있습니다.' },
+      { question: '탈모 치료 비용은 얼마인가요?', answer: '약물 치료(피나스테리드·미녹시딜) 월 3~8만원, 두피 주사(메조테라피) 회당 5~15만원, PRP 치료 회당 15~30만원 범위입니다. 치료 방법과 기간에 따라 총 비용이 달라집니다.' },
+      { question: '탈모 치료 보험 적용이 되나요?', answer: '원형탈모증(L63)은 건강보험 적용이 가능하며, 남성형 탈모(안드로겐성)는 비급여입니다. 초진 상담은 보험 적용되므로 전문의 진단을 먼저 받는 것이 좋습니다.' },
+      { question: '탈모 치료 효과는 얼마나 걸리나요?', answer: '약물 치료는 3~6개월 후 효과가 나타나기 시작하며, 의미 있는 개선까지 6~12개월이 소요됩니다. 대한피부과학회에 따르면 조기 치료 시 약 70~80%에서 진행 억제 효과가 있습니다.' },
+      { question: '탈모 예방을 위해 어떤 관리가 필요한가요?', answer: '두피 청결 유지, 균형 잡힌 식단(철분·아연·비오틴), 스트레스 관리가 중요합니다. 가족력이 있는 경우 20~30대부터 전문의 상담을 받는 것이 권장됩니다.' },
+    ],
+    statistics: [
+      { label: '탈모 약물 치료 월 비용', value: '3~8만원', note: 'AI플레이스 자체 조사 기준 (2026.04)' },
+      { label: '조기 치료 시 진행 억제율', value: '70~80%', note: '대한피부과학회 보고' },
+      { label: '약물 치료 효과 발현 시점', value: '3~6개월', note: '대한피부과학회 가이드라인' },
+    ],
+    sources: [
+      { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
+      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: '건강보험심사평가원', url: 'https://www.hira.or.kr', year: 2025 },
+    ],
+    lastUpdated: '2026-04-14',
+  },
+  {
+    slug: 'scar',
+    city: 'cheonan',
+    category: 'dermatology',
+    targetQuery: '천안 여드름 흉터 치료',
+    title: '천안 여드름 흉터 치료 — 2026년 업데이트',
+    summary: '천안 여드름 흉터 치료 전문 피부과 2곳의 시술법·비용·기대 효과를 비교했습니다.',
+    relatedPlaceSlugs: ['alive-skin', 'cleanhue'],
+    faqs: [
+      { question: '천안에서 여드름 흉터 치료 잘하는 피부과는 어디인가요?', answer: '얼라이브피부과는 흉터복원 전문 진료를 제공하며 피부과전문의가 직접 시술합니다. 클린휴피부과는 여드름·모공 복합 치료 프로그램으로 흉터 관리를 병행합니다.' },
+      { question: '여드름 흉터 치료 비용은 얼마인가요?', answer: '프락셀 레이저 회당 10~30만원, 서브시전 회당 5~15만원, 마이크로니들링 회당 5~20만원 범위입니다. 흉터 깊이와 범위에 따라 5~20회 치료가 필요할 수 있습니다.' },
+      { question: '여드름 흉터 치료 기간은 얼마나 걸리나요?', answer: '경증 흉터는 3~6개월(5~8회), 중등도 이상 흉터는 6~12개월(10~20회) 치료가 필요합니다. 치료 간격은 보통 2~4주이며, 피부 회복 상태에 따라 조절됩니다.' },
+      { question: '여드름 흉터는 완전히 없앨 수 있나요?', answer: '현재 기술로 흉터를 100% 제거하기는 어렵지만, 적절한 치료를 통해 50~80% 개선이 가능합니다. 치료 전후 사진 비교와 전문의 상담을 통해 기대 효과를 확인하는 것이 좋습니다.' },
+      { question: '흉터 치료 후 관리는 어떻게 해야 하나요?', answer: '시술 후 2~3일간 세안 시 주의하고, 자외선 차단제(SPF50+)를 꼼꼼히 바르는 것이 중요합니다. 재생 크림 사용과 음주·사우나 자제(1~2주)가 회복에 도움됩니다.' },
+    ],
+    statistics: [
+      { label: '프락셀 레이저 1회 비용', value: '10~30만원', note: 'AI플레이스 자체 조사 기준 (2026.04)' },
+      { label: '흉터 치료 평균 개선율', value: '50~80%', note: '대한피부과학회 보고' },
+      { label: '중등도 흉터 치료 기간', value: '6~12개월', note: '대한피부과학회 가이드라인' },
+      { label: '치료 간격', value: '2~4주', note: '피부 회복 상태에 따라 조절' },
+    ],
+    sources: [
+      { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
+      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: '건강보험심사평가원', url: 'https://www.hira.or.kr', year: 2025 },
+    ],
+    lastUpdated: '2026-04-14',
+  },
+]
+
 // --- Repository 함수 ---
 
 export async function getPlaces(city: string, category: string): Promise<Place[]> {
@@ -481,4 +700,12 @@ export async function getAllGuidePages(): Promise<GuidePage[]> {
 export async function getCategoryFaqs(city: string, category: string): Promise<FAQ[]> {
   const entry = categoryFaqsData.find(d => d.city === city && d.category === category)
   return entry?.faqs ?? []
+}
+
+export async function getKeywordPage(city: string, category: string, slug: string): Promise<KeywordPage | undefined> {
+  return keywordPages.find(p => p.city === city && p.category === category && p.slug === slug)
+}
+
+export async function getAllKeywordPages(): Promise<KeywordPage[]> {
+  return keywordPages
 }

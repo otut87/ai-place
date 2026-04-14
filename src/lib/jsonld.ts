@@ -190,13 +190,19 @@ export function generateArticle(opts: {
     name: 'AI 플레이스',
     url: 'https://aiplace.kr',
   }
+  const author = {
+    '@type': 'Person',
+    name: '이지수',
+    jobTitle: 'AI Place 큐레이터',
+    url: 'https://aiplace.kr',
+  }
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: opts.title,
     description: opts.description,
     dateModified: opts.lastUpdated,
-    author: org,
+    author,
     publisher: org,
     mainEntityOfPage: opts.url,
   }
