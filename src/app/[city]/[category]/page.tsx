@@ -82,9 +82,7 @@ export default async function ListingPage({ params }: Props) {
             <nav className="mb-8 text-sm text-[#6a6a6a]">
               <Link href="/" className="hover:text-[#008f6b]">홈</Link>
               <span className="mx-2">›</span>
-              <Link href={`/${city}`} className="hover:text-[#008f6b]">{cityObj.name}</Link>
-              <span className="mx-2">›</span>
-              <span className="text-[#222222] font-medium">{catObj.name}</span>
+              <span className="text-[#222222] font-medium">{cityObj.name} {catObj.name}</span>
             </nav>
 
             {/* Title */}

@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { PhoneButton } from "@/components/phone-button"
 import { getPlaceBySlug, getPlaces, getCities, getCategories } from "@/lib/data"
 import { generateLocalBusiness, generateFAQPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
@@ -97,9 +98,7 @@ export default async function ProfilePage({ params }: Props) {
             <nav className="mb-8 text-sm text-[#6a6a6a]">
               <Link href="/" className="hover:text-[#008f6b]">홈</Link>
               <span className="mx-2">›</span>
-              <Link href={`/${city}`} className="hover:text-[#008f6b]">{cityObj?.name}</Link>
-              <span className="mx-2">›</span>
-              <Link href={`/${city}/${category}`} className="hover:text-[#008f6b]">{catObj?.name}</Link>
+              <Link href={`/${city}/${category}`} className="hover:text-[#008f6b]">{cityObj?.name} {catObj?.name}</Link>
               <span className="mx-2">›</span>
               <span className="text-[#222222] font-medium">{place.name}</span>
             </nav>
@@ -142,12 +141,7 @@ export default async function ProfilePage({ params }: Props) {
             {/* CTA Buttons */}
             <div className="mt-6 flex gap-3">
               {place.phone && (
-                <a
-                  href={`tel:${place.phone}`}
-                  className="inline-flex h-12 px-6 items-center rounded-lg bg-[#00a67c] text-white font-medium hover:bg-[#008f6b] transition-colors"
-                >
-                  전화하기
-                </a>
+                <PhoneButton phone={place.phone} businessName={place.name} />
               )}
               <Link
                 href={`/${city}/${category}`}
