@@ -14,7 +14,7 @@ export default async function HomePage() {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "AI Place",
-    url: "https://ai-place.vercel.app",
+    url: "https://aiplace.kr",
     description: "AI가 추천하는 로컬 업체 디렉토리",
   }
 

@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
   description:
     "ChatGPT, Claude, Gemini에서 추천되는 로컬 업체를 찾아보세요. 피부과, 치과, 미용실, 인테리어 등.",
-  metadataBase: new URL("https://ai-place.vercel.app"),
+  metadataBase: new URL("https://aiplace.kr"),
   openGraph: {
     type: "website",
     locale: "ko_KR",

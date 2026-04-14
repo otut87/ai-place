@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 describe('robots.txt', () => {
   it('should allow all AI search crawlers', async () => {
     const { generateRobotsTxt } = await import('@/lib/seo')
-    const robots = generateRobotsTxt('https://ai-place.vercel.app')
+    const robots = generateRobotsTxt('https://aiplace.kr')
 
     // 검색·답변용 크롤러 (GEO 딥리서치 §5.1 — 필수 허용)
     expect(robots).toContain('User-agent: OAI-SearchBot')
@@ -22,12 +22,12 @@ describe('robots.txt', () => {
     expect(robots).toContain('Allow: /')
 
     // Sitemap 참조
-    expect(robots).toContain('Sitemap: https://ai-place.vercel.app/sitemap.xml')
+    expect(robots).toContain('Sitemap: https://aiplace.kr/sitemap.xml')
   })
 
   it('should disallow admin and api paths', async () => {
     const { generateRobotsTxt } = await import('@/lib/seo')
-    const robots = generateRobotsTxt('https://ai-place.vercel.app')
+    const robots = generateRobotsTxt('https://aiplace.kr')
 
     expect(robots).toContain('Disallow: /admin')
     expect(robots).toContain('Disallow: /api')
@@ -37,12 +37,12 @@ describe('robots.txt', () => {
 describe('sitemap generation', () => {
   it('should include all static and dynamic pages', async () => {
     const { generateSitemapEntries } = await import('@/lib/seo')
-    const entries = await generateSitemapEntries('https://ai-place.vercel.app')
+    const entries = await generateSitemapEntries('https://aiplace.kr')
 
     expect(entries.length).toBeGreaterThan(0)
 
     // 메인 페이지
-    const main = entries.find(e => e.url === 'https://ai-place.vercel.app')
+    const main = entries.find(e => e.url === 'https://aiplace.kr')
     expect(main).toBeDefined()
 
     // 리스트 페이지
@@ -57,9 +57,9 @@ describe('sitemap generation', () => {
 
   it('should set correct priorities', async () => {
     const { generateSitemapEntries } = await import('@/lib/seo')
-    const entries = await generateSitemapEntries('https://ai-place.vercel.app')
+    const entries = await generateSitemapEntries('https://aiplace.kr')
 
-    const main = entries.find(e => e.url === 'https://ai-place.vercel.app')
+    const main = entries.find(e => e.url === 'https://aiplace.kr')
     expect(main?.priority).toBe(1.0)
 
     const listing = entries.find(e => e.url.endsWith('/cheonan/dermatology'))
@@ -71,7 +71,7 @@ describe('sitemap generation', () => {
 
   it('should include lastModified dates', async () => {
     const { generateSitemapEntries } = await import('@/lib/seo')
-    const entries = await generateSitemapEntries('https://ai-place.vercel.app')
+    const entries = await generateSitemapEntries('https://aiplace.kr')
 
     entries.forEach(entry => {
       expect(entry.lastModified).toBeDefined()
@@ -83,9 +83,9 @@ describe('BreadcrumbList JSON-LD', () => {
   it('should generate valid BreadcrumbList', async () => {
     const { generateBreadcrumbList } = await import('@/lib/seo')
     const crumbs = generateBreadcrumbList([
-      { name: '홈', url: 'https://ai-place.vercel.app' },
-      { name: '천안', url: 'https://ai-place.vercel.app/cheonan' },
-      { name: '피부과', url: 'https://ai-place.vercel.app/cheonan/dermatology' },
+      { name: '홈', url: 'https://aiplace.kr' },
+      { name: '천안', url: 'https://aiplace.kr/cheonan' },
+      { name: '피부과', url: 'https://aiplace.kr/cheonan/dermatology' },
     ])
 
     expect(crumbs['@context']).toBe('https://schema.org')

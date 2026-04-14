@@ -1,0 +1,66 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /c/dev/ai-place config user.name)",
+      "Bash(find /c/dev/ai-place/src -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec basename {} \\\\;)",
+      "Skill(plan-eng-review)",
+      "Skill(plan-eng-review:*)",
+      "Skill(plan-design-review)",
+      "Skill(plan-design-review:*)",
+      "Bash(npm install:*)"
+    ]
+  },
+  "mcpServers": {
+    "tosspayments-integration-guide": {
+      "disabled": true
+    },
+    "fal-ai": {
+      "disabled": true
+    },
+    "exa-web-search": {
+      "disabled": true
+    },
+    "firecrawl": {
+      "disabled": true
+    },
+    "browser-use": {
+      "disabled": true
+    },
+    "memory": {
+      "disabled": true
+    },
+    "magic": {
+      "disabled": true
+    },
+    "cloudflare-docs": {
+      "disabled": true
+    },
+    "cloudflare-observability": {
+      "disabled": true
+    },
+    "cloudflare-workers-bindings": {
+      "disabled": true
+    },
+    "cloudflare-workers-builds": {
+      "disabled": true
+    },
+    "clickhouse": {
+      "disabled": true
+    },
+    "railway": {
+      "disabled": true
+    },
+    "vercel": {
+      "disabled": true
+    },
+    "token-optimizer": {
+      "disabled": true
+    },
+    "browserbase": {
+      "disabled": true
+    },
+    "claude_ai_Google_Drive": {
+      "disabled": true
+    }
+  }
+}

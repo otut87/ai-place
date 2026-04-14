@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-const BASE_URL = 'https://ai-place.vercel.app'
+const BASE_URL = 'https://aiplace.kr'
 
 export default function robots(): MetadataRoute.Robots {
   return {
