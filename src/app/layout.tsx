@@ -30,6 +30,12 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  verification: {
+    google: "5ew7ZO8IHVZbSw1H8z3JrlqJTxECjalQ9ME944V88fE",
+    other: {
+      "naver-site-verification": "3fc34d317afb03f00b61668570ab9b7dda278426",
+    },
+  },
 }
 
 export default function RootLayout({
