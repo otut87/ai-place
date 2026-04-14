@@ -53,5 +53,6 @@ export function trackPhoneClick(businessName: string) {
   window.gtag?.('event', 'phone_click', {
     business_name: businessName,
     page_path: window.location.pathname,
+    referrer: document.referrer,
   })
 }
