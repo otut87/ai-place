@@ -155,7 +155,7 @@ export default async function ProfilePage({ params }: Props) {
 
             {/* HIGH 8: Direct Answer Block (§4.4 — H1 직하 40-60자 자기완결 답변) */}
             <p className="mt-3 text-base text-[#222222] font-medium leading-relaxed">
-              {place.name}은(는) {place.address}에 위치한 {catObj?.name ?? '피부과'}입니다. {place.services.slice(0, 3).map(s => s.name).join(', ')} 등을 전문으로 합니다.
+              {place.description}
             </p>
 
             {/* CRITICAL 4: Last Updated (§4.2 Freshness) */}
@@ -180,7 +180,7 @@ export default async function ProfilePage({ params }: Props) {
             <section id="info" className="mt-12 p-6 bg-[#f2f2f2] rounded-[14px]">
               <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">기본 정보</h2>
               {/* HIGH 8: Direct Answer Block under H2 */}
-              <p className="text-sm text-[#222222] mb-4">{place.address}에 위치하며, {place.openingHours ? `${place.openingHours[0]} 등의 시간에 진료합니다.` : '진료 시간은 전화로 확인해주세요.'}</p>
+              <p className="text-sm text-[#222222] mb-4">{place.description}</p>
               <dl className="space-y-3">
                 <div className="flex gap-3">
                   <dt className="text-sm font-medium text-[#6a6a6a] w-20 shrink-0">주소</dt>
@@ -195,7 +195,12 @@ export default async function ProfilePage({ params }: Props) {
                 {place.openingHours && (
                   <div className="flex gap-3">
                     <dt className="text-sm font-medium text-[#6a6a6a] w-20 shrink-0">영업시간</dt>
-                    <dd className="text-sm text-[#222222]">{place.openingHours.join(', ')}</dd>
+                    <dd className="text-sm text-[#222222]">{place.openingHours.map(h => {
+                      // 영문 약어 → 한글 변환 (Mo-Fr 09:00-18:00 → 월~금 09:00-18:00)
+                      return h.replace(/Mo/g, '월').replace(/Tu/g, '화').replace(/We/g, '수')
+                        .replace(/Th/g, '목').replace(/Fr/g, '금').replace(/Sa/g, '토').replace(/Su/g, '일')
+                        .replace(/-(?=[\uC6D4\uD654\uC218\uBAA9\uAE08\uD1A0\uC77C])/g, '~')
+                    }).join(', ')}</dd>
                   </div>
                 )}
               </dl>

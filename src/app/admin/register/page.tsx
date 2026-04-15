@@ -23,6 +23,7 @@ export default function RegisterPage() {
   const [slug, setSlug] = useState('')
   const [description, setDescription] = useState('')
   const [phone, setPhone] = useState('')
+  const [openingHours, setOpeningHours] = useState('')
   const [naverPlaceUrl, setNaverPlaceUrl] = useState('')
   const [kakaoMapUrl, setKakaoMapUrl] = useState('')
   const [enrichedReviews, setEnrichedReviews] = useState<Array<{ text: string; rating: number }>>([])
@@ -60,6 +61,7 @@ export default function RegisterPage() {
         setSlug(place.name.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'new-place')
       }
       if (d.phone) setPhone(d.phone)
+      if (d.openingHours) setOpeningHours(d.openingHours.join('\n'))
       if (d.kakaoMapUrl) setKakaoMapUrl(d.kakaoMapUrl)
       if (d.reviews) setEnrichedReviews(d.reviews)
       setEnrichedData({ openingHours: d.openingHours, editorialSummary: d.editorialSummary })
@@ -104,7 +106,7 @@ export default function RegisterPage() {
       slug, description,
       address: selectedPlace.address,
       phone: phone || undefined,
-      openingHours: undefined,
+      openingHours: openingHours.trim() ? openingHours.split('\n').map(h => h.trim()).filter(Boolean) : undefined,
       rating: selectedPlace.rating,
       reviewCount: selectedPlace.reviewCount,
       googleBusinessUrl: undefined,
@@ -231,6 +233,13 @@ export default function RegisterPage() {
               </span>
             </label>
             <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={65} rows={2} className="w-full px-4 py-3 rounded-lg border border-[#dddddd] text-sm" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#484848] mb-1">
+              영업시간 <span className="text-xs text-green-600">(Google 자동 입력, 수정 가능)</span>
+            </label>
+            <textarea value={openingHours} onChange={e => setOpeningHours(e.target.value)} rows={3} className="w-full px-3 py-2 rounded-lg border border-[#dddddd] text-sm" placeholder={"월요일: 오전 9:00 ~ 오후 6:00\n화요일: 오전 9:00 ~ 오후 6:00\n..."} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
