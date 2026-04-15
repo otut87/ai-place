@@ -10,11 +10,15 @@ export async function getPlaceById(placeId: string) {
   const supabase = getAdminClient()
   if (!supabase) return null
 
-  const { data } = await supabase.from('places')
+  const { data, error } = await supabase.from('places')
     .select('*')
-    .eq('id' as never, placeId as never)
+    .eq('id', placeId)
     .single()
 
+  if (error) {
+    console.error('[manage-place] getPlaceById failed:', error)
+    return null
+  }
   return data
 }
 
@@ -25,8 +29,8 @@ export async function updatePlaceStatus(placeId: string, status: 'active' | 'rej
   if (!supabase) return { success: false, error: 'Admin 클라이언트 초기화 실패' }
 
   const { error } = await supabase.from('places')
-    .update({ status } as never)
-    .eq('id' as never, placeId as never)
+    .update({ status })
+    .eq('id', placeId)
 
   if (error) {
     console.error('[manage-place] Status update failed:', error)
@@ -48,8 +52,8 @@ export async function updatePlace(placeId: string, data: {
   if (!supabase) return { success: false, error: 'Admin 클라이언트 초기화 실패' }
 
   const { error } = await supabase.from('places')
-    .update(data as never)
-    .eq('id' as never, placeId as never)
+    .update(data)
+    .eq('id', placeId)
 
   if (error) {
     console.error('[manage-place] Update failed:', error)
@@ -68,7 +72,7 @@ export async function deletePlace(placeId: string) {
 
   const { error } = await supabase.from('places')
     .delete()
-    .eq('id' as never, placeId as never)
+    .eq('id', placeId)
 
   if (error) {
     console.error('[manage-place] Delete failed:', error)
