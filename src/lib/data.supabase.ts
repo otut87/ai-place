@@ -106,19 +106,12 @@ async function supabaseCategories(): Promise<Category[] | null> {
 // --- Public API (data.ts와 동일 시그니처) ---
 
 export async function getPlaces(city: string, category: string): Promise<Place[]> {
-  const dbPlaces = await supabasePlaces(city, category)
-  const seedPlaces = await seed.getPlaces(city, category)
-
-  if (!dbPlaces) return seedPlaces
-
-  const dbSlugs = new Set(dbPlaces.map(p => p.slug))
-  const seedOnly = seedPlaces.filter(p => !dbSlugs.has(p.slug))
-  return [...dbPlaces, ...seedOnly]
+  // DB 우선, 실패 시 시드 폴백 (merge 없음 — 단일 소스)
+  return (await supabasePlaces(city, category)) ?? (await seed.getPlaces(city, category))
 }
 
 export async function getPlaceBySlug(city: string, category: string, slug: string): Promise<Place | undefined> {
-  const result = await supabasePlaceBySlug(city, category, slug)
-  return result ?? (await seed.getPlaceBySlug(city, category, slug))
+  return (await supabasePlaceBySlug(city, category, slug)) ?? (await seed.getPlaceBySlug(city, category, slug))
 }
 
 export async function getCities(): Promise<City[]> {
@@ -146,15 +139,8 @@ export async function getSectorForCategory(categorySlug: string) {
 }
 
 export async function getAllPlaces(): Promise<Place[]> {
-  const dbPlaces = await supabaseAllPlaces()
-  const seedPlaces = await seed.getAllPlaces()
-
-  if (!dbPlaces) return seedPlaces
-
-  // DB + 시드 합치기 (slug 중복 시 DB 우선)
-  const dbSlugs = new Set(dbPlaces.map(p => p.slug))
-  const seedOnly = seedPlaces.filter(p => !dbSlugs.has(p.slug))
-  return [...dbPlaces, ...seedOnly]
+  // DB 우선, 실패 시 시드 폴백 (merge 없음 — 단일 소스)
+  return (await supabaseAllPlaces()) ?? (await seed.getAllPlaces())
 }
 
 // --- 비교/가이드/키워드 페이지: 아직 시드 데이터만 (Phase 6에서 DB 전환) ---

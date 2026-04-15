@@ -1,6 +1,12 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import * as seedData from '@/lib/data'
 
-// robots.txt 테스트는 geo-seo-aeo.test.ts에서 app/robots.ts 기반으로 검증.
+// sitemap 테스트: DB 없이 시드 데이터 기반으로 검증
+// data.supabase의 getAllPlaces/getPlaces를 시드 데이터로 mock
+vi.mock('@/lib/data.supabase', async () => {
+  const seed = await vi.importActual<typeof import('@/lib/data')>('@/lib/data')
+  return { ...seed }
+})
 
 describe('sitemap generation', () => {
   it('should include all static and dynamic pages', async () => {

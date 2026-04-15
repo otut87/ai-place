@@ -152,21 +152,19 @@ describe('Supabase 성공 시', () => {
   })
 })
 
-// ===== 3. Supabase 실패 시 시드 데이터 폴백 =====
-describe('Supabase 실패 시 폴백', () => {
-  it('getPlaces → Supabase 에러 시 시드 데이터 반환', async () => {
+// ===== 3. Supabase 실패 시 시드 폴백 (merge 없음 — DB OR 시드) =====
+describe('Supabase 실패 시 시드 폴백', () => {
+  it('getPlaces → Supabase 에러 시 시드 데이터 반환 (merge 없음)', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: null, error: { message: 'connection refused' } }))
 
     const { getPlaces } = await import('@/lib/data.supabase')
     const result = await getPlaces('cheonan', 'dermatology')
 
-    // 폴백: 시드 데이터에서 천안 피부과 4곳 반환
     expect(result.length).toBe(4)
     expect(result[0].city).toBe('cheonan')
-    expect(result[0].category).toBe('dermatology')
   })
 
-  it('getCities → Supabase 에러 시 시드 데이터 반환', async () => {
+  it('getCities → Supabase 에러 시 시드 폴백', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: null, error: { message: 'timeout' } }))
 
     const { getCities } = await import('@/lib/data.supabase')
@@ -175,34 +173,28 @@ describe('Supabase 실패 시 폴백', () => {
     expect(result[0].slug).toBe('cheonan')
   })
 
-  it('getAllPlaces → Supabase 에러 시 시드 데이터 반환', async () => {
+  it('getAllPlaces → Supabase 에러 시 시드 데이터 반환 (merge 없음)', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: null, error: { message: 'service unavailable' } }))
 
     const { getAllPlaces } = await import('@/lib/data.supabase')
     const result = await getAllPlaces()
 
-    // 폴백: 시드 4곳
     expect(result.length).toBe(4)
   })
 })
 
-// ===== 4. GEO/SEO/AEO 필수 필드 보장 =====
-describe('폴백 데이터 GEO/SEO/AEO 필수 필드', () => {
-  beforeEach(() => {
-    // 항상 Supabase 실패 → 폴백
-    mockFrom.mockReturnValue(createChainMock({ data: null, error: { message: 'forced fallback' } }))
-  })
-
-  it('폴백 Place에 googlePlaceId 존재', async () => {
-    const { getAllPlaces } = await import('@/lib/data.supabase')
+// ===== 4. 시드 데이터 GEO/SEO/AEO 필수 필드 보장 =====
+describe('시드 데이터 GEO/SEO/AEO 필수 필드', () => {
+  it('시드 Place에 googlePlaceId 존재', async () => {
+    const { getAllPlaces } = await import('@/lib/data')
     const places = await getAllPlaces()
     for (const p of places) {
       expect(p.googlePlaceId, `${p.name}: googlePlaceId 누락`).toBeTruthy()
     }
   })
 
-  it('폴백 Place에 sameAs URL 존재', async () => {
-    const { getAllPlaces } = await import('@/lib/data.supabase')
+  it('시드 Place에 sameAs URL 존재', async () => {
+    const { getAllPlaces } = await import('@/lib/data')
     const places = await getAllPlaces()
     for (const p of places) {
       const has = p.naverPlaceUrl || p.kakaoMapUrl || p.googleBusinessUrl
@@ -210,16 +202,16 @@ describe('폴백 데이터 GEO/SEO/AEO 필수 필드', () => {
     }
   })
 
-  it('폴백 Place에 FAQ 최소 3개', async () => {
-    const { getAllPlaces } = await import('@/lib/data.supabase')
+  it('시드 Place에 FAQ 최소 3개', async () => {
+    const { getAllPlaces } = await import('@/lib/data')
     const places = await getAllPlaces()
     for (const p of places) {
       expect(p.faqs.length, `${p.name}: FAQ ${p.faqs.length}개`).toBeGreaterThanOrEqual(3)
     }
   })
 
-  it('폴백 Place description 40~60자', async () => {
-    const { getAllPlaces } = await import('@/lib/data.supabase')
+  it('시드 Place description 40~60자', async () => {
+    const { getAllPlaces } = await import('@/lib/data')
     const places = await getAllPlaces()
     for (const p of places) {
       expect(p.description.length, `${p.name}: ${p.description.length}자`).toBeGreaterThanOrEqual(40)
@@ -281,7 +273,7 @@ describe('패스스루 함수 (비교/가이드/키워드)', () => {
     expect(pages.length).toBeGreaterThan(0)
   })
 
-  it('getPlaceBySlug 폴백 → 시드 데이터 반환', async () => {
+  it('getPlaceBySlug 폴백 → DB 실패 시 시드 반환', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: null, error: { message: 'fail' } }))
     const { getPlaceBySlug } = await import('@/lib/data.supabase')
     const result = await getPlaceBySlug('cheonan', 'dermatology', 'dr-evers')
