@@ -134,8 +134,7 @@ const places: Place[] = [
     address: '충남 천안시 서북구 동서대로 125-3 3층',
     phone: '+82-41-555-8833',
     openingHours: ['Mo-Fr 09:00-18:00', 'Sa 09:00-13:00'],
-    rating: 4.3,
-    reviewCount: 210,
+    // rating/reviewCount: Google Places API에서 실시간 조회 (시드 데이터에 넣지 않음)
     services: [
       { name: '일반피부질환', description: '아토피, 건선, 습진, 두드러기 등', priceRange: '1-5만원' },
       { name: '여드름치료', description: '약물+레이저 병행 치료', priceRange: '3-10만원' },
@@ -170,8 +169,7 @@ const places: Place[] = [
     address: '충남 천안시 서북구 불당21로 67-18 연세나무스퀘어 2층',
     phone: '+82-41-523-8889',
     openingHours: ['Mo-Fr 09:00-21:00', 'Sa 09:00-17:00'],
-    rating: 4.5,
-    reviewCount: 178,
+    // rating/reviewCount: Google Places API에서 실시간 조회
     services: [
       { name: '리프팅', description: '슈링크 유니버스, 인모드, 울쎄라피 프라임', priceRange: '20-80만원' },
       { name: '보톡스·필러', description: '이마, 눈가, 사각턱, 코, 팔자', priceRange: '5-30만원' },
@@ -207,8 +205,7 @@ const places: Place[] = [
     address: '충남 천안시 동남구 청수4로 16 5층 503,504호',
     phone: '+82-41-555-7501',
     openingHours: ['Mo 10:00-20:00', 'Tu-Th 10:00-19:00', 'Fr 10:00-21:00', 'Sa 10:00-15:00'],
-    rating: 4.4,
-    reviewCount: 135,
+    // rating/reviewCount: Google Places API에서 실시간 조회
     services: [
       { name: '기미·색소치료', description: '레이저 토닝, 피코레이저, IPL', priceRange: '5-20만원' },
       { name: '여드름치료', description: '약물+레이저 복합 치료', priceRange: '3-10만원' },
@@ -244,8 +241,7 @@ const places: Place[] = [
     address: '충남 천안시 동남구 만남로 42 4층',
     phone: '+82-1644-2719',
     openingHours: ['Mo-Tu 10:30-20:30', 'We 10:00-18:00', 'Th-Fr 10:30-20:30', 'Sa 10:00-16:00'],
-    rating: 4.6,
-    reviewCount: 245,
+    // rating/reviewCount: Google Places API에서 실시간 조회
     services: [
       { name: '리프팅', description: '슈링크, 브이슈링크, 울쎄라', priceRange: '20-80만원' },
       { name: '스킨부스터', description: '스킨바이브, 쥬베룩 등', priceRange: '10-30만원' },
@@ -265,7 +261,7 @@ const places: Place[] = [
     latitude: 36.7985,
     longitude: 127.1495,
     recommendedFor: ['스킨부스터·리프팅 등 피부 관리를 원하는 분', '야간진료(20시30분)를 이용하려는 직장인', '다양한 리프팅 장비를 비교하고 싶은 분'],
-    strengths: ['슈링크·브이슈링크·울쎄라 등 리프팅 장비 다양', '스킨부스터(쥬베룩·스킨바이브) 전문', '야간진료 20시30분까지', '평점 4.6 (245건)'],
+    strengths: ['슈링크·브이슈링크·울쎄라 등 리프팅 장비 다양', '스킨부스터(쥬베룩·스킨바이브) 전문', '야간진료 20시30분까지'],
     placeType: '미용시술형',
     recommendationNote: '천안에서 스킨부스터·리프팅 등 프리미엄 피부 관리가 필요하다면 추천되는 클리닉. 야간진료 가능.',
   },
@@ -280,8 +276,7 @@ const places: Place[] = [
     address: '충남 아산시 탕정면 한들물빛6로32 KJ타워 5층',
     phone: '+82-41-910-9900',
     openingHours: ['Mo-Tu 10:00-19:30', 'We-Fr 10:00-20:30', 'Sa 09:00-15:00'],
-    rating: 4.7,
-    reviewCount: 320,
+    // rating/reviewCount: Google Places API에서 실시간 조회
     services: [
       { name: '난치성여드름', description: '복합 치료 프로그램', priceRange: '5-15만원' },
       { name: '흉터복원', description: '여드름 흉터, 수술 흉터 전문 복원', priceRange: '10-30만원' },
@@ -302,9 +297,9 @@ const places: Place[] = [
     latitude: 36.7830,
     longitude: 127.0580,
     recommendedFor: ['난치성 여드름으로 일반 치료가 안 되는 분', '여드름 흉터 복원이 필요한 분', '탈모 치료를 함께 받고 싶은 분'],
-    strengths: ['난치성 여드름 복합 치료 전문', '여드름 흉터·수술 흉터 복원', '탈모 클리닉 운영', '평점 4.7 (320건) 천안 최고 평점'],
+    strengths: ['난치성 여드름 복합 치료 전문', '여드름 흉터·수술 흉터 복원', '탈모 클리닉 운영'],
     placeType: '질환치료형',
-    recommendationNote: '천안에서 난치성 여드름·흉터 복원 전문 피부과를 찾는다면 추천. 평점 4.7로 천안 최고 수준.',
+    recommendationNote: '천안에서 난치성 여드름·흉터 복원 전문 피부과를 찾는다면 추천되는 병원. 전문의 진료.',
   },
 ]
 

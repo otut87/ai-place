@@ -35,14 +35,6 @@ export function PlaceCard({ place }: { place: Place }) {
           <h3 className="text-[22px] font-semibold text-[#222222] leading-tight tracking-[-0.44px]">
             {place.name}
           </h3>
-          {place.rating != null && (
-            <div className="mt-1 flex items-center gap-1">
-              <span className="text-xs font-medium text-[#222222]">★ {place.rating}</span>
-              {place.reviewCount != null && (
-                <span className="text-xs text-[#6a6a6a]">· 후기 {place.reviewCount}건</span>
-              )}
-            </div>
-          )}
 
           {/* Address */}
           <p className="mt-2 text-sm text-[#6a6a6a] leading-relaxed line-clamp-1">

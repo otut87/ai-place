@@ -119,18 +119,8 @@ export function generateCategoryDAB(places: Place[], cityName: string, catName: 
     return `${cityName} 지역 ${catName} 업체 정보를 준비 중입니다.`
   }
 
-  const sorted = [...places]
-    .filter(p => p.rating != null)
-    .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
-    .slice(0, 3)
+  const top = places.slice(0, 3)
+  const names = top.map(p => p.name).join(', ')
 
-  if (sorted.length === 0) {
-    return `${cityName} 지역 ${catName} ${places.length}곳의 전문 분야, 위치, 이용 후기를 정리했습니다.`
-  }
-
-  const highlights = sorted
-    .map(p => `${p.name}(★${p.rating})`)
-    .join(', ')
-
-  return `2026년 기준 ${cityName} ${catName} ${places.length}곳 중 ${highlights}이 높은 평가를 받고 있습니다.`
+  return `2026년 기준 ${cityName} ${catName} ${places.length}곳이 등록되어 있습니다. ${names} 등의 전문 분야, 위치, 이용 후기를 정리했습니다.`
 }

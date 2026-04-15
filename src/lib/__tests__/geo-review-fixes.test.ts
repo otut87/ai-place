@@ -25,10 +25,8 @@ describe('C. 카테고리 리스팅 DAB 정보밀도', () => {
 
     const dab = generateCategoryDAB(places, '천안', '피부과')
 
-    // 평점 상위 업체명이 포함되어야 함 (얼라이브 4.7이 1위)
-    expect(dab).toContain('얼라이브')
-    // 평점이 포함되어야 함
-    expect(dab).toMatch(/★[\d.]+/)
+    // 업체명이 포함되어야 함
+    expect(dab).toContain('수피부과')
     // 업체 수가 포함되어야 함
     expect(dab).toContain(`${places.length}곳`)
   })
