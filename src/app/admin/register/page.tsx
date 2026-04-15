@@ -5,6 +5,22 @@ import { useRouter } from 'next/navigation'
 import { searchPlace, enrichPlace, registerPlace, generatePlaceContent } from '@/lib/actions/register-place'
 import type { PlaceSearchResult } from '@/lib/google-places'
 
+// 30분 단위 시간 드롭다운
+const TIME_OPTIONS = Array.from({ length: 33 }, (_, i) => {
+  const h = Math.floor(i / 2) + 7 // 07:00 ~ 23:00
+  const m = i % 2 === 0 ? '00' : '30'
+  return `${String(h).padStart(2, '0')}:${m}`
+})
+
+function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)} className="h-8 px-2 rounded border border-[#dddddd] text-sm">
+      <option value="">--:--</option>
+      {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+    </select>
+  )
+}
+
 export default function RegisterPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -278,28 +294,26 @@ export default function RegisterPage() {
                   </label>
                   {!h.closed && (
                     <>
-                      <input type="time" value={h.open} onChange={e => {
-                        const val = e.target.value
+                      <TimeSelect value={h.open} onChange={val => {
                         setHours(prev => prev.map((item, j) => {
                           if (j === i) return { ...item, open: val }
                           if (!item.closed && !item.open) return { ...item, open: val }
                           return item
                         }))
-                      }} className="h-8 px-2 rounded border border-[#dddddd] text-sm" />
+                      }} />
                       <span className="text-xs text-[#6a6a6a]">~</span>
-                      <input type="time" value={h.close} onChange={e => {
-                        const val = e.target.value
+                      <TimeSelect value={h.close} onChange={val => {
                         setHours(prev => prev.map((item, j) => {
                           if (j === i) return { ...item, close: val }
                           if (!item.closed && !item.close) return { ...item, close: val }
                           return item
                         }))
-                      }} className="h-8 px-2 rounded border border-[#dddddd] text-sm" />
+                      }} />
                     </>
                   )}
                 </div>
               ))}
-              <p className="text-xs text-[#6a6a6a] mt-1">첫 번째 시간 입력 시 빈 칸에 자동 복사됩니다</p>
+              <p className="text-xs text-[#6a6a6a] mt-1">첫 요일 선택 시 빈 칸에 자동 복사</p>
             </div>
           </div>
 
