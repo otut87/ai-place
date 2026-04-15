@@ -94,8 +94,8 @@ export async function generatePlaceContent(input: {
   name: string
   category: string
   address: string
-  description?: string
 }): Promise<ActionResult<{
+  description: string
   services: Array<{ name: string; description: string; priceRange: string }>
   faqs: Array<{ question: string; answer: string }>
   tags: string[]
@@ -122,6 +122,7 @@ export async function generatePlaceContent(input: {
 반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만:
 
 {
+  "description": "업체 한줄 설명 (정확히 40~60자, 위치+전문분야 포함)",
   "services": [
     {"name": "서비스명", "description": "한줄 설명", "priceRange": "가격대 (예: 5-10만원)"}
   ],
@@ -132,6 +133,7 @@ export async function generatePlaceContent(input: {
 }
 
 조건:
+- description: 정확히 40~60자 (글자수 엄수), "OO 위치. OO 전문." 형태의 Direct Answer Block
 - services: 3-5개, 해당 업종에 맞는 실제 서비스
 - faqs: 5개, 실제 고객이 검색할 형태의 질문 (업체명 포함), 답변은 구체적
 - tags: 5-8개, 검색 키워드로 활용 가능한 태그
@@ -150,6 +152,7 @@ export async function generatePlaceContent(input: {
     return {
       success: true,
       data: {
+        description: data.description ?? '',
         services: data.services ?? [],
         faqs: data.faqs ?? [],
         tags: data.tags ?? [],
