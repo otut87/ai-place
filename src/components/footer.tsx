@@ -34,14 +34,19 @@ export function Footer() {
           <div>
             <h3 className="text-sm font-semibold text-[#222222] mb-3">AI Place</h3>
             <ul className="space-y-2">
+              <li><Link href="/about" className="text-sm text-[#6a6a6a] hover:text-[#008f6b]">소개</Link></li>
               <li><Link href="/admin/register" className="text-sm text-[#6a6a6a] hover:text-[#008f6b]">업체 등록</Link></li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-[#c1c1c1]/50">
+        <div className="mt-12 pt-6 border-t border-[#c1c1c1]/50 space-y-1.5">
           <p className="text-xs text-[#6a6a6a]">
-            &copy; {new Date().getFullYear()} AI Place. AI가 추천하는 우리 동네 업체.
+            &copy; {new Date().getFullYear()} AI Place. 기획·제작{' '}
+            <a href="https://dedo.kr" target="_blank" rel="noopener noreferrer" className="hover:text-[#008f6b]">디두(dedo)</a>
+          </p>
+          <p className="text-[11px] text-[#6a6a6a]/70">
+            사업자등록번호 742-21-00642 | 충남 천안시 서북구 쌍용11길 33 | support@dedo.kr
           </p>
         </div>
       </div>

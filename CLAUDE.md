@@ -3,6 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 @AGENTS.md
+@docs/AIPLACE의 제작 철학.md
 
 ## Commands
 

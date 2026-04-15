@@ -237,6 +237,38 @@ export function generateWebSite(baseUrl: string): JsonLd {
   }
 }
 
+/** Person schema — /about 페이지 저자 프로필 (E-E-A-T) */
+export function generatePerson(): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    '@id': 'https://aiplace.kr/about#person',
+    name: '이지수',
+    jobTitle: 'AI Place 큐레이터',
+    description: '천안 지역 로컬 업체의 AI 검색 노출을 돕고 있습니다.',
+    url: 'https://aiplace.kr/about',
+    worksFor: {
+      '@type': 'Organization',
+      '@id': 'https://aiplace.kr/#organization',
+      name: 'AI 플레이스',
+      url: 'https://aiplace.kr',
+    },
+  }
+}
+
+/** ProfilePage schema — /about 페이지 래퍼 */
+export function generateProfilePage(): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    '@id': 'https://aiplace.kr/about',
+    name: 'AI Place 소개 — 이지수 큐레이터',
+    description: 'AI Place는 ChatGPT, Claude, Gemini에서 추천되는 로컬 업체 디렉토리입니다. 큐레이터 이지수가 천안 지역 업체의 AI 검색 노출을 돕고 있습니다.',
+    dateModified: new Date().toISOString().slice(0, 10),
+    mainEntity: { '@id': 'https://aiplace.kr/about#person' },
+  }
+}
+
 /** WebPage schema — E-E-A-T author/publisher 래퍼 */
 export function generateWebPage(opts: {
   url: string

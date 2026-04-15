@@ -30,6 +30,14 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
     priority: 1.0,
   })
 
+  // About 페이지
+  entries.push({
+    url: `${baseUrl}/about`,
+    lastModified: now,
+    changeFrequency: 'monthly',
+    priority: 0.7,
+  })
+
   const cities = await getCities()
   const categories = await getCategories()
 
