@@ -19,10 +19,12 @@ export interface PlaceDetailsResult {
 /** Place Details API (New) 호출 */
 export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResult | null> {
   const fields = 'displayName,rating,userRatingCount,reviews,photos'
-  const url = `${BASE_URL}/places/${placeId}?fields=${fields}&languageCode=ko&key=${API_KEY}`
+  const url = `${BASE_URL}/places/${placeId}?fields=${fields}&languageCode=ko`
 
   try {
-    const res = await fetch(url)
+    const res = await fetch(url, {
+      headers: { 'X-Goog-Api-Key': API_KEY },
+    })
     if (!res.ok) {
       console.error(`Google Places API error ${res.status}: ${await res.text()}`)
       return null

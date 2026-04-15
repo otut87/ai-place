@@ -117,13 +117,7 @@ export function generateLocalBusiness(place: Place, pageUrl?: string): JsonLd {
           name: s.name,
           ...(s.description && { description: s.description }),
         },
-        ...(s.priceRange && {
-          priceSpecification: {
-            '@type': 'UnitPriceSpecification',
-            price: s.priceRange,
-            priceCurrency: 'KRW',
-          },
-        }),
+        ...(s.priceRange && { description: `가격: ${s.priceRange}` }),
       })),
     }
   }
