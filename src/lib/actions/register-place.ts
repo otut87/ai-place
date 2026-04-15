@@ -118,11 +118,9 @@ export async function generatePlaceContent(input: {
   const Anthropic = (await import('@anthropic-ai/sdk')).default
   const client = new Anthropic()
 
-  const categoryNames: Record<string, string> = {
-    dermatology: '피부과', interior: '인테리어', webagency: '웹에이전시',
-    'auto-repair': '자동차정비', hairsalon: '미용실',
-  }
-  const catName = categoryNames[input.category] ?? input.category
+  const { getCategories: getCats } = await import('@/lib/data')
+  const allCats = await getCats()
+  const catName = allCats.find(c => c.slug === input.category)?.name ?? input.category
 
   // Google 데이터를 프롬프트용 텍스트로 변환
   const parts: string[] = []
@@ -180,8 +178,90 @@ Rules:
       },
     }
   } catch (err) {
-    console.error('[generatePlaceContent] LLM call failed:', err)
+    console.error('[generatePlaceContent] LLM call failed:', err instanceof Error ? err.message : 'Unknown error')
     return { success: false, error: 'AI 콘텐츠 생성에 실패했습니다.' }
+  }
+}
+
+/** Step 2.6: LLM으로 추천 데이터 생성 (GEO 추천 로직) */
+export async function generateRecommendation(input: {
+  name: string
+  category: string
+  address: string
+  services: Array<{ name: string; description?: string }>
+  rating?: number
+  reviewCount?: number
+  reviews?: Array<{ text: string; rating: number }>
+}): Promise<ActionResult<{
+  recommendedFor: string[]
+  strengths: string[]
+  placeType: string
+  recommendationNote: string
+}>> {
+  await requireAuth()
+
+  const Anthropic = (await import('@anthropic-ai/sdk')).default
+  const client = new Anthropic()
+
+  const { getCategories: getCats2 } = await import('@/lib/data')
+  const allCats2 = await getCats2()
+  const catName = allCats2.find(c => c.slug === input.category)?.name ?? input.category
+  const city = input.address.split(' ').slice(0, 2).join(' ')
+
+  const parts: string[] = []
+  if (input.rating) parts.push(`평점: ${input.rating}점 (${input.reviewCount ?? 0}건)`)
+  if (input.services.length > 0) parts.push(`서비스: ${input.services.map(s => s.name).join(', ')}`)
+  if (input.reviews && input.reviews.length > 0) parts.push(`리뷰:\n${input.reviews.slice(0, 5).map(r => `- [${r.rating}점] ${r.text}`).join('\n')}`)
+  const context = parts.length > 0 ? `\n\n${parts.join('\n\n')}` : ''
+
+  try {
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      system: 'You are a JSON generator. Output ONLY valid JSON. No markdown, no explanation, no code blocks.',
+      messages: [{
+        role: 'user',
+        content: `Generate GEO recommendation data for "${input.name}" (${catName}, ${input.address}).${context}
+
+Return this exact JSON:
+{"recommendedFor":["추천 대상 1","추천 대상 2"],"strengths":["강점 1","강점 2","강점 3"],"placeType":"유형","recommendationNote":"추천 문장"}
+
+Rules:
+- recommendedFor: 2-3 items, Korean, who should visit this place (specific situations/needs)
+- strengths: 2-4 items, Korean, what makes this place different from competitors
+- placeType: one of "질환치료형","미용시술형","프리미엄","종합형","전문기술형","디자인특화형","가성비형" (pick the best fit for ${catName})
+- recommendationNote: Korean, 45-55 characters, format "${city}에서 {구체적 상황}이라면 추천되는 {업종}. {핵심 강점}."
+- Base on actual review data if available, not generic templates
+- ALL content in Korean`,
+      }],
+    })
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+    const stripped = text.replace(/```json?\s*/g, '').replace(/```/g, '').trim()
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      return { success: false, error: 'LLM 추천 데이터 파싱 실패' }
+    }
+
+    const cleaned = jsonMatch[0]
+      .replace(/,\s*]/g, ']')
+      .replace(/,\s*}/g, '}')
+      .replace(/[\x00-\x1F\x7F]/g, ' ')
+
+    const { z } = await import('zod')
+    const RecommendationSchema = z.object({
+      recommendedFor: z.array(z.string().max(100)).max(5).default([]),
+      strengths: z.array(z.string().max(100)).max(5).default([]),
+      placeType: z.string().max(30).default(''),
+      recommendationNote: z.string().max(100).default(''),
+    })
+
+    const raw = JSON.parse(cleaned)
+    const data = RecommendationSchema.parse(raw)
+    return { success: true, data }
+  } catch (err) {
+    console.error('[generateRecommendation] LLM call failed:', err instanceof Error ? err.message : 'Unknown error')
+    return { success: false, error: 'AI 추천 데이터 생성에 실패했습니다.' }
   }
 }
 
@@ -214,8 +294,9 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
     return { success: false, error: '업체명은 100자 이내여야 합니다.' }
   }
 
-  const validCities = ['cheonan']
-  const validCategories = ['dermatology', 'interior', 'webagency', 'auto-repair', 'hairsalon']
+  const { getCities, getCategories } = await import('@/lib/data')
+  const validCities = (await getCities()).map(c => c.slug)
+  const validCategories = (await getCategories()).map(c => c.slug)
   if (!validCities.includes(input.city)) {
     return { success: false, error: `유효하지 않은 도시입니다: ${input.city}` }
   }

@@ -8,12 +8,72 @@ export interface City {
   nameEn: string        // "Cheonan"
 }
 
-/** 업종 카테고리 */
+/** Schema.org LocalBusiness 하위 타입 — 유효한 값만 허용 */
+export type LocalBusinessSchemaType =
+  | 'LocalBusiness'
+  // 의료
+  | 'MedicalClinic'
+  | 'Dentist'
+  | 'Pharmacy'
+  // 뷰티
+  | 'BeautySalon'
+  | 'HairSalon'
+  | 'HealthAndBeautyBusiness'
+  | 'HealthClub'
+  // 생활서비스
+  | 'HomeAndConstructionBusiness'
+  | 'MovingCompany'
+  | 'Florist'
+  | 'DryCleaningOrLaundry'
+  // 자동차
+  | 'AutoRepair'
+  | 'AutoDealer'
+  | 'AutoRental'
+  | 'TireShop'
+  // 음식
+  | 'Restaurant'
+  | 'FoodEstablishment'
+  | 'CafeOrCoffeeShop'
+  | 'Bakery'
+  | 'BarOrPub'
+  // 전문서비스
+  | 'ProfessionalService'
+  | 'LegalService'
+  | 'AccountingService'
+  | 'InsuranceAgency'
+  | 'FinancialService'
+  | 'RealEstateAgent'
+  // 교육
+  | 'EducationalOrganization'
+  | 'Preschool'
+  | 'SportsActivityLocation'
+  // 반려동물
+  | 'VeterinaryCare'
+  // 웨딩·행사
+  | 'EventVenue'
+  // 레저
+  | 'EntertainmentBusiness'
+  // 기타
+  | 'Store'
+  | 'TravelAgency'
+  | 'ChildCare'
+  | 'LodgingBusiness'
+
+/** 대분류 (Sector) — Schema.org 타입과 1:1 매핑 */
+export interface Sector {
+  slug: string                       // "medical"
+  name: string                       // "의료"
+  nameEn: string                     // "Medical"
+  schemaType: LocalBusinessSchemaType // Schema.org 타입
+}
+
+/** 소분류 (Category) — 대분류에 속하는 세부 업종 */
 export interface Category {
   slug: string          // "dermatology"
   name: string          // "피부과"
   nameEn: string        // "Dermatology"
   icon?: string         // lucide-react icon name
+  sector: string        // Sector slug reference ("medical")
 }
 
 /** 업체 서비스 */
@@ -55,6 +115,11 @@ export interface Place {
   googlePlaceId?: string    // Google Places API place_id
   reviewSummaries?: ReviewSummary[]
   images?: PlaceImage[]
+  // GEO 추천 로직 (GPT/Gemini 리뷰 반영)
+  recommendedFor?: string[]      // ["여드름 치료 필요한 환자", "건강보험 적용 원하는 분"]
+  strengths?: string[]           // ["피부질환 중심 진료", "건강보험 적용 가능"]
+  placeType?: string             // "질환치료형" | "미용시술형" | "프리미엄"
+  recommendationNote?: string    // 40-60자 추천형 Direct Answer Block
 }
 
 // --- Google Places API 연동 타입 ---
@@ -128,6 +193,11 @@ export interface GuideSection {
   heading: string
   content: string
   items?: string[]
+  recommendedPlaces?: Array<{
+    slug: string        // "soo-derm"
+    name: string        // "수피부과의원"
+    reason: string      // "피부질환 중심 진료, 건강보험 적용 가능"
+  }>
 }
 
 /** 가이드 페이지 데이터 */

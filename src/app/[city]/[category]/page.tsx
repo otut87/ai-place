@@ -10,7 +10,7 @@ import { safeJsonLd } from "@/lib/utils"
 import type { StatisticItem, Source } from "@/lib/types"
 import { getPlaces, getCities, getCategories, getComparisonTopics, getGuidePage, getCategoryFaqs } from "@/lib/data.supabase"
 import { generateItemList, generateFAQPage } from "@/lib/jsonld"
-import { generateBreadcrumbList } from "@/lib/seo"
+import { generateBreadcrumbList, generateCategoryDAB } from "@/lib/seo"
 
 interface Props {
   params: Promise<{ city: string; category: string }>
@@ -34,7 +34,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!cityObj || !catObj) return {}
 
   const title = `${cityObj.name} ${catObj.name} 추천 — 2026년 업데이트`
-  const description = `${cityObj.name}시에 위치한 ${catObj.name} 목록. 진료 과목, 위치, 리뷰 기반 정리.`
+  const places = await getPlaces(city, category)
+  const description = places.length > 0
+    ? generateCategoryDAB(places, cityObj.name, catObj.name)
+    : `${cityObj.name}시에 위치한 ${catObj.name} 목록. 전문 분야, 위치, 리뷰 기반 정리.`
   return {
     title,
     description,
@@ -111,13 +114,13 @@ export default async function ListingPage({ params }: Props) {
               {cityObj.name} {catObj.name} 추천 — 2026년 업데이트
             </h1>
             <p className="mt-3 text-base text-[#6a6a6a]">
-              {cityObj.name}시에 위치한 {catObj.name} {places.length}곳을 진료 과목, 위치, 이용 후기 기준으로 정리했습니다.
+              {generateCategoryDAB(places, cityObj.name, catObj.name)}
             </p>
-            <p className="mt-1 text-xs text-[#6a6a6a]">최종 업데이트: 2026-04-16</p>
+            <time dateTime={new Date().toISOString().slice(0, 10)} className="mt-1 block text-xs text-[#6a6a6a]">최종 업데이트: {new Date().toISOString().slice(0, 10)}</time>
 
             {/* GEO: Statistics + Sources */}
             <div className="mt-6">
-              <StatisticsBox statistics={categoryStats} sources={categorySources} lastUpdated="2026-04-16" />
+              <StatisticsBox statistics={categoryStats} sources={categorySources} lastUpdated={new Date().toISOString().slice(0, 10)} />
             </div>
 
             {/* Listing Grid */}

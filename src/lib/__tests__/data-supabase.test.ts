@@ -296,3 +296,39 @@ describe('패스스루 함수 (비교/가이드/키워드)', () => {
     expect(result[0].slug).toBe('dermatology')
   })
 })
+
+describe('Sector/SchemaType 함수 (시드 폴백)', () => {
+  it('getSectors → 시드 데이터 반환', async () => {
+    const { getSectors } = await import('@/lib/data.supabase')
+    const result = await getSectors()
+    expect(result.length).toBe(10)
+    expect(result[0].schemaType).toBeTruthy()
+  })
+
+  it('getSchemaTypeForCategory → sector에서 schemaType 반환', async () => {
+    const { getSchemaTypeForCategory } = await import('@/lib/data.supabase')
+    expect(await getSchemaTypeForCategory('dermatology')).toBe('MedicalClinic')
+    expect(await getSchemaTypeForCategory('hairsalon')).toBe('BeautySalon')
+    expect(await getSchemaTypeForCategory('unknown')).toBe('LocalBusiness')
+  })
+})
+
+describe('역방향 링크 함수 (시드 폴백)', () => {
+  it('getGuidesForPlace → 참조된 업체 결과 반환', async () => {
+    const { getGuidesForPlace } = await import('@/lib/data.supabase')
+    const guides = await getGuidesForPlace('soo-derm')
+    expect(guides.length).toBeGreaterThan(0)
+  })
+
+  it('getGuidesForPlace → 미참조 업체는 빈 배열', async () => {
+    const { getGuidesForPlace } = await import('@/lib/data.supabase')
+    const guides = await getGuidesForPlace('nonexistent')
+    expect(guides).toEqual([])
+  })
+
+  it('getComparisonsForPlace → 참조된 업체 결과 반환', async () => {
+    const { getComparisonsForPlace } = await import('@/lib/data.supabase')
+    const comps = await getComparisonsForPlace('soo-derm')
+    expect(comps.length).toBeGreaterThan(0)
+  })
+})

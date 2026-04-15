@@ -116,10 +116,10 @@ describe('[페이지별]', () => {
       expect(generateLocalBusiness(place)['@type']).toBe('MedicalClinic')
     })
 
-    it('hairsalon → HairSalon', async () => {
+    it('hairsalon → BeautySalon', async () => {
       const { generateLocalBusiness } = await import('@/lib/jsonld')
       const place = { slug: 't', name: 'T', city: 'c', category: 'hairsalon', description: 'd', address: 'a', services: [], faqs: [], tags: [] }
-      expect(generateLocalBusiness(place)['@type']).toBe('HairSalon')
+      expect(generateLocalBusiness(place)['@type']).toBe('BeautySalon')
     })
 
     it('unknown category → LocalBusiness fallback', async () => {

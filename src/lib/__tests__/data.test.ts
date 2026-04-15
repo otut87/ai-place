@@ -297,4 +297,48 @@ describe('Data Repository', () => {
       })
     })
   })
+
+  describe('getGuidesForPlace', () => {
+    it('가이드에서 참조된 업체는 결과 반환', async () => {
+      const { getGuidesForPlace } = await import('@/lib/data')
+      const guides = await getGuidesForPlace('soo-derm')
+      expect(guides.length).toBeGreaterThan(0)
+      expect(guides[0].city).toBe('cheonan')
+    })
+
+    it('참조되지 않은 업체는 빈 배열', async () => {
+      const { getGuidesForPlace } = await import('@/lib/data')
+      const guides = await getGuidesForPlace('nonexistent-slug')
+      expect(guides).toEqual([])
+    })
+  })
+
+  describe('getComparisonsForPlace', () => {
+    it('비교 페이지에 포함된 업체는 결과 반환', async () => {
+      const { getComparisonsForPlace } = await import('@/lib/data')
+      const comps = await getComparisonsForPlace('soo-derm')
+      expect(comps.length).toBeGreaterThan(0)
+    })
+
+    it('포함되지 않은 업체는 빈 배열', async () => {
+      const { getComparisonsForPlace } = await import('@/lib/data')
+      const comps = await getComparisonsForPlace('nonexistent-slug')
+      expect(comps).toEqual([])
+    })
+  })
+
+  describe('Recommendation fields in seed data', () => {
+    it('피부과 시드 데이터에 추천 필드가 있음', async () => {
+      const { getPlaces } = await import('@/lib/data')
+      const places = await getPlaces('cheonan', 'dermatology')
+      places.forEach(place => {
+        expect(place.recommendedFor).toBeDefined()
+        expect(place.recommendedFor!.length).toBeGreaterThan(0)
+        expect(place.strengths).toBeDefined()
+        expect(place.strengths!.length).toBeGreaterThan(0)
+        expect(place.placeType).toBeTruthy()
+        expect(place.recommendationNote).toBeTruthy()
+      })
+    })
+  })
 })

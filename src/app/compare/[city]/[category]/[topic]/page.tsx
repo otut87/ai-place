@@ -7,6 +7,7 @@ import { ComparisonTable } from "@/components/comparison-table"
 import { StatisticsBox } from "@/components/statistics-box"
 import { SourceList } from "@/components/source-list"
 import { safeJsonLd } from "@/lib/utils"
+import { AuthorByline } from "@/components/author-card"
 import { getComparisonPage, getAllComparisonTopics, getCities, getCategories } from "@/lib/data.supabase"
 import { generateArticle, generateFAQPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
@@ -58,7 +59,7 @@ export default async function ComparisonPageRoute({ params }: Props) {
   const pageUrl = `${baseUrl}/compare/${city}/${category}/${topic}`
 
   const articleJsonLd = generateArticle({
-    title: `${cityObj.name} ${page.topic.name}`,
+    title: `${cityObj.name} ${catObj.name} ${page.topic.name}`,
     description: page.summary,
     lastUpdated: page.lastUpdated,
     url: pageUrl,
@@ -98,7 +99,11 @@ export default async function ComparisonPageRoute({ params }: Props) {
               {page.summary}
             </p>
 
-            <p className="mt-1 text-xs text-[#6a6a6a]">최종 업데이트: {page.lastUpdated}</p>
+            <div className="mt-1 flex items-center gap-2">
+              <AuthorByline />
+              <span className="text-xs text-[#c1c1c1]">|</span>
+              <time dateTime={page.lastUpdated} className="text-xs text-[#6a6a6a]">최종 업데이트: {page.lastUpdated}</time>
+            </div>
 
             {/* Statistics (§2.2 Princeton GEO lever) */}
             <div className="mt-10">

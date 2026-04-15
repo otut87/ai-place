@@ -2,6 +2,7 @@
 // robots.txt, sitemap, BreadcrumbList 생성
 // GEO 딥리서치 §5.1, §5.3, §5.4 기반
 
+import type { Place } from './types'
 import { getAllPlaces, getCities, getCategories, getAllComparisonTopics, getAllGuidePages, getAllKeywordPages } from './data.supabase'
 
 // robots.txt는 app/robots.ts에서 Next.js MetadataRoute로 처리.
@@ -107,4 +108,29 @@ export function generateBreadcrumbList(items: Array<{ name: string; url: string 
       item: item.url,
     })),
   }
+}
+
+/**
+ * 카테고리 리스팅 Direct Answer Block 생성
+ * 상위 업체명 + 평점을 포함한 자기완결형 요약
+ */
+export function generateCategoryDAB(places: Place[], cityName: string, catName: string): string {
+  if (places.length === 0) {
+    return `${cityName} 지역 ${catName} 업체 정보를 준비 중입니다.`
+  }
+
+  const sorted = [...places]
+    .filter(p => p.rating != null)
+    .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+    .slice(0, 3)
+
+  if (sorted.length === 0) {
+    return `${cityName} 지역 ${catName} ${places.length}곳의 전문 분야, 위치, 이용 후기를 정리했습니다.`
+  }
+
+  const highlights = sorted
+    .map(p => `${p.name}(★${p.rating})`)
+    .join(', ')
+
+  return `2026년 기준 ${cityName} ${catName} ${places.length}곳 중 ${highlights}이 높은 평가를 받고 있습니다.`
 }

@@ -6,10 +6,12 @@ import type { Place, FAQ } from './types'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type JsonLd = Record<string, any>
 
+// DEPRECATED: 레거시 폴백용. 새 카테고리는 Sector.schemaType으로 결정.
+// getSchemaTypeForCategory()를 사용하고, 이 맵은 직접 호출 시 폴백으로만 사용.
 const CATEGORY_SCHEMA_MAP: Record<string, string> = {
   dermatology: 'MedicalClinic',
-  dentistry: 'Dentist',
-  hairsalon: 'HairSalon',
+  dental: 'MedicalClinic',
+  hairsalon: 'BeautySalon',
   interior: 'HomeAndConstructionBusiness',
   webagency: 'ProfessionalService',
   'auto-repair': 'AutoRepair',
@@ -49,12 +51,12 @@ function parseOpeningHours(hours: string[]): JsonLd[] {
   return specs
 }
 
-export function generateLocalBusiness(place: Place, pageUrl?: string): JsonLd {
-  const schemaType = CATEGORY_SCHEMA_MAP[place.category] ?? 'LocalBusiness'
+export function generateLocalBusiness(place: Place, pageUrl?: string, schemaType?: string): JsonLd {
+  const resolvedType = schemaType ?? CATEGORY_SCHEMA_MAP[place.category] ?? 'LocalBusiness'
 
   const jsonld: JsonLd = {
     '@context': 'https://schema.org',
-    '@type': schemaType,
+    '@type': resolvedType,
     name: place.name,
     description: place.description,
     address: {
@@ -127,6 +129,19 @@ export function generateLocalBusiness(place: Place, pageUrl?: string): JsonLd {
   // dateModified는 CreativeWork 계열에서만 유효 — MedicalClinic 등 LocalBusiness에서는 사용 불가
   // lastUpdated는 페이지 HTML에만 표시
 
+  // GEO 추천 로직: AI가 인식할 수 있는 구조화 데이터
+  // knowsAbout: LocalBusiness→Organization 상속. Google Rich Results 미인식, AI 크롤러용.
+  if (place.strengths && place.strengths.length > 0) {
+    jsonld.knowsAbout = place.strengths
+  }
+  if (place.recommendedFor && place.recommendedFor.length > 0) {
+    jsonld.additionalProperty = place.recommendedFor.map(r => ({
+      '@type': 'PropertyValue',
+      name: '추천 대상',
+      value: r,
+    }))
+  }
+
   const sameAs: string[] = []
   if (place.naverPlaceUrl) sameAs.push(place.naverPlaceUrl)
   if (place.kakaoMapUrl) sameAs.push(place.kakaoMapUrl)
@@ -195,7 +210,7 @@ export function generateArticle(opts: {
     '@type': 'Person',
     name: '이지수',
     jobTitle: 'AI Place 큐레이터',
-    url: 'https://aiplace.kr',
+    url: 'https://aiplace.kr/about',
   }
   return {
     '@context': 'https://schema.org',

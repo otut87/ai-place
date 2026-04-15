@@ -7,6 +7,7 @@ import { GuideSection } from "@/components/guide-section"
 import { StatisticsBox } from "@/components/statistics-box"
 import { SourceList } from "@/components/source-list"
 import { safeJsonLd } from "@/lib/utils"
+import { AuthorByline, AuthorCard } from "@/components/author-card"
 import { getGuidePage, getAllGuidePages, getCities, getCategories, getComparisonTopics } from "@/lib/data.supabase"
 import { generateArticle, generateFAQPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
@@ -94,7 +95,11 @@ export default async function GuidePageRoute({ params }: Props) {
               {guide.summary}
             </p>
 
-            <p className="mt-1 text-xs text-[#6a6a6a]">최종 업데이트: {guide.lastUpdated}</p>
+            <div className="mt-1 flex items-center gap-2">
+              <AuthorByline />
+              <span className="text-xs text-[#c1c1c1]">|</span>
+              <time dateTime={guide.lastUpdated} className="text-xs text-[#6a6a6a]">최종 업데이트: {guide.lastUpdated}</time>
+            </div>
 
             {/* Table of Contents */}
             <nav className="mt-8 bg-[#f2f2f2] rounded-[14px] p-5">
@@ -119,7 +124,7 @@ export default async function GuidePageRoute({ params }: Props) {
             <div className="mt-10">
               {guide.sections.map(section => (
                 <div key={section.heading} id={encodeURIComponent(section.heading)}>
-                  <GuideSection section={section} />
+                  <GuideSection section={section} citySlug={city} categorySlug={category} />
                 </div>
               ))}
             </div>
@@ -164,6 +169,9 @@ export default async function GuidePageRoute({ params }: Props) {
 
             {/* Sources */}
             <SourceList sources={guide.sources} />
+
+            {/* E-E-A-T: 저자 프로필 카드 */}
+            <AuthorCard />
 
             {/* Related Links */}
             <div className="mt-10 pt-6 border-t border-[#c1c1c1]">

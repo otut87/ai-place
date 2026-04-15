@@ -5,7 +5,7 @@ import Image from "next/image"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PhoneButton } from "@/components/phone-button"
-import { getPlaceBySlug, getPlaces, getCities, getCategories } from "@/lib/data.supabase"
+import { getPlaceBySlug, getPlaces, getCities, getCategories, getGuidesForPlace, getComparisonsForPlace, getSchemaTypeForCategory } from "@/lib/data.supabase"
 import { generateLocalBusiness, generateFAQPage, generateWebPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
 import { safeJsonLd } from "@/lib/utils"
@@ -92,8 +92,13 @@ export default async function ProfilePage({ params }: Props) {
       }
     : place
 
+  // GEO: 역방향 링크 (이 업체를 참조하는 가이드/비교 페이지)
+  const relatedGuides = await getGuidesForPlace(place.slug)
+  const relatedComparisons = await getComparisonsForPlace(place.slug)
+
   // CRITICAL 5: @id + mainEntityOfPage
-  const localBusinessJsonLd = generateLocalBusiness(placeWithGoogleData, pageUrl)
+  const schemaType = await getSchemaTypeForCategory(category)
+  const localBusinessJsonLd = generateLocalBusiness(placeWithGoogleData, pageUrl, schemaType)
   const faqJsonLd = place.faqs.length > 0 ? generateFAQPage(place.faqs) : null
 
   // E-E-A-T: WebPage 래퍼 (author + publisher)
@@ -153,14 +158,14 @@ export default async function ProfilePage({ params }: Props) {
               </div>
             )}
 
-            {/* HIGH 8: Direct Answer Block (§4.4 — H1 직하 40-60자 자기완결 답변) */}
+            {/* GEO: Direct Answer Block — 추천형 문장 우선, 없으면 기존 description */}
             <p className="mt-3 text-base text-[#222222] font-medium leading-relaxed">
-              {place.description}
+              {place.recommendationNote ?? place.description}
             </p>
 
             {/* CRITICAL 4: Last Updated (§4.2 Freshness) */}
             {place.lastUpdated && (
-              <p className="mt-1 text-xs text-[#6a6a6a]">최종 업데이트: {place.lastUpdated}</p>
+              <time dateTime={place.lastUpdated} className="mt-1 block text-xs text-[#6a6a6a]">최종 업데이트: {place.lastUpdated}</time>
             )}
 
             {/* CTA Buttons */}
@@ -175,6 +180,47 @@ export default async function ProfilePage({ params }: Props) {
                 목록으로
               </Link>
             </div>
+
+            {/* GEO: 추천 대상 + 핵심 강점 (GPT 리뷰 반영) */}
+            {(place.recommendedFor?.length || place.strengths?.length) && (
+              <section className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {place.recommendedFor && place.recommendedFor.length > 0 && (
+                  <div className="p-5 bg-[#f2f2f2] rounded-[14px]">
+                    <h2 className="text-[16px] font-semibold text-[#222222] mb-3">추천 대상</h2>
+                    <ul className="space-y-2">
+                      {place.recommendedFor.map(item => (
+                        <li key={item} className="flex items-start gap-2 text-sm text-[#222222]">
+                          <span className="text-[#008f6b] mt-0.5 shrink-0">✓</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {place.strengths && place.strengths.length > 0 && (
+                  <div className="p-5 bg-[#f2f2f2] rounded-[14px]">
+                    <h2 className="text-[16px] font-semibold text-[#222222] mb-3">핵심 강점</h2>
+                    <ul className="space-y-2">
+                      {place.strengths.map(item => (
+                        <li key={item} className="flex items-start gap-2 text-sm text-[#222222]">
+                          <span className="text-[#008f6b] mt-0.5 shrink-0">★</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* 업체 유형 배지 */}
+            {place.placeType && (
+              <div className="mt-4">
+                <span className="inline-flex px-3 py-1 text-xs font-medium text-[#008f6b] bg-[#e6f7f2] border border-[#008f6b]/20 rounded-full">
+                  {place.placeType}
+                </span>
+              </div>
+            )}
 
             {/* Info Section */}
             <section id="info" className="mt-12 p-6 bg-[#f2f2f2] rounded-[14px]">
@@ -288,6 +334,33 @@ export default async function ProfilePage({ params }: Props) {
                       </summary>
                       <p className="mt-2 text-sm text-[#6a6a6a] leading-relaxed">{faq.answer}</p>
                     </details>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* GEO: 관련 콘텐츠 역방향 링크 */}
+            {(relatedGuides.length > 0 || relatedComparisons.length > 0) && (
+              <section className="mt-12 pt-6 border-t border-[#c1c1c1]">
+                <h2 className="text-[16px] font-semibold text-[#222222] mb-3">관련 콘텐츠</h2>
+                <div className="flex flex-wrap gap-2">
+                  {relatedGuides.map(guide => (
+                    <Link
+                      key={`${guide.city}-${guide.category}`}
+                      href={`/guide/${guide.city}/${guide.category}`}
+                      className="px-4 py-2 text-sm text-[#222222] bg-[#f2f2f2] border border-[#c1c1c1] rounded-lg hover:bg-[#e8e8e8] transition-colors"
+                    >
+                      {guide.title}
+                    </Link>
+                  ))}
+                  {relatedComparisons.map(comp => (
+                    <Link
+                      key={comp.topic.slug}
+                      href={`/compare/${comp.topic.city}/${comp.topic.category}/${comp.topic.slug}`}
+                      className="px-4 py-2 text-sm text-[#222222] bg-[#f2f2f2] border border-[#c1c1c1] rounded-lg hover:bg-[#e8e8e8] transition-colors"
+                    >
+                      {comp.topic.name} 비교
+                    </Link>
                   ))}
                 </div>
               </section>

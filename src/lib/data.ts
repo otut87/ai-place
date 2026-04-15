@@ -1,20 +1,123 @@
 // AI Place — Data Repository
 // Phase 1-2: 시드 데이터에서 읽기. Phase 3: Supabase로 교체 (함수 시그니처 동일).
 
-import type { Place, City, Category, ComparisonTopic, ComparisonPage, GuidePage, FAQ, KeywordPage } from './types'
+import type { Place, City, Category, Sector, ComparisonTopic, ComparisonPage, GuidePage, FAQ, KeywordPage } from './types'
 
 // --- 시드 데이터: 도시 ---
 const cities: City[] = [
   { slug: 'cheonan', name: '천안', nameEn: 'Cheonan' },
 ]
 
-// --- 시드 데이터: 카테고리 ---
+// --- 시드 데이터: 대분류 (Sector) — 업종사전 기준 10개 ---
+const sectors: Sector[] = [
+  { slug: 'medical', name: '의료', nameEn: 'Medical', schemaType: 'MedicalClinic' },
+  { slug: 'beauty', name: '뷰티', nameEn: 'Beauty', schemaType: 'BeautySalon' },
+  { slug: 'living', name: '생활서비스', nameEn: 'Living', schemaType: 'HomeAndConstructionBusiness' },
+  { slug: 'auto', name: '자동차', nameEn: 'Auto', schemaType: 'AutoRepair' },
+  { slug: 'education', name: '교육', nameEn: 'Education', schemaType: 'EducationalOrganization' },
+  { slug: 'professional', name: '전문서비스', nameEn: 'Professional', schemaType: 'ProfessionalService' },
+  { slug: 'pet', name: '반려동물', nameEn: 'Pet', schemaType: 'LocalBusiness' },
+  { slug: 'wedding', name: '웨딩·행사', nameEn: 'Wedding & Events', schemaType: 'LocalBusiness' },
+  { slug: 'leisure', name: '레저·취미', nameEn: 'Leisure', schemaType: 'EntertainmentBusiness' },
+  { slug: 'food', name: '음식', nameEn: 'Food', schemaType: 'Restaurant' },
+]
+
+// --- 시드 데이터: 소분류 (Category) — 업종사전 기준 83개 ---
+// schemaType은 sector에서 자동 결정. 소분류별 override가 필요하면 업종사전의 schemaType 참조.
 const categories: Category[] = [
-  { slug: 'dermatology', name: '피부과', nameEn: 'Dermatology', icon: 'Stethoscope' },
-  { slug: 'interior', name: '인테리어', nameEn: 'Interior Design', icon: 'Paintbrush' },
-  { slug: 'webagency', name: '웹에이전시', nameEn: 'Web Agency', icon: 'Globe' },
-  { slug: 'auto-repair', name: '자동차정비', nameEn: 'Auto Repair', icon: 'Wrench' },
-  { slug: 'hairsalon', name: '미용실', nameEn: 'Hair Salon', icon: 'Scissors' },
+  // 의료 (14)
+  { slug: 'dermatology', name: '피부과', nameEn: 'Dermatology', icon: 'Stethoscope', sector: 'medical' },
+  { slug: 'dental', name: '치과', nameEn: 'Dental', icon: 'Stethoscope', sector: 'medical' },
+  { slug: 'eye', name: '안과', nameEn: 'Ophthalmology', icon: 'Eye', sector: 'medical' },
+  { slug: 'orthopedics', name: '정형외과', nameEn: 'Orthopedics', icon: 'Stethoscope', sector: 'medical' },
+  { slug: 'korean-medicine', name: '한의원', nameEn: 'Korean Medicine', icon: 'Stethoscope', sector: 'medical' },
+  { slug: 'ent', name: '이비인후과', nameEn: 'ENT', icon: 'Stethoscope', sector: 'medical' },
+  { slug: 'internal-medicine', name: '내과', nameEn: 'Internal Medicine', icon: 'Stethoscope', sector: 'medical' },
+  { slug: 'obgyn', name: '산부인과', nameEn: 'OB/GYN', icon: 'Stethoscope', sector: 'medical' },
+  { slug: 'pediatrics', name: '소아과', nameEn: 'Pediatrics', icon: 'Stethoscope', sector: 'medical' },
+  { slug: 'psychiatry', name: '정신건강의학과', nameEn: 'Psychiatry', icon: 'Stethoscope', sector: 'medical' },
+  { slug: 'rehabilitation', name: '재활의학과', nameEn: 'Rehabilitation', icon: 'Stethoscope', sector: 'medical' },
+  { slug: 'plastic-surgery', name: '성형외과', nameEn: 'Plastic Surgery', icon: 'Stethoscope', sector: 'medical' },
+  { slug: 'urology', name: '비뇨기과', nameEn: 'Urology', icon: 'Stethoscope', sector: 'medical' },
+  { slug: 'pharmacy', name: '약국', nameEn: 'Pharmacy', icon: 'Pill', sector: 'medical' },
+  // 뷰티 (9)
+  { slug: 'hairsalon', name: '미용실', nameEn: 'Hair Salon', icon: 'Scissors', sector: 'beauty' },
+  { slug: 'nail', name: '네일샵', nameEn: 'Nail Salon', icon: 'Sparkles', sector: 'beauty' },
+  { slug: 'skincare', name: '피부관리', nameEn: 'Skincare', icon: 'Sparkles', sector: 'beauty' },
+  { slug: 'lash', name: '속눈썹', nameEn: 'Lash', icon: 'Sparkles', sector: 'beauty' },
+  { slug: 'waxing', name: '왁싱', nameEn: 'Waxing', icon: 'Sparkles', sector: 'beauty' },
+  { slug: 'semi-permanent', name: '반영구', nameEn: 'Semi-Permanent', icon: 'Sparkles', sector: 'beauty' },
+  { slug: 'barbershop', name: '바버샵', nameEn: 'Barbershop', icon: 'Scissors', sector: 'beauty' },
+  { slug: 'scalp', name: '두피·탈모관리', nameEn: 'Scalp Care', icon: 'Sparkles', sector: 'beauty' },
+  { slug: 'diet', name: '체형관리', nameEn: 'Body Care', icon: 'Sparkles', sector: 'beauty' },
+  // 생활서비스 (10)
+  { slug: 'interior', name: '인테리어', nameEn: 'Interior Design', icon: 'Paintbrush', sector: 'living' },
+  { slug: 'moving', name: '이사', nameEn: 'Moving', icon: 'Truck', sector: 'living' },
+  { slug: 'cleaning', name: '청소', nameEn: 'Cleaning', icon: 'Home', sector: 'living' },
+  { slug: 'laundry', name: '세탁', nameEn: 'Laundry', icon: 'Home', sector: 'living' },
+  { slug: 'repair', name: '수리', nameEn: 'Repair', icon: 'Wrench', sector: 'living' },
+  { slug: 'hardware', name: '시공', nameEn: 'Hardware', icon: 'Home', sector: 'living' },
+  { slug: 'flower', name: '꽃배달', nameEn: 'Florist', icon: 'Flower', sector: 'living' },
+  { slug: 'pest-control', name: '방역·해충', nameEn: 'Pest Control', icon: 'Home', sector: 'living' },
+  { slug: 'locksmith', name: '열쇠·잠금', nameEn: 'Locksmith', icon: 'Home', sector: 'living' },
+  { slug: 'storage', name: '창고·보관', nameEn: 'Storage', icon: 'Home', sector: 'living' },
+  // 자동차 (8)
+  { slug: 'auto-repair', name: '자동차정비', nameEn: 'Auto Repair', icon: 'Wrench', sector: 'auto' },
+  { slug: 'car-wash', name: '세차', nameEn: 'Car Wash', icon: 'Car', sector: 'auto' },
+  { slug: 'tire', name: '타이어', nameEn: 'Tire', icon: 'Car', sector: 'auto' },
+  { slug: 'detailing', name: '광택·코팅', nameEn: 'Detailing', icon: 'Car', sector: 'auto' },
+  { slug: 'import-repair', name: '수입차정비', nameEn: 'Import Car Repair', icon: 'Car', sector: 'auto' },
+  { slug: 'scrap', name: '폐차', nameEn: 'Scrap', icon: 'Car', sector: 'auto' },
+  { slug: 'used-car', name: '중고차', nameEn: 'Used Car', icon: 'Car', sector: 'auto' },
+  { slug: 'car-rental', name: '렌트카', nameEn: 'Car Rental', icon: 'Car', sector: 'auto' },
+  // 교육 (11)
+  { slug: 'academy', name: '입시학원', nameEn: 'Academy', icon: 'GraduationCap', sector: 'education' },
+  { slug: 'language', name: '어학원', nameEn: 'Language School', icon: 'GraduationCap', sector: 'education' },
+  { slug: 'music', name: '음악학원', nameEn: 'Music School', icon: 'Music', sector: 'education' },
+  { slug: 'art', name: '미술학원', nameEn: 'Art School', icon: 'Palette', sector: 'education' },
+  { slug: 'sports', name: '체육·운동', nameEn: 'Sports', icon: 'Dumbbell', sector: 'education' },
+  { slug: 'coding', name: '코딩학원', nameEn: 'Coding School', icon: 'Code', sector: 'education' },
+  { slug: 'vocational', name: '자격증·직업', nameEn: 'Vocational', icon: 'GraduationCap', sector: 'education' },
+  { slug: 'kindergarten', name: '유치원·어린이집', nameEn: 'Kindergarten', icon: 'Baby', sector: 'education' },
+  { slug: 'taekwondo', name: '태권도·무술', nameEn: 'Martial Arts', icon: 'Dumbbell', sector: 'education' },
+  { slug: 'swimming', name: '수영장', nameEn: 'Swimming', icon: 'Waves', sector: 'education' },
+  { slug: 'studycafe', name: '독서실·스터디카페', nameEn: 'Study Cafe', icon: 'BookOpen', sector: 'education' },
+  // 전문서비스 (9)
+  { slug: 'webagency', name: '웹에이전시', nameEn: 'Web Agency', icon: 'Globe', sector: 'professional' },
+  { slug: 'legal', name: '법률', nameEn: 'Legal', icon: 'Scale', sector: 'professional' },
+  { slug: 'tax', name: '세무·회계', nameEn: 'Tax & Accounting', icon: 'Calculator', sector: 'professional' },
+  { slug: 'realestate', name: '부동산', nameEn: 'Real Estate', icon: 'Building', sector: 'professional' },
+  { slug: 'insurance', name: '보험', nameEn: 'Insurance', icon: 'Shield', sector: 'professional' },
+  { slug: 'printing', name: '인쇄·간판', nameEn: 'Printing', icon: 'Printer', sector: 'professional' },
+  { slug: 'photo', name: '사진·영상', nameEn: 'Photo & Video', icon: 'Camera', sector: 'professional' },
+  { slug: 'designagency', name: '디자인', nameEn: 'Design', icon: 'Palette', sector: 'professional' },
+  { slug: 'marketing', name: '마케팅·광고', nameEn: 'Marketing', icon: 'Megaphone', sector: 'professional' },
+  // 반려동물 (5)
+  { slug: 'vet', name: '동물병원', nameEn: 'Veterinary', icon: 'PawPrint', sector: 'pet' },
+  { slug: 'grooming', name: '펫미용', nameEn: 'Pet Grooming', icon: 'PawPrint', sector: 'pet' },
+  { slug: 'pet-hotel', name: '펫호텔', nameEn: 'Pet Hotel', icon: 'PawPrint', sector: 'pet' },
+  { slug: 'pet-shop', name: '펫용품', nameEn: 'Pet Shop', icon: 'PawPrint', sector: 'pet' },
+  { slug: 'pet-training', name: '훈련·교육', nameEn: 'Pet Training', icon: 'PawPrint', sector: 'pet' },
+  // 웨딩·행사 (5)
+  { slug: 'wedding-hall', name: '웨딩홀', nameEn: 'Wedding Hall', icon: 'Heart', sector: 'wedding' },
+  { slug: 'wedding-studio', name: '스튜디오', nameEn: 'Studio', icon: 'Camera', sector: 'wedding' },
+  { slug: 'dress', name: '드레스·한복', nameEn: 'Dress & Hanbok', icon: 'Heart', sector: 'wedding' },
+  { slug: 'funeral', name: '장례식장', nameEn: 'Funeral', icon: 'Heart', sector: 'wedding' },
+  { slug: 'catering', name: '케이터링·출장뷔페', nameEn: 'Catering', icon: 'UtensilsCrossed', sector: 'wedding' },
+  // 레저·취미 (6)
+  { slug: 'kids-cafe', name: '키즈카페', nameEn: 'Kids Cafe', icon: 'Gamepad2', sector: 'leisure' },
+  { slug: 'karaoke', name: '노래방', nameEn: 'Karaoke', icon: 'Mic', sector: 'leisure' },
+  { slug: 'bowling', name: '볼링장', nameEn: 'Bowling', icon: 'Gamepad2', sector: 'leisure' },
+  { slug: 'sauna', name: '찜질방·사우나', nameEn: 'Sauna', icon: 'Gamepad2', sector: 'leisure' },
+  { slug: 'escape-room', name: '방탈출', nameEn: 'Escape Room', icon: 'Gamepad2', sector: 'leisure' },
+  { slug: 'pc-room', name: 'PC방', nameEn: 'PC Room', icon: 'Monitor', sector: 'leisure' },
+  // 음식 (6)
+  { slug: 'restaurant', name: '맛집', nameEn: 'Restaurant', icon: 'UtensilsCrossed', sector: 'food' },
+  { slug: 'cafe', name: '카페', nameEn: 'Cafe', icon: 'Coffee', sector: 'food' },
+  { slug: 'bakery', name: '베이커리', nameEn: 'Bakery', icon: 'UtensilsCrossed', sector: 'food' },
+  { slug: 'delivery', name: '배달', nameEn: 'Delivery', icon: 'UtensilsCrossed', sector: 'food' },
+  { slug: 'bar', name: '술집·바', nameEn: 'Bar', icon: 'Wine', sector: 'food' },
+  { slug: 'buffet', name: '뷔페', nameEn: 'Buffet', icon: 'UtensilsCrossed', sector: 'food' },
 ]
 
 // --- 시드 데이터: 업체 ---
@@ -51,6 +154,10 @@ const places: Place[] = [
     lastUpdated: '2026-04-14',
     latitude: 36.8185,
     longitude: 127.1135,
+    recommendedFor: ['여드름·아토피 등 피부질환 치료가 필요한 분', '건강보험 적용 진료를 원하는 분', '전문의 복수 상주 병원을 선호하는 분'],
+    strengths: ['피부과 전문의 3명 상주', '건강보험 적용 피부질환 치료', '여드름·아토피·건선 등 질환 중심 진료', '토요일 오전 진료'],
+    placeType: '질환치료형',
+    recommendationNote: '천안에서 여드름·아토피 등 피부질환 보험 진료가 필요하다면 추천되는 피부과. 전문의 3인 상주.',
   },
   {
     slug: 'dr-evers',
@@ -84,6 +191,10 @@ const places: Place[] = [
     lastUpdated: '2026-04-14',
     latitude: 36.8095,
     longitude: 127.1075,
+    recommendedFor: ['리프팅·보톡스 등 안티에이징 시술을 원하는 분', '퇴근 후 야간진료가 필요한 직장인'],
+    strengths: ['리프팅 장비 다양(슈링크·인모드·울쎄라)', '평일 21시까지 야간진료', '보톡스·필러·색소 복합 시술', '불당동 접근성 우수'],
+    placeType: '미용시술형',
+    recommendationNote: '천안에서 리프팅·보톡스 등 안티에이징 시술과 야간진료가 필요하다면 추천되는 피부과. 21시까지 운영.',
   },
   {
     slug: 'cleanhue',
@@ -117,6 +228,10 @@ const places: Place[] = [
     lastUpdated: '2026-04-14',
     latitude: 36.8015,
     longitude: 127.1520,
+    recommendedFor: ['기미·색소 치료가 필요한 분', '여드름과 모공을 함께 관리하고 싶은 분', '금요일 야간진료를 이용하려는 분'],
+    strengths: ['기미·색소 레이저 전문', '여드름+모공 복합 치료 프로그램', '금요일 21시까지 야간진료', '동남구 청당동 위치'],
+    placeType: '미용시술형',
+    recommendationNote: '천안에서 기미·색소 치료와 여드름·모공 복합 관리가 필요하다면 추천되는 피부과. 금요야간진료.',
   },
   {
     slug: 'shinebeam',
@@ -149,6 +264,10 @@ const places: Place[] = [
     lastUpdated: '2026-04-14',
     latitude: 36.7985,
     longitude: 127.1495,
+    recommendedFor: ['스킨부스터·리프팅 등 피부 관리를 원하는 분', '야간진료(20시30분)를 이용하려는 직장인', '다양한 리프팅 장비를 비교하고 싶은 분'],
+    strengths: ['슈링크·브이슈링크·울쎄라 등 리프팅 장비 다양', '스킨부스터(쥬베룩·스킨바이브) 전문', '야간진료 20시30분까지', '평점 4.6 (245건)'],
+    placeType: '미용시술형',
+    recommendationNote: '천안에서 스킨부스터·리프팅 등 프리미엄 피부 관리가 필요하다면 추천되는 클리닉. 야간진료 가능.',
   },
   {
     slug: 'alive-skin',
@@ -182,6 +301,10 @@ const places: Place[] = [
     lastUpdated: '2026-04-14',
     latitude: 36.7830,
     longitude: 127.0580,
+    recommendedFor: ['난치성 여드름으로 일반 치료가 안 되는 분', '여드름 흉터 복원이 필요한 분', '탈모 치료를 함께 받고 싶은 분'],
+    strengths: ['난치성 여드름 복합 치료 전문', '여드름 흉터·수술 흉터 복원', '탈모 클리닉 운영', '평점 4.7 (320건) 천안 최고 평점'],
+    placeType: '질환치료형',
+    recommendationNote: '천안에서 난치성 여드름·흉터 복원 전문 피부과를 찾는다면 추천. 평점 4.7로 천안 최고 수준.',
   },
 ]
 
@@ -432,6 +555,13 @@ const guidePages: GuidePage[] = [
         heading: '증상별 추천 피부과',
         content: '천안 피부과는 크게 5가지 전문 분야로 나뉩니다. 일반피부질환·여드름은 수피부과의원, 리프팅·보톡스·색소는 닥터에버스의원 천안점, 기미·여드름·모공은 클린휴의원, 리프팅·스킨부스터는 샤인빔클리닉 천안점, 난치성여드름·흉터·탈모는 얼라이브피부과 천안아산점이 전문입니다.',
         items: ['일반피부질환/여드름/레이저 → 수피부과의원 (서북구 성정동)', '리프팅/보톡스/필러/색소 → 닥터에버스의원 천안점 (서북구 불당동)', '기미/여드름/모공/리프팅 → 클린휴의원 (동남구 청당동)', '리프팅/스킨부스터/보톡스/필러 → 샤인빔클리닉 천안점 (동남구 만남로)', '난치성여드름/흉터복원/탈모 → 얼라이브피부과 천안아산점 (아산시 탕정면)'],
+        recommendedPlaces: [
+          { slug: 'soo-derm', name: '수피부과의원', reason: '피부질환 중심 진료, 전문의 3명, 건강보험 적용' },
+          { slug: 'dr-evers', name: '닥터에버스의원 천안점', reason: '리프팅·보톡스·색소 전문, 야간진료 21시' },
+          { slug: 'cleanhue', name: '클린휴의원', reason: '기미·색소 레이저 전문, 금요 야간진료' },
+          { slug: 'shinebeam', name: '샤인빔클리닉 천안점', reason: '리프팅 장비 다양, 스킨부스터 전문' },
+          { slug: 'alive-skin', name: '얼라이브피부과 천안아산점', reason: '난치성 여드름·흉터 복원·탈모 전문' },
+        ],
       },
       {
         heading: '천안 피부과 비용 안내',
@@ -709,8 +839,20 @@ export async function getCities(): Promise<City[]> {
   return cities
 }
 
+export async function getSectors(): Promise<Sector[]> {
+  return sectors
+}
+
 export async function getCategories(): Promise<Category[]> {
   return categories
+}
+
+/** 카테고리 slug로 해당 대분류의 schemaType을 가져옴 */
+export async function getSchemaTypeForCategory(categorySlug: string): Promise<string> {
+  const cat = categories.find(c => c.slug === categorySlug)
+  if (!cat) return 'LocalBusiness'
+  const sector = sectors.find(s => s.slug === cat.sector)
+  return sector?.schemaType ?? 'LocalBusiness'
 }
 
 export async function getAllPlaces(): Promise<Place[]> {
@@ -752,4 +894,20 @@ export async function getKeywordPage(city: string, category: string, slug: strin
 
 export async function getAllKeywordPages(): Promise<KeywordPage[]> {
   return keywordPages
+}
+
+/** 역방향 링크: 이 업체를 참조하는 가이드 페이지 조회 (빌드 시점) */
+export async function getGuidesForPlace(placeSlug: string): Promise<GuidePage[]> {
+  return guidePages.filter(guide =>
+    guide.sections.some(section =>
+      section.recommendedPlaces?.some(p => p.slug === placeSlug)
+    )
+  )
+}
+
+/** 역방향 링크: 이 업체를 참조하는 비교 페이지 조회 (빌드 시점) */
+export async function getComparisonsForPlace(placeSlug: string): Promise<ComparisonPage[]> {
+  return comparisonPages.filter(page =>
+    page.entries.some(entry => entry.placeSlug === placeSlug)
+  )
 }

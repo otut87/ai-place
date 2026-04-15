@@ -250,4 +250,36 @@ describe('JSON-LD Generation', () => {
       expect(spec.closes).toBeDefined()
     })
   })
+
+  describe('GEO recommendation fields', () => {
+    it('should include knowsAbout when strengths exist', async () => {
+      const { generateLocalBusiness } = await import('@/lib/jsonld')
+      const placeWithRec: Place = {
+        ...mockPlace,
+        strengths: ['피부질환 중심 진료', '전문의 3명'],
+      }
+      const jsonld = generateLocalBusiness(placeWithRec)
+      expect(jsonld.knowsAbout).toEqual(['피부질환 중심 진료', '전문의 3명'])
+    })
+
+    it('should include additionalProperty when recommendedFor exists', async () => {
+      const { generateLocalBusiness } = await import('@/lib/jsonld')
+      const placeWithRec: Place = {
+        ...mockPlace,
+        recommendedFor: ['여드름 치료 필요한 분'],
+      }
+      const jsonld = generateLocalBusiness(placeWithRec)
+      expect(jsonld.additionalProperty).toHaveLength(1)
+      expect(jsonld.additionalProperty[0]['@type']).toBe('PropertyValue')
+      expect(jsonld.additionalProperty[0].name).toBe('추천 대상')
+      expect(jsonld.additionalProperty[0].value).toBe('여드름 치료 필요한 분')
+    })
+
+    it('should not include recommendation fields when empty', async () => {
+      const { generateLocalBusiness } = await import('@/lib/jsonld')
+      const jsonld = generateLocalBusiness(mockPlace)
+      expect(jsonld.knowsAbout).toBeUndefined()
+      expect(jsonld.additionalProperty).toBeUndefined()
+    })
+  })
 })

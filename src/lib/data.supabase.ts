@@ -2,7 +2,7 @@
 // Supabase에서 데이터 fetch, 실패 시 data.ts 시드 데이터 폴백.
 // 함수 시그니처는 data.ts와 100% 동일.
 
-import type { Place, City, Category, ComparisonTopic, ComparisonPage, GuidePage, FAQ, KeywordPage } from './types'
+import type { Place, City, Category, Sector, ComparisonTopic, ComparisonPage, GuidePage, FAQ, KeywordPage } from './types'
 import { dbPlaceToPlace, dbCityToCity, dbCategoryToCategory } from './supabase-types'
 import { getReadClient } from './supabase/read-client'
 
@@ -118,8 +118,16 @@ export async function getCities(): Promise<City[]> {
   return (await supabaseCities()) ?? (await seed.getCities())
 }
 
+export async function getSectors(): Promise<Sector[]> {
+  return seed.getSectors()
+}
+
 export async function getCategories(): Promise<Category[]> {
   return (await supabaseCategories()) ?? (await seed.getCategories())
+}
+
+export async function getSchemaTypeForCategory(categorySlug: string): Promise<string> {
+  return seed.getSchemaTypeForCategory(categorySlug)
 }
 
 export async function getAllPlaces(): Promise<Place[]> {
@@ -158,4 +166,12 @@ export async function getKeywordPage(city: string, category: string, slug: strin
 
 export async function getAllKeywordPages(): Promise<KeywordPage[]> {
   return seed.getAllKeywordPages()
+}
+
+export async function getGuidesForPlace(placeSlug: string): Promise<GuidePage[]> {
+  return seed.getGuidesForPlace(placeSlug)
+}
+
+export async function getComparisonsForPlace(placeSlug: string): Promise<ComparisonPage[]> {
+  return seed.getComparisonsForPlace(placeSlug)
 }

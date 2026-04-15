@@ -32,6 +32,10 @@ export interface DbPlace {
   images: PlaceImage[] | null
   latitude: number | null
   longitude: number | null
+  recommended_for: string[]  // jsonb DEFAULT '[]', never null for new rows
+  strengths: string[]        // jsonb DEFAULT '[]', never null for new rows
+  place_type: string | null
+  recommendation_note: string | null
   owner_id: string | null
   status: 'active' | 'pending' | 'rejected'
   created_at: string
@@ -54,6 +58,7 @@ export interface DbCategory {
   name: string
   name_en: string
   icon: string | null
+  sector: string
   created_at: string
 }
 
@@ -101,6 +106,10 @@ export function dbPlaceToPlace(row: DbPlace): Place {
     images: row.images ?? undefined,
     latitude: row.latitude ?? undefined,
     longitude: row.longitude ?? undefined,
+    recommendedFor: row.recommended_for?.length ? row.recommended_for : undefined,
+    strengths: row.strengths?.length ? row.strengths : undefined,
+    placeType: row.place_type ?? undefined,
+    recommendationNote: row.recommendation_note ?? undefined,
     lastUpdated: row.updated_at.slice(0, 10), // ISO datetime → date
   }
 }
@@ -121,6 +130,7 @@ export function dbCategoryToCategory(row: DbCategory): Category {
     name: row.name,
     nameEn: row.name_en,
     icon: row.icon ?? undefined,
+    sector: row.sector,
   }
 }
 
@@ -150,6 +160,10 @@ export function placeToDbInsert(place: Place): Omit<DbPlace, 'id' | 'created_at'
     images: place.images ?? null,
     latitude: place.latitude ?? null,
     longitude: place.longitude ?? null,
+    recommended_for: place.recommendedFor ?? [],
+    strengths: place.strengths ?? [],
+    place_type: place.placeType ?? null,
+    recommendation_note: place.recommendationNote ?? null,
     owner_id: null,
     status: 'active',
   }

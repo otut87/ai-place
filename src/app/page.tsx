@@ -21,7 +21,6 @@ export const metadata: Metadata = {
 export default async function HomePage() {
   const cities = await getCities()
   const categories = await getCategories()
-  const recentPlaces = await getPlaces("cheonan", "dermatology")
   const allPlaces = await getAllPlaces()
   const comparisonTopics = await getAllComparisonTopics()
   const guidePages = await getAllGuidePages()
@@ -45,7 +44,7 @@ export default async function HomePage() {
   // GEO: FAQ (§4.3 — 2.7-3.2x 인용률)
   const homeFaqs: FAQ[] = [
     { question: 'AI Place는 무엇인가요?', answer: 'AI Place는 ChatGPT, Claude, Gemini 등 AI 검색 엔진에서 추천되는 로컬 업체를 찾을 수 있는 디렉토리입니다. 구조화된 데이터와 AI 최적화 프로필로 업체의 AI 검색 노출을 돕습니다.' },
-    { question: 'AI Place에 어떤 업체가 등록되어 있나요?', answer: `현재 천안 지역 피부과 ${allPlaces.length}곳이 등록되어 있습니다. 각 업체의 진료 과목, 비용, 위치, FAQ를 구조화된 형태로 제공합니다.` },
+    { question: 'AI Place에 어떤 업체가 등록되어 있나요?', answer: `현재 천안 지역 ${allPlaces.length}곳의 업체가 등록되어 있습니다. 각 업체의 전문 분야, 비용, 위치, FAQ를 구조화된 형태로 제공합니다.` },
     { question: 'AI 검색에서 우리 업체가 추천되려면 어떻게 해야 하나요?', answer: 'AI Place에 업체를 등록하면 Schema.org 구조화 데이터, FAQ, 비교 콘텐츠가 자동 생성됩니다. 이를 통해 ChatGPT, Claude 등에서 업체가 인용될 가능성이 높아집니다.' },
     { question: '업체 등록은 어떻게 하나요?', answer: '업체 등록 문의를 통해 기본 정보(업체명, 주소, 전화번호, 서비스)를 전달해 주시면, AI 최적화 프로필을 생성해 드립니다.' },
     { question: 'AI Place 데이터는 어디서 가져오나요?', answer: 'AI Place는 네이버 플레이스, 건강보험심사평가원 등 공개 데이터와 업체 직접 제공 정보를 기반으로 합니다. 모든 정보에 출처와 업데이트 날짜를 명시합니다.' },
@@ -62,7 +61,7 @@ export default async function HomePage() {
 
   const webSiteJsonLd = generateWebSite("https://aiplace.kr")
   const faqJsonLd = generateFAQPage(homeFaqs)
-  const itemListJsonLd = generateItemList(recentPlaces, '천안 피부과 추천 업체')
+  const itemListJsonLd = generateItemList(allPlaces, 'AI Place 등록 업체')
 
   return (
     <>
@@ -99,7 +98,7 @@ export default async function HomePage() {
               {cities.map(city => (
                 <Link
                   key={city.slug}
-                  href={`/${city.slug}/dermatology`}
+                  href={`/${city.slug}/${categories[0]?.slug ?? 'dermatology'}`}
                   className="px-5 py-2.5 text-sm font-medium text-[#222222] border border-[#c1c1c1] rounded-lg hover:bg-[#f2f2f2] transition-colors"
                 >
                   {city.name}
@@ -132,9 +131,9 @@ export default async function HomePage() {
         <section className="py-20 px-6">
           <div className="mx-auto max-w-[1200px]">
             <h2 className="text-[28px] font-bold text-[#222222] leading-[1.43]">최근 등록 업체</h2>
-            <p className="mt-2 text-base text-[#222222]">천안 피부과 {recentPlaces.length}곳의 AI 최적화 프로필을 확인하세요.</p>
+            <p className="mt-2 text-base text-[#222222]">천안 지역 {allPlaces.length}곳의 AI 최적화 프로필을 확인하세요.</p>
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {recentPlaces.slice(0, 4).map(place => (
+              {allPlaces.slice(0, 4).map(place => (
                 <PlaceCard key={place.slug} place={place} />
               ))}
             </div>
@@ -169,12 +168,12 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Keyword Landing Pages — 자주 찾는 질문 */}
+        {/* Keyword Landing Pages */}
         {keywordPages.length > 0 && (
           <section className="py-20 px-6">
             <div className="mx-auto max-w-[1200px]">
-              <h2 className="text-[28px] font-bold text-[#222222] leading-[1.43]">자주 찾는 질문</h2>
-              <p className="mt-2 text-base text-[#222222]">AI에게 자주 묻는 질문별 추천 페이지입니다.</p>
+              <h2 className="text-[28px] font-bold text-[#222222] leading-[1.43]">AI 검색 인기 키워드</h2>
+              <p className="mt-2 text-base text-[#222222]">AI에게 자주 물어보는 질문별 추천 페이지입니다.</p>
               <div className="mt-8 flex flex-wrap gap-3">
                 {keywordPages.map(kw => (
                   <Link
