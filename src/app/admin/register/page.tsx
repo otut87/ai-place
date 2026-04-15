@@ -23,7 +23,15 @@ export default function RegisterPage() {
   const [slug, setSlug] = useState('')
   const [description, setDescription] = useState('')
   const [phone, setPhone] = useState('')
-  const [openingHours, setOpeningHours] = useState('')
+  const [hours, setHours] = useState([
+    { day: 'Mo', label: '월', open: '', close: '', closed: false },
+    { day: 'Tu', label: '화', open: '', close: '', closed: false },
+    { day: 'We', label: '수', open: '', close: '', closed: false },
+    { day: 'Th', label: '목', open: '', close: '', closed: false },
+    { day: 'Fr', label: '금', open: '', close: '', closed: false },
+    { day: 'Sa', label: '토', open: '', close: '', closed: false },
+    { day: 'Su', label: '일', open: '', close: '', closed: true },
+  ])
   const [naverPlaceUrl, setNaverPlaceUrl] = useState('')
   const [kakaoMapUrl, setKakaoMapUrl] = useState('')
   const [enrichedReviews, setEnrichedReviews] = useState<Array<{ text: string; rating: number }>>([])
@@ -61,7 +69,29 @@ export default function RegisterPage() {
         setSlug(place.name.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'new-place')
       }
       if (d.phone) setPhone(d.phone)
-      if (d.openingHours) setOpeningHours(d.openingHours.join('\n'))
+      // Google 영업시간 파싱 → 구조화 입력
+      if (d.openingHours) {
+        const dayMap: Record<string, string> = { '월요일': 'Mo', '화요일': 'Tu', '수요일': 'We', '목요일': 'Th', '금요일': 'Fr', '토요일': 'Sa', '일요일': 'Su' }
+        setHours(prev => prev.map(h => {
+          const line = d.openingHours?.find(l => {
+            const dayKr = Object.entries(dayMap).find(([, v]) => v === h.day)?.[0]
+            return dayKr && l.startsWith(dayKr)
+          })
+          if (!line) return { ...h, closed: true, open: '', close: '' }
+          if (line.includes('휴무')) return { ...h, closed: true, open: '', close: '' }
+          // "월요일: 오전 10:00 ~ 오후 8:00" → open/close 추출
+          const timeMatch = line.match(/(\d{1,2}:\d{2})\s*~\s*.*?(\d{1,2}:\d{2})/)
+          if (!timeMatch) return h
+          const openH = line.includes('오후') && !line.includes('오전') ? parseInt(timeMatch[1]) + 12 : parseInt(timeMatch[1])
+          // 간단한 24시간 변환
+          const rawOpen = timeMatch[1]
+          const rawClose = timeMatch[2]
+          const openTime = line.indexOf('오후') < line.indexOf(rawOpen) && parseInt(rawOpen) < 12 ? `${parseInt(rawOpen) + 12}:${rawOpen.split(':')[1]}` : rawOpen.padStart(5, '0')
+          const closeIdx = line.lastIndexOf('오후')
+          const closeTime = closeIdx > line.indexOf(rawOpen) && parseInt(rawClose) < 12 ? `${parseInt(rawClose) + 12}:${rawClose.split(':')[1]}` : rawClose.padStart(5, '0')
+          return { ...h, closed: false, open: openTime, close: closeTime }
+        }))
+      }
       if (d.kakaoMapUrl) setKakaoMapUrl(d.kakaoMapUrl)
       if (d.reviews) setEnrichedReviews(d.reviews)
       setEnrichedData({ openingHours: d.openingHours, editorialSummary: d.editorialSummary })
@@ -106,7 +136,7 @@ export default function RegisterPage() {
       slug, description,
       address: selectedPlace.address,
       phone: phone || undefined,
-      openingHours: openingHours.trim() ? openingHours.split('\n').map(h => h.trim()).filter(Boolean) : undefined,
+      openingHours: hours.filter(h => !h.closed && h.open && h.close).map(h => `${h.day} ${h.open}-${h.close}`) || undefined,
       rating: selectedPlace.rating,
       reviewCount: selectedPlace.reviewCount,
       googleBusinessUrl: undefined,
@@ -236,10 +266,27 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#484848] mb-1">
-              영업시간 <span className="text-xs text-green-600">(Google 자동 입력, 수정 가능)</span>
+            <label className="block text-sm font-medium text-[#484848] mb-2">
+              영업시간 <span className="text-xs text-green-600">(Google 자동 입력)</span>
             </label>
-            <textarea value={openingHours} onChange={e => setOpeningHours(e.target.value)} rows={3} className="w-full px-3 py-2 rounded-lg border border-[#dddddd] text-sm" placeholder={"월요일: 오전 9:00 ~ 오후 6:00\n화요일: 오전 9:00 ~ 오후 6:00\n..."} />
+            <div className="space-y-1">
+              {hours.map((h, i) => (
+                <div key={h.day} className="flex items-center gap-2">
+                  <span className="w-6 text-sm font-medium text-[#484848]">{h.label}</span>
+                  <label className="flex items-center gap-1">
+                    <input type="checkbox" checked={h.closed} onChange={e => { const next = [...hours]; next[i] = { ...next[i], closed: e.target.checked }; setHours(next) }} className="rounded" />
+                    <span className="text-xs text-[#6a6a6a]">휴무</span>
+                  </label>
+                  {!h.closed && (
+                    <>
+                      <input type="time" value={h.open} onChange={e => { const next = [...hours]; next[i] = { ...next[i], open: e.target.value }; setHours(next) }} className="h-8 px-2 rounded border border-[#dddddd] text-sm" />
+                      <span className="text-xs text-[#6a6a6a]">~</span>
+                      <input type="time" value={h.close} onChange={e => { const next = [...hours]; next[i] = { ...next[i], close: e.target.value }; setHours(next) }} className="h-8 px-2 rounded border border-[#dddddd] text-sm" />
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
