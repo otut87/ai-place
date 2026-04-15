@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { PlaceActions } from './place-actions'
 
 export default async function AdminPlacesPage() {
   await requireAuth()
@@ -38,13 +39,16 @@ export default async function AdminPlacesPage() {
                   {place.rating != null && ` · ★ ${place.rating}`}
                 </p>
               </div>
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                place.status === 'active' ? 'bg-green-100 text-green-700' :
-                place.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                'bg-red-100 text-red-700'
-              }`}>
-                {place.status}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  place.status === 'active' ? 'bg-green-100 text-green-700' :
+                  place.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-red-100 text-red-700'
+                }`}>
+                  {place.status}
+                </span>
+                <PlaceActions placeId={place.id} status={place.status} />
+              </div>
             </div>
           ))}
         </div>
