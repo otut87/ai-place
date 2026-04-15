@@ -10,7 +10,8 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && npx tsx scripts/validate-pages.ts",
+    "build:only": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
