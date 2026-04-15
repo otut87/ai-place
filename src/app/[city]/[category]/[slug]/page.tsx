@@ -82,12 +82,12 @@ export default async function ProfilePage({ params }: Props) {
     ? await getPlaceDetails(place.googlePlaceId)
     : null
 
-  // Google 데이터로 rating/reviewCount/googleBusinessUrl 오버라이드
+  // Google 데이터로 오버라이드 (리뷰 수가 시드 데이터 이상일 때만 — 이상값 방어)
+  const googleRatingValid = googleData && googleData.reviewCount >= (place.reviewCount ?? 0)
   const placeWithGoogleData = googleData
     ? {
         ...place,
-        rating: googleData.rating,
-        reviewCount: googleData.reviewCount,
+        ...(googleRatingValid && { rating: googleData.rating, reviewCount: googleData.reviewCount }),
         googleBusinessUrl: googleData.googleMapsUri ?? place.googleBusinessUrl,
       }
     : place
