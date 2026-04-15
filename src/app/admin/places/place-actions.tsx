@@ -44,6 +44,9 @@ export function PlaceActions({ placeId, status }: { placeId: string; status: str
           재활성
         </button>
       )}
+      <a href={`/admin/places/${placeId}/edit`} className="text-xs px-2 py-1 text-[#6a6a6a] hover:text-[#222222]">
+        수정
+      </a>
       <button onClick={() => handleAction('delete')} className="text-xs px-2 py-1 text-[#6a6a6a] hover:text-red-600">
         삭제
       </button>
