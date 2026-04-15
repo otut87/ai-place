@@ -1,11 +1,11 @@
 'use server'
 
-import { requireAuth } from '@/lib/auth'
+import { requireAuthForAction } from '@/lib/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { revalidatePath } from 'next/cache'
 
 export async function getPlaceById(placeId: string) {
-  await requireAuth()
+  await requireAuthForAction()
 
   const supabase = getAdminClient()
   if (!supabase) return null
@@ -23,7 +23,7 @@ export async function getPlaceById(placeId: string) {
 }
 
 export async function updatePlaceStatus(placeId: string, status: 'active' | 'rejected') {
-  await requireAuth()
+  await requireAuthForAction()
 
   const supabase = getAdminClient()
   if (!supabase) return { success: false, error: 'Admin 클라이언트 초기화 실패' }
@@ -46,7 +46,7 @@ export async function updatePlace(placeId: string, data: {
   services?: unknown[]; faqs?: unknown[]; tags?: string[];
   naver_place_url?: string; kakao_map_url?: string;
 }) {
-  await requireAuth()
+  await requireAuthForAction()
 
   const supabase = getAdminClient()
   if (!supabase) return { success: false, error: 'Admin 클라이언트 초기화 실패' }
@@ -65,7 +65,7 @@ export async function updatePlace(placeId: string, data: {
 }
 
 export async function deletePlace(placeId: string) {
-  await requireAuth()
+  await requireAuthForAction()
 
   const supabase = getAdminClient()
   if (!supabase) return { success: false, error: 'Admin 클라이언트 초기화 실패' }

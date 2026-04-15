@@ -35,6 +35,10 @@ export default function EditPlacePage() {
       setFaqs((d.faqs as Array<{ question: string; answer: string }>) ?? [])
       setTags(((d.tags as string[]) ?? []).join(', '))
       setLoading(false)
+    }).catch(err => {
+      console.error('[edit] getPlaceById error:', err)
+      setError('데이터 로딩 실패: ' + (err?.message ?? '알 수 없는 오류'))
+      setLoading(false)
     })
   }, [placeId])
 

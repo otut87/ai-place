@@ -6,21 +6,32 @@ import { useRouter } from 'next/navigation'
 
 export function PlaceActions({ placeId, status }: { placeId: string; status: string }) {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   async function handleAction(action: 'active' | 'rejected' | 'delete') {
     setLoading(true)
-    if (action === 'delete') {
-      if (!confirm('정말 삭제하시겠습니까?')) { setLoading(false); return }
-      await deletePlace(placeId)
-    } else {
-      await updatePlaceStatus(placeId, action)
+    setError(null)
+    try {
+      let result: { success: boolean; error?: string }
+      if (action === 'delete') {
+        if (!confirm('정말 삭제하시겠습니까?')) { setLoading(false); return }
+        result = await deletePlace(placeId)
+      } else {
+        result = await updatePlaceStatus(placeId, action)
+      }
+      if (!result.success) {
+        setError(result.error ?? '처리 실패')
+      }
+    } catch (e) {
+      setError(String((e as Error)?.message ?? e))
     }
     setLoading(false)
     router.refresh()
   }
 
   if (loading) return <span className="text-xs text-[#6a6a6a]">처리 중...</span>
+  if (error) return <span className="text-xs text-red-600">{error}</span>
 
   return (
     <div className="flex items-center gap-2">

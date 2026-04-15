@@ -26,5 +26,15 @@ export async function requireAuth() {
   return user
 }
 
+/** Server Action용 인증 체크. redirect 대신 에러를 throw.
+ *  middleware가 이미 /admin/* 보호 중이므로 이중 방어용. */
+export async function requireAuthForAction() {
+  const user = await getUser()
+  if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) {
+    throw new Error('UNAUTHORIZED')
+  }
+  return user
+}
+
 // signIn/signOut는 클라이언트 SDK에서 직접 처리.
 // admin/login/page.tsx, admin/logout-button.tsx 참조.
