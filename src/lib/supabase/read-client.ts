@@ -15,7 +15,16 @@ let client: ReturnType<typeof createClient<Database>> | null = null
 export function getReadClient() {
   if (!supabaseUrl || !supabaseAnonKey) return null
   if (!client) {
-    client = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      global: {
+        // Next.js SSG fetch 캐시 우회: 같은 URL 쿼리에 대한 dedup 방지
+        fetch: (url, options) => {
+          const separator = typeof url === 'string' && url.includes('?') ? '&' : '?'
+          const bustUrl = `${url}${separator}_t=${Date.now()}`
+          return fetch(bustUrl, options)
+        },
+      },
+    })
   }
   return client
 }
