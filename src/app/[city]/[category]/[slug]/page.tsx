@@ -82,8 +82,13 @@ export default async function ProfilePage({ params }: Props) {
     ? await getPlaceDetails(place.googlePlaceId)
     : null
 
+  // Google 데이터로 rating/reviewCount 오버라이드
+  const placeWithGoogleData = googleData
+    ? { ...place, rating: googleData.rating, reviewCount: googleData.reviewCount }
+    : place
+
   // CRITICAL 5: @id + mainEntityOfPage
-  const localBusinessJsonLd = generateLocalBusiness(place, pageUrl)
+  const localBusinessJsonLd = generateLocalBusiness(placeWithGoogleData, pageUrl)
   const faqJsonLd = place.faqs.length > 0 ? generateFAQPage(place.faqs) : null
 
   // CRITICAL 3: BreadcrumbList JSON-LD
@@ -123,14 +128,15 @@ export default async function ProfilePage({ params }: Props) {
               )}
             </div>
 
-            {/* H1 + Rating */}
+            {/* H1 + Rating (Google Places 데이터 우선, 없으면 수동 데이터) */}
             <h1 className="text-[28px] font-bold text-[#222222] leading-[1.43]">{place.name}</h1>
-            {place.rating != null && (
+            {(googleData?.rating ?? place.rating) != null && (
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-base font-medium text-[#222222]">★ {place.rating}</span>
-                {place.reviewCount != null && (
-                  <span className="text-base text-[#6a6a6a]">· 후기 {place.reviewCount}건</span>
+                <span className="text-base font-medium text-[#222222]">★ {googleData?.rating ?? place.rating}</span>
+                {(googleData?.reviewCount ?? place.reviewCount) != null && (
+                  <span className="text-base text-[#6a6a6a]">· 후기 {googleData?.reviewCount ?? place.reviewCount}건</span>
                 )}
+                {googleData && <span className="text-xs text-[#6a6a6a]">(Google)</span>}
               </div>
             )}
 
