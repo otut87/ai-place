@@ -14,6 +14,7 @@ export async function getUser() {
 // Admin 허용 이메일 목록
 const ADMIN_EMAILS = [
   'methoddesign7@gmail.com',
+  'support@dedo.kr',
 ]
 
 /** 인증 필수 + admin role 확인. 미인증/비admin 시 /admin/login으로 리다이렉트. */
