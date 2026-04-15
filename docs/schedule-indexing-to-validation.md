@@ -33,14 +33,16 @@
 
 ## Week 1 (4/15 ~ 4/21) — 잔여 개발 작업
 
-### 내일 (4/16)
-- [ ] Gemini 베이스라인 측정 (`npx tsx scripts/baseline-test.ts --engine=gemini --repeat=1`)
-- [ ] Google Places API 연동 시작
-  - Google Cloud Console에서 Places API 활성화
-  - `googlePlaceId` 필드 + `ReviewSummary` 타입 추가
-  - Place Details API로 rating, reviews 가져오기
-  - 프로필 페이지에 리뷰 섹션 + Review schema 추가
-  - `PlaceImage` 타입 추가 (이미지 alt 구조화 준비)
+### 4/16 완료
+- [x] Gemini 베이스라인 측정 (13/15 완료, 인용 0건 — 베이스라인 확인)
+- [x] Google Places API 연동 완료
+  - [x] Google Cloud Console에서 Places API 활성화 + API 키 발급
+  - [x] `googlePlaceId` 필드 + `ReviewSummary` + `PlaceImage` 타입 추가
+  - [x] `google-places.ts` 구현 (Place Details API)
+  - [x] 5곳 Place ID 조회 (Text Search API)
+  - [x] 프로필 페이지에 Google 리뷰 섹션 + AggregateRating schema
+- [x] 홈페이지 ItemList JSON-LD 추가
+- [x] IndexNow 재제출 (20 URL, 200 OK)
 
 ### 4/17 ~ 4/18
 - [ ] P3: Supabase 스키마 설계 (마이그레이션 SQL)
