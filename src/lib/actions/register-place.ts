@@ -305,6 +305,17 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
   }
 
   const supabase = await createServerClient()
+
+  // 슬러그 중복 체크
+  const { data: existing } = await supabase
+    .from('places')
+    .select('slug')
+    .eq('slug', input.slug)
+    .limit(1)
+  if (existing && existing.length > 0) {
+    return { success: false, error: `이미 사용 중인 URL 슬러그입니다: ${input.slug}` }
+  }
+
   const insertData = {
     slug: input.slug,
     name: input.name,

@@ -19,10 +19,16 @@ vi.mock('@/lib/google-places', () => ({
 
 // Mock supabase server client
 const mockInsert = vi.fn()
+const mockSelect = vi.fn()
 vi.mock('@/lib/supabase/server', () => ({
   createServerClient: vi.fn(() => ({
     from: vi.fn(() => ({
       insert: mockInsert,
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          limit: mockSelect,
+        })),
+      })),
     })),
   })),
 }))
@@ -172,6 +178,7 @@ describe('registerPlace validation', () => {
 // ===== registerPlace 성공/실패 =====
 describe('registerPlace DB insert', () => {
   it('성공 시 slug 반환', async () => {
+    mockSelect.mockResolvedValue({ data: [] })
     mockInsert.mockResolvedValue({ error: null })
     const { registerPlace } = await import('@/lib/actions/register-place')
     const result = await registerPlace(validInput)
@@ -179,7 +186,16 @@ describe('registerPlace DB insert', () => {
     if (result.success) expect(result.data.slug).toBe('test-clinic')
   })
 
+  it('슬러그 중복 시 에러 반환', async () => {
+    mockSelect.mockResolvedValue({ data: [{ slug: 'test-clinic' }] })
+    const { registerPlace } = await import('@/lib/actions/register-place')
+    const result = await registerPlace(validInput)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toContain('이미 사용 중')
+  })
+
   it('DB 에러 시 실패 반환', async () => {
+    mockSelect.mockResolvedValue({ data: [] })
     mockInsert.mockResolvedValue({ error: { message: 'duplicate key' } })
     const { registerPlace } = await import('@/lib/actions/register-place')
     const result = await registerPlace(validInput)
