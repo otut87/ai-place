@@ -47,7 +47,7 @@ export default async function HomePage() {
     { question: 'AI Place는 무엇인가요?', answer: 'AI Place는 ChatGPT, Claude, Gemini 등 AI 검색 엔진에서 추천되는 로컬 업체를 찾을 수 있는 디렉토리입니다. 구조화된 데이터와 AI 최적화 프로필로 업체의 AI 검색 노출을 돕습니다.' },
     { question: 'AI Place에 어떤 업체가 등록되어 있나요?', answer: `현재 천안 지역 피부과 ${allPlaces.length}곳이 등록되어 있습니다. 각 업체의 진료 과목, 비용, 위치, FAQ를 구조화된 형태로 제공합니다.` },
     { question: 'AI 검색에서 우리 업체가 추천되려면 어떻게 해야 하나요?', answer: 'AI Place에 업체를 등록하면 Schema.org 구조화 데이터, FAQ, 비교 콘텐츠가 자동 생성됩니다. 이를 통해 ChatGPT, Claude 등에서 업체가 인용될 가능성이 높아집니다.' },
-    { question: '업체 등록 비용은 얼마인가요?', answer: '현재 무료로 등록할 수 있습니다. 기본 정보(업체명, 주소, 전화번호, 서비스)만 입력하면 5분 내에 AI 최적화 프로필이 생성됩니다.' },
+    { question: '업체 등록은 어떻게 하나요?', answer: '업체 등록 문의를 통해 기본 정보(업체명, 주소, 전화번호, 서비스)를 전달해 주시면, AI 최적화 프로필을 생성해 드립니다.' },
     { question: 'AI Place 데이터는 어디서 가져오나요?', answer: 'AI Place는 네이버 플레이스, 건강보험심사평가원 등 공개 데이터와 업체 직접 제공 정보를 기반으로 합니다. 모든 정보에 출처와 업데이트 날짜를 명시합니다.' },
   ]
 
@@ -217,7 +217,7 @@ export default async function HomePage() {
                 href="/admin/register"
                 className="inline-flex h-12 px-6 items-center rounded-lg bg-[#008060] text-white font-medium hover:bg-[#006b4f] transition-colors"
               >
-                무료 등록하기
+                업체 등록 문의
               </Link>
             </div>
           </div>
