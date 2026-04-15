@@ -1,18 +1,6 @@
 import type { Metadata } from "next"
-import localFont from "next/font/local"
 import { Analytics } from "@/components/analytics"
 import "./globals.css"
-
-const pretendard = localFont({
-  src: [
-    {
-      path: "../../node_modules/pretendard/dist/web/variable/woff2/PretendardVariable.woff2",
-      style: "normal",
-    },
-  ],
-  variable: "--font-sans",
-  display: "swap",
-})
 
 export const metadata: Metadata = {
   title: {
@@ -45,7 +33,15 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ko" className={`${pretendard.variable} h-full antialiased`}>
+    <html lang="ko" className="h-full antialiased">
+      <head>
+        <link
+          rel="stylesheet"
+          as="style"
+          crossOrigin="anonymous"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        />
+      </head>
       <body className="min-h-full flex flex-col font-sans text-[#222222] bg-white">
         {children}
         <Analytics />

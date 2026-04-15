@@ -137,7 +137,7 @@ export default async function HomePage() {
                 <Link
                   key={`${guide.city}-${guide.category}`}
                   href={`/guide/${guide.city}/${guide.category}`}
-                  className="px-5 py-2.5 text-sm font-medium text-white bg-[#00a67c] rounded-lg hover:bg-[#008f6b] transition-colors"
+                  className="px-5 py-2.5 text-sm font-medium text-white bg-[#008060] rounded-lg hover:bg-[#006b4f] transition-colors"
                 >
                   {guide.title}
                 </Link>
@@ -201,7 +201,7 @@ export default async function HomePage() {
             <div className="mt-8 text-center">
               <Link
                 href="/admin/register"
-                className="inline-flex h-12 px-6 items-center rounded-lg bg-[#00a67c] text-white font-medium hover:bg-[#008f6b] transition-colors"
+                className="inline-flex h-12 px-6 items-center rounded-lg bg-[#008060] text-white font-medium hover:bg-[#006b4f] transition-colors"
               >
                 무료 등록하기
               </Link>

@@ -12,7 +12,7 @@ export function PhoneButton({ phone, businessName }: PhoneButtonProps) {
     <a
       href={`tel:${phone}`}
       onClick={() => trackPhoneClick(businessName)}
-      className="inline-flex h-12 px-6 items-center rounded-lg bg-[#00a67c] text-white font-medium hover:bg-[#008f6b] transition-colors"
+      className="inline-flex h-12 px-6 items-center rounded-lg bg-[#008060] text-white font-medium hover:bg-[#006b4f] transition-colors"
     >
       전화하기
     </a>

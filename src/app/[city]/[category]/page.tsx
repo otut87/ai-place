@@ -108,7 +108,7 @@ export default async function ListingPage({ params }: Props) {
                 <p className="text-lg text-[#6a6a6a]">아직 등록된 업체가 없어요</p>
                 <Link
                   href="/admin/register"
-                  className="mt-4 inline-flex h-10 px-5 items-center rounded-lg bg-[#00a67c] text-white text-sm font-medium hover:bg-[#008f6b] transition-colors"
+                  className="mt-4 inline-flex h-10 px-5 items-center rounded-lg bg-[#008060] text-white text-sm font-medium hover:bg-[#006b4f] transition-colors"
                 >
                   첫 번째 업체 등록하기
                 </Link>
@@ -125,7 +125,7 @@ export default async function ListingPage({ params }: Props) {
                   {guide && (
                     <Link
                       href={`/guide/${city}/${category}`}
-                      className="px-5 py-2.5 text-sm font-medium text-white bg-[#00a67c] rounded-lg hover:bg-[#008f6b] transition-colors"
+                      className="px-5 py-2.5 text-sm font-medium text-white bg-[#008060] rounded-lg hover:bg-[#006b4f] transition-colors"
                     >
                       {cityObj.name} {catObj.name} 선택 가이드
                     </Link>

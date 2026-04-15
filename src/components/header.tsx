@@ -12,7 +12,7 @@ export function Header() {
         {/* CTA */}
         <Link
           href="/admin/register"
-          className="hidden sm:inline-flex h-10 px-5 items-center rounded-lg bg-[#00a67c] text-white text-sm font-medium hover:bg-[#008f6b] transition-colors"
+          className="hidden sm:inline-flex h-10 px-5 items-center rounded-lg bg-[#008060] text-white text-sm font-medium hover:bg-[#006b4f] transition-colors"
         >
           업체 등록
         </Link>
