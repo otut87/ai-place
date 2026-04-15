@@ -39,9 +39,9 @@ async function supabasePlaceBySlug(city: string, category: string, slug: string)
     const { data, error } = await supabase
       .from('places')
       .select('*')
+      .eq('slug', slug)
       .eq('city', city)
       .eq('category', category)
-      .eq('slug', slug)
       .eq('status', 'active')
 
     if (error || !data || data.length === 0) return null

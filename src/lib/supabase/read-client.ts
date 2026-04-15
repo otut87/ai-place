@@ -15,16 +15,7 @@ let client: ReturnType<typeof createClient<Database>> | null = null
 export function getReadClient() {
   if (!supabaseUrl || !supabaseAnonKey) return null
   if (!client) {
-    client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-      global: {
-        // Next.js SSG fetch 캐시 무효화: DB 쿼리는 매번 최신 데이터를 조회해야 하므로 요청별 고유 헤더 설정
-        fetch: (url, options) => {
-          const headers = new Headers(options?.headers)
-          headers.set('X-Cache-Bust', Date.now().toString())
-          return fetch(url, { ...options, headers })
-        },
-      },
-    })
+    client = createClient<Database>(supabaseUrl, supabaseAnonKey)
   }
   return client
 }
