@@ -106,12 +106,11 @@ async function supabaseCategories(): Promise<Category[] | null> {
 // --- Public API (data.ts와 동일 시그니처) ---
 
 export async function getPlaces(city: string, category: string): Promise<Place[]> {
-  // DB 우선, 실패 시 시드 폴백 (merge 없음 — 단일 소스)
-  return (await supabasePlaces(city, category)) ?? (await seed.getPlaces(city, category))
+  return (await supabasePlaces(city, category)) ?? []
 }
 
 export async function getPlaceBySlug(city: string, category: string, slug: string): Promise<Place | undefined> {
-  return (await supabasePlaceBySlug(city, category, slug)) ?? (await seed.getPlaceBySlug(city, category, slug))
+  return (await supabasePlaceBySlug(city, category, slug)) ?? undefined
 }
 
 export async function getCities(): Promise<City[]> {
@@ -139,8 +138,7 @@ export async function getSectorForCategory(categorySlug: string) {
 }
 
 export async function getAllPlaces(): Promise<Place[]> {
-  // DB 우선, 실패 시 시드 폴백 (merge 없음 — 단일 소스)
-  return (await supabaseAllPlaces()) ?? (await seed.getAllPlaces())
+  return (await supabaseAllPlaces()) ?? []
 }
 
 // --- 비교/가이드/키워드 페이지: 아직 시드 데이터만 (Phase 6에서 DB 전환) ---

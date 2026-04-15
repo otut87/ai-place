@@ -152,19 +152,18 @@ describe('Supabase 성공 시', () => {
   })
 })
 
-// ===== 3. Supabase 실패 시 시드 폴백 (merge 없음 — DB OR 시드) =====
-describe('Supabase 실패 시 시드 폴백', () => {
-  it('getPlaces → Supabase 에러 시 시드 데이터 반환 (merge 없음)', async () => {
+// ===== 3. Supabase 실패 시 빈 배열 (DB가 유일한 Place 소스) =====
+describe('Supabase 실패 시', () => {
+  it('getPlaces → Supabase 에러 시 빈 배열', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: null, error: { message: 'connection refused' } }))
 
     const { getPlaces } = await import('@/lib/data.supabase')
     const result = await getPlaces('cheonan', 'dermatology')
 
-    expect(result.length).toBe(4)
-    expect(result[0].city).toBe('cheonan')
+    expect(result).toEqual([])
   })
 
-  it('getCities → Supabase 에러 시 시드 폴백', async () => {
+  it('getCities → Supabase 에러 시 시드 폴백 (cities는 시드 유지)', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: null, error: { message: 'timeout' } }))
 
     const { getCities } = await import('@/lib/data.supabase')
@@ -173,13 +172,13 @@ describe('Supabase 실패 시 시드 폴백', () => {
     expect(result[0].slug).toBe('cheonan')
   })
 
-  it('getAllPlaces → Supabase 에러 시 시드 데이터 반환 (merge 없음)', async () => {
+  it('getAllPlaces → Supabase 에러 시 빈 배열', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: null, error: { message: 'service unavailable' } }))
 
     const { getAllPlaces } = await import('@/lib/data.supabase')
     const result = await getAllPlaces()
 
-    expect(result.length).toBe(4)
+    expect(result).toEqual([])
   })
 })
 
@@ -273,12 +272,11 @@ describe('패스스루 함수 (비교/가이드/키워드)', () => {
     expect(pages.length).toBeGreaterThan(0)
   })
 
-  it('getPlaceBySlug 폴백 → DB 실패 시 시드 반환', async () => {
+  it('getPlaceBySlug → DB 실패 시 undefined', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: null, error: { message: 'fail' } }))
     const { getPlaceBySlug } = await import('@/lib/data.supabase')
     const result = await getPlaceBySlug('cheonan', 'dermatology', 'dr-evers')
-    expect(result).toBeDefined()
-    expect(result!.slug).toBe('dr-evers')
+    expect(result).toBeUndefined()
   })
 
   it('getCategories 폴백 → 시드 데이터 반환', async () => {
