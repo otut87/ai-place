@@ -26,6 +26,7 @@ export default function RegisterPage() {
   const [naverPlaceUrl, setNaverPlaceUrl] = useState('')
   const [kakaoMapUrl, setKakaoMapUrl] = useState('')
   const [enrichedReviews, setEnrichedReviews] = useState<Array<{ text: string; rating: number }>>([])
+  const [enrichedData, setEnrichedData] = useState<{ openingHours?: string[]; editorialSummary?: string } | null>(null)
   const [services, setServices] = useState([{ name: '', description: '', priceRange: '' }])
   const [faqs, setFaqs] = useState([{ question: '', answer: '' }, { question: '', answer: '' }, { question: '', answer: '' }])
   const [tags, setTags] = useState('')
@@ -61,6 +62,7 @@ export default function RegisterPage() {
       if (d.phone) setPhone(d.phone)
       if (d.kakaoMapUrl) setKakaoMapUrl(d.kakaoMapUrl)
       if (d.reviews) setEnrichedReviews(d.reviews)
+      setEnrichedData({ openingHours: d.openingHours, editorialSummary: d.editorialSummary })
     }
     setLoading(false)
   }
@@ -76,6 +78,8 @@ export default function RegisterPage() {
       rating: selectedPlace.rating,
       reviewCount: selectedPlace.reviewCount,
       reviews: enrichedReviews,
+      openingHours: enrichedData?.openingHours,
+      editorialSummary: enrichedData?.editorialSummary,
     })
     setAiLoading(false)
     if (result.success) {

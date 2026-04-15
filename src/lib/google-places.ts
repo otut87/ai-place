@@ -10,6 +10,9 @@ export interface PlaceDetailsResult {
   rating: number
   reviewCount: number
   phone?: string
+  websiteUri?: string
+  openingHours?: string[]
+  editorialSummary?: string
   reviews: Array<{
     text: string
     rating: number
@@ -21,7 +24,7 @@ export interface PlaceDetailsResult {
 
 /** Place Details API (New) 호출 */
 export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResult | null> {
-  const fields = 'displayName,rating,userRatingCount,reviews,photos,googleMapsUri,nationalPhoneNumber'
+  const fields = 'displayName,rating,userRatingCount,reviews,photos,googleMapsUri,nationalPhoneNumber,websiteUri,regularOpeningHours,editorialSummary'
   const url = `${BASE_URL}/places/${placeId}?fields=${fields}&languageCode=ko`
 
   try {
@@ -56,6 +59,9 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResu
       rating: data.rating ?? 0,
       reviewCount: data.userRatingCount ?? 0,
       phone: data.nationalPhoneNumber ?? undefined,
+      websiteUri: data.websiteUri ?? undefined,
+      openingHours: data.regularOpeningHours?.weekdayDescriptions ?? undefined,
+      editorialSummary: data.editorialSummary?.text ?? undefined,
       reviews: (data.reviews ?? []).map((r: { text?: { text?: string }; rating?: number; relativePublishTimeDescription?: string }) => ({
         text: r.text?.text ?? '',
         rating: r.rating ?? 0,

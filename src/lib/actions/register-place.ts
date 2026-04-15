@@ -60,6 +60,9 @@ export async function enrichPlace(placeId: string, placeName?: string): Promise<
   rating: number
   reviewCount: number
   phone?: string
+  websiteUri?: string
+  openingHours?: string[]
+  editorialSummary?: string
   googleMapsUri?: string
   kakaoMapUrl?: string
   reviews?: Array<{ text: string; rating: number }>
@@ -84,6 +87,9 @@ export async function enrichPlace(placeId: string, placeName?: string): Promise<
       rating: details.rating,
       reviewCount: details.reviewCount,
       phone: details.phone,
+      websiteUri: details.websiteUri,
+      openingHours: details.openingHours,
+      editorialSummary: details.editorialSummary,
       googleMapsUri: details.googleMapsUri,
       kakaoMapUrl: kakao?.placeUrl || undefined,
       reviews: details.reviews.slice(0, 5).map(r => ({ text: r.text, rating: r.rating })),
@@ -99,6 +105,8 @@ export async function generatePlaceContent(input: {
   rating?: number
   reviewCount?: number
   reviews?: Array<{ text: string; rating: number }>
+  openingHours?: string[]
+  editorialSummary?: string
 }): Promise<ActionResult<{
   description: string
   services: Array<{ name: string; description: string; priceRange: string }>
@@ -116,10 +124,13 @@ export async function generatePlaceContent(input: {
   }
   const catName = categoryNames[input.category] ?? input.category
 
-  // 리뷰 데이터를 프롬프트용 텍스트로 변환
-  const reviewText = (input.reviews && input.reviews.length > 0)
-    ? `\n\nGoogle Reviews (${input.rating ?? 0}점, ${input.reviewCount ?? 0}건):\n${input.reviews.map(r => `- [${r.rating}점] ${r.text}`).join('\n')}`
-    : ''
+  // Google 데이터를 프롬프트용 텍스트로 변환
+  const parts: string[] = []
+  if (input.rating) parts.push(`Rating: ${input.rating}점 (${input.reviewCount ?? 0}건)`)
+  if (input.editorialSummary) parts.push(`Google 소개: ${input.editorialSummary}`)
+  if (input.openingHours && input.openingHours.length > 0) parts.push(`영업시간:\n${input.openingHours.join('\n')}`)
+  if (input.reviews && input.reviews.length > 0) parts.push(`고객 리뷰:\n${input.reviews.map(r => `- [${r.rating}점] ${r.text}`).join('\n')}`)
+  const googleData = parts.length > 0 ? `\n\nGoogle Places Data:\n${parts.join('\n\n')}` : ''
 
   try {
     const response = await client.messages.create({
@@ -128,7 +139,7 @@ export async function generatePlaceContent(input: {
       system: 'You are a JSON generator. Output ONLY valid JSON. No markdown, no explanation, no code blocks. Just raw JSON.',
       messages: [{
         role: 'user',
-        content: `Generate info for Korean business "${input.name}" (${catName}, ${input.address}).${reviewText}
+        content: `Generate info for Korean business "${input.name}" (${catName}, ${input.address}).${googleData}
 
 Return this exact JSON structure:
 {"description":"50자 내외 한국어 설명","services":[{"name":"서비스명","description":"설명","priceRange":"5-10만원"}],"faqs":[{"question":"질문?","answer":"답변"}],"tags":["태그"]}
