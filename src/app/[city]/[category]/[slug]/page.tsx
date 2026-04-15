@@ -6,7 +6,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PhoneButton } from "@/components/phone-button"
 import { getPlaceBySlug, getPlaces, getCities, getCategories } from "@/lib/data"
-import { generateLocalBusiness, generateFAQPage } from "@/lib/jsonld"
+import { generateLocalBusiness, generateFAQPage, generateWebPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
 import { safeJsonLd } from "@/lib/utils"
 import { getPlaceDetails } from "@/lib/google-places"
@@ -82,14 +82,27 @@ export default async function ProfilePage({ params }: Props) {
     ? await getPlaceDetails(place.googlePlaceId)
     : null
 
-  // Google 데이터로 rating/reviewCount 오버라이드
+  // Google 데이터로 rating/reviewCount/googleBusinessUrl 오버라이드
   const placeWithGoogleData = googleData
-    ? { ...place, rating: googleData.rating, reviewCount: googleData.reviewCount }
+    ? {
+        ...place,
+        rating: googleData.rating,
+        reviewCount: googleData.reviewCount,
+        googleBusinessUrl: googleData.googleMapsUri ?? place.googleBusinessUrl,
+      }
     : place
 
   // CRITICAL 5: @id + mainEntityOfPage
   const localBusinessJsonLd = generateLocalBusiness(placeWithGoogleData, pageUrl)
   const faqJsonLd = place.faqs.length > 0 ? generateFAQPage(place.faqs) : null
+
+  // E-E-A-T: WebPage 래퍼 (author + publisher)
+  const webPageJsonLd = generateWebPage({
+    url: pageUrl,
+    name: `${place.name} - ${cityObj?.name} ${catObj?.name}`,
+    description: place.description,
+    lastUpdated: place.lastUpdated,
+  })
 
   // CRITICAL 3: BreadcrumbList JSON-LD
   const breadcrumbJsonLd = generateBreadcrumbList([
@@ -286,6 +299,7 @@ export default async function ProfilePage({ params }: Props) {
       <Footer />
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(localBusinessJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(webPageJsonLd) }} />
       {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }} />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
       {googleData && googleData.reviews.length > 0 && (

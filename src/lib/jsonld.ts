@@ -198,6 +198,7 @@ export function generateArticle(opts: {
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
+    '@id': opts.url,
     headline: opts.title,
     description: opts.description,
     dateModified: opts.lastUpdated,
@@ -212,8 +213,38 @@ export function generateWebSite(baseUrl: string): JsonLd {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
+    '@id': `${baseUrl}/#website`,
     name: 'AI Place',
     url: baseUrl,
     description: 'AI가 추천하는 로컬 업체 디렉토리',
+  }
+}
+
+/** WebPage schema — E-E-A-T author/publisher 래퍼 */
+export function generateWebPage(opts: {
+  url: string
+  name: string
+  description: string
+  lastUpdated?: string
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    '@id': opts.url,
+    name: opts.name,
+    description: opts.description,
+    ...(opts.lastUpdated && { dateModified: opts.lastUpdated }),
+    author: {
+      '@type': 'Person',
+      name: '이지수',
+      jobTitle: 'AI Place 큐레이터',
+      url: 'https://aiplace.kr',
+    },
+    publisher: {
+      '@type': 'Organization',
+      '@id': 'https://aiplace.kr/#organization',
+      name: 'AI 플레이스',
+      url: 'https://aiplace.kr',
+    },
   }
 }

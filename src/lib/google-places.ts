@@ -14,11 +14,12 @@ export interface PlaceDetailsResult {
     relativeTime: string
   }>
   photoRefs: string[]
+  googleMapsUri?: string
 }
 
 /** Place Details API (New) 호출 */
 export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResult | null> {
-  const fields = 'displayName,rating,userRatingCount,reviews,photos'
+  const fields = 'displayName,rating,userRatingCount,reviews,photos,googleMapsUri'
   const url = `${BASE_URL}/places/${placeId}?fields=${fields}&languageCode=ko`
 
   try {
@@ -42,6 +43,7 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResu
         relativeTime: r.relativePublishTimeDescription ?? '',
       })),
       photoRefs: (data.photos ?? []).map((p: { name?: string }) => p.name ?? ''),
+      googleMapsUri: data.googleMapsUri ?? undefined,
     }
   } catch (err) {
     console.error('Google Places API fetch failed:', err)

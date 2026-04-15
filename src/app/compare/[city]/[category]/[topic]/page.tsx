@@ -30,9 +30,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const cityObj = cities.find(c => c.slug === city)
   const catObj = categories.find(c => c.slug === category)
 
+  const title = `${cityObj?.name ?? city} ${catObj?.name ?? category} ${page.topic.name}`
   return {
-    title: `${cityObj?.name ?? city} ${catObj?.name ?? category} ${page.topic.name}`,
+    title,
     description: page.summary,
+    alternates: { canonical: `/compare/${city}/${category}/${topic}` },
+    openGraph: { title, description: page.summary, url: `/compare/${city}/${category}/${topic}` },
   }
 }
 

@@ -4,7 +4,10 @@ import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PlaceCard } from "@/components/place-card"
+import { StatisticsBox } from "@/components/statistics-box"
+import { SourceList } from "@/components/source-list"
 import { safeJsonLd } from "@/lib/utils"
+import type { StatisticItem, Source } from "@/lib/types"
 import { getPlaces, getCities, getCategories, getComparisonTopics, getGuidePage, getCategoryFaqs } from "@/lib/data"
 import { generateItemList, generateFAQPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
@@ -30,9 +33,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!cityObj || !catObj) return {}
 
+  const title = `${cityObj.name} ${catObj.name} 추천 — 2026년 업데이트`
+  const description = `${cityObj.name}시에 위치한 ${catObj.name} 목록. 진료 과목, 위치, 리뷰 기반 정리.`
   return {
-    title: `${cityObj.name} ${catObj.name} 추천 — 2026년 업데이트`,
-    description: `${cityObj.name}시에 위치한 ${catObj.name} 목록. 진료 과목, 위치, 리뷰 기반 정리.`,
+    title,
+    description,
+    alternates: { canonical: `/${city}/${category}` },
+    openGraph: { title, description, url: `/${city}/${category}` },
   }
 }
 
@@ -67,6 +74,20 @@ export default async function ListingPage({ params }: Props) {
     { name: `${cityObj.name} ${catObj.name}`, url: `${baseUrl}/${city}/${category}` },
   ])
 
+  // GEO: 통계 + 출처 (Princeton §2.2)
+  const avgRating = places.length > 0
+    ? places.reduce((sum, p) => sum + (p.rating ?? 0), 0) / places.length
+    : 0
+  const categoryStats: StatisticItem[] = [
+    { label: '등록 업체 수', value: `${places.length}곳`, note: '2026년 4월 기준' },
+    { label: '평균 평점', value: `${avgRating.toFixed(1)}점`, note: 'Google/네이버 기준' },
+  ]
+  const categorySources: Source[] = [
+    { name: 'AI플레이스 자체 조사', year: 2026 },
+    { name: '네이버 플레이스', year: 2026 },
+    { name: 'Google Places', year: 2026 },
+  ]
+
   // 관련 콘텐츠 (비교/가이드)
   const comparisonTopics = await getComparisonTopics(city, category)
   const guide = await getGuidePage(city, category)
@@ -92,6 +113,12 @@ export default async function ListingPage({ params }: Props) {
             <p className="mt-3 text-base text-[#6a6a6a]">
               {cityObj.name}시에 위치한 {catObj.name} {places.length}곳을 진료 과목, 위치, 이용 후기 기준으로 정리했습니다.
             </p>
+            <p className="mt-1 text-xs text-[#6a6a6a]">최종 업데이트: 2026-04-16</p>
+
+            {/* GEO: Statistics + Sources */}
+            <div className="mt-6">
+              <StatisticsBox statistics={categoryStats} sources={categorySources} lastUpdated="2026-04-16" />
+            </div>
 
             {/* Listing Grid */}
             {places.length > 0 ? (
