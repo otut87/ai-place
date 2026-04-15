@@ -162,6 +162,50 @@ const checks: Check[] = [
     required: ['profile'],
   },
 
+  // === og:image 필수 ===
+  {
+    name: 'og:image',
+    test: (html) => html.includes('property="og:image"'),
+    required: ['home', 'category', 'profile', 'compare', 'guide', 'keyword'],
+  },
+
+  // === <time> 태그 (날짜 표시 페이지) ===
+  {
+    name: '<time> 태그',
+    test: (html) => /dateTime=/i.test(html) || /<time[\s>]/i.test(html),
+    required: ['category', 'profile', 'compare', 'guide', 'keyword'],
+  },
+
+  // === datePublished (Article 포함 페이지) ===
+  {
+    name: 'datePublished in Article',
+    test: (html) => {
+      // Article 스키마가 없는 페이지는 skip
+      if (!html.includes('"Article"')) return true
+      return html.includes('datePublished')
+    },
+    required: ['compare', 'guide', 'keyword'],
+  },
+
+  // === BreadcrumbList 3단계 이상 ===
+  {
+    name: 'BreadcrumbList 3단계+',
+    test: (html) => {
+      const jsonLdBlocks = html.match(/<script[^>]*application\/ld\+json[^>]*>(.*?)<\/script>/gs) ?? []
+      for (const block of jsonLdBlocks) {
+        try {
+          const content = block.replace(/<[^>]+>/g, '')
+          const data = JSON.parse(content)
+          if (data['@type'] === 'BreadcrumbList' && data.itemListElement) {
+            return data.itemListElement.length >= 3
+          }
+        } catch { /* skip */ }
+      }
+      return false
+    },
+    required: ['category', 'profile', 'compare', 'guide', 'keyword'],
+  },
+
   // === 추가: 부록 A 런칭 체크리스트 갭 ===
 
   // H1 1개 제한
