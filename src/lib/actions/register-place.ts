@@ -114,44 +114,38 @@ export async function generatePlaceContent(input: {
   try {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+      max_tokens: 2048,
+      system: 'You are a JSON generator. Output ONLY valid JSON. No markdown, no explanation, no code blocks. Just raw JSON.',
       messages: [{
         role: 'user',
-        content: `한국 로컬 업체 "${input.name}" (${catName}, ${input.address})의 정보를 생성해주세요.
+        content: `Generate info for Korean business "${input.name}" (${catName}, ${input.address}).
 
-반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만:
+Return this exact JSON structure:
+{"description":"40-60 char Korean description with location and specialty","services":[{"name":"서비스명","description":"설명","priceRange":"5-10만원"}],"faqs":[{"question":"질문?","answer":"답변"}],"tags":["태그"]}
 
-{
-  "description": "업체 한줄 설명 (정확히 40~60자, 위치+전문분야 포함)",
-  "services": [
-    {"name": "서비스명", "description": "한줄 설명", "priceRange": "가격대 (예: 5-10만원)"}
-  ],
-  "faqs": [
-    {"question": "질문? (반드시 물음표로 끝남)", "answer": "답변 (2-3문장)"}
-  ],
-  "tags": ["태그1", "태그2"]
-}
-
-조건:
-- description: 정확히 40~60자 (글자수 엄수), "OO 위치. OO 전문." 형태의 Direct Answer Block
-- services: 3-5개, 해당 업종에 맞는 실제 서비스
-- faqs: 5개, 실제 고객이 검색할 형태의 질문 (업체명 포함), 답변은 구체적
-- tags: 5-8개, 검색 키워드로 활용 가능한 태그
-- 모든 내용은 한국어
-- 가격대는 해당 지역/업종의 실제 시세 반영`,
+Rules:
+- description: Korean, 40-60 characters, format "OO 위치. OO 전문."
+- services: 3-5 items, realistic for this business type
+- faqs: 5 items, questions end with ?, include business name, answers are 2-3 sentences
+- tags: 5-8 Korean keywords
+- prices: realistic for this region/industry
+- ALL content in Korean`,
       }],
     })
 
     const text = response.content[0].type === 'text' ? response.content[0].text : ''
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
+
+    // JSON 추출: 코드블록 제거 → trailing comma 제거 → 파싱
+    const stripped = text.replace(/```json?\s*/g, '').replace(/```/g, '').trim()
+    const jsonMatch = stripped.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       return { success: false, error: 'LLM 응답을 파싱할 수 없습니다.' }
     }
 
-    // LLM이 trailing comma를 넣는 경우 대비: ,] → ] , ,} → }
     const cleaned = jsonMatch[0]
       .replace(/,\s*]/g, ']')
       .replace(/,\s*}/g, '}')
+      .replace(/[\x00-\x1F\x7F]/g, ' ') // control characters 제거
 
     const data = JSON.parse(cleaned)
     return {
