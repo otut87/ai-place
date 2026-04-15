@@ -5,6 +5,7 @@
 import type { Place, City, Category, Sector, ComparisonTopic, ComparisonPage, GuidePage, FAQ, KeywordPage } from './types'
 import { dbPlaceToPlace, dbCityToCity, dbCategoryToCategory } from './supabase-types'
 import { getReadClient } from './supabase/read-client'
+import { getAdminClient } from './supabase/admin-client'
 
 // 시드 데이터 폴백 (import를 seed로 네이밍)
 import * as seed from './data'
@@ -139,6 +140,28 @@ export async function getSectorForCategory(categorySlug: string) {
 
 export async function getAllPlaces(): Promise<Place[]> {
   return (await supabaseAllPlaces()) ?? []
+}
+
+/** Google Places API 결과를 DB에 저장 — 빌드 시 상세페이지에서 호출 */
+export async function updatePlaceGoogleData(slug: string, data: {
+  rating: number
+  reviewCount: number
+  googleBusinessUrl?: string
+}): Promise<void> {
+  try {
+    const supabase = getAdminClient()
+    if (!supabase) return
+    await supabase
+      .from('places')
+      .update({
+        rating: data.rating,
+        review_count: data.reviewCount,
+        ...(data.googleBusinessUrl && { google_business_url: data.googleBusinessUrl }),
+      })
+      .eq('slug', slug)
+  } catch (err) {
+    console.error('[data.supabase] updatePlaceGoogleData failed:', err)
+  }
 }
 
 // --- 비교/가이드/키워드 페이지: 아직 시드 데이터만 (Phase 6에서 DB 전환) ---

@@ -5,7 +5,7 @@ import Image from "next/image"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PhoneButton } from "@/components/phone-button"
-import { getPlaceBySlug, getPlaces, getCities, getCategories, getGuidesForPlace, getComparisonsForPlace, getSchemaTypeForCategory } from "@/lib/data.supabase"
+import { getPlaceBySlug, getPlaces, getCities, getCategories, getGuidesForPlace, getComparisonsForPlace, getSchemaTypeForCategory, updatePlaceGoogleData } from "@/lib/data.supabase"
 import { generateLocalBusiness, generateFAQPage, generateWebPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
 import { safeJsonLd } from "@/lib/utils"
@@ -82,7 +82,7 @@ export default async function ProfilePage({ params }: Props) {
     ? await getPlaceDetails(place.googlePlaceId)
     : null
 
-  // Google 데이터로 rating/reviewCount/googleBusinessUrl 오버라이드
+  // Google 데이터로 rating/reviewCount/googleBusinessUrl 오버라이드 + DB에 저장
   const placeWithGoogleData = googleData
     ? {
         ...place,
@@ -91,6 +91,15 @@ export default async function ProfilePage({ params }: Props) {
         googleBusinessUrl: googleData.googleMapsUri ?? place.googleBusinessUrl,
       }
     : place
+
+  // DB에 Google 데이터 저장 — 카드에서도 동일한 데이터 표시
+  if (googleData) {
+    await updatePlaceGoogleData(place.slug, {
+      rating: googleData.rating,
+      reviewCount: googleData.reviewCount,
+      googleBusinessUrl: googleData.googleMapsUri,
+    })
+  }
 
   // GEO: 역방향 링크 (이 업체를 참조하는 가이드/비교 페이지)
   const relatedGuides = await getGuidesForPlace(place.slug)
