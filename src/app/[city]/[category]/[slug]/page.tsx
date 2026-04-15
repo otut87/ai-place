@@ -5,7 +5,7 @@ import Image from "next/image"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PhoneButton } from "@/components/phone-button"
-import { getPlaceBySlug, getPlaces, getCities, getCategories, getGuidesForPlace, getComparisonsForPlace, getSchemaTypeForCategory, updatePlaceGoogleData } from "@/lib/data.supabase"
+import { getPlaceBySlug, getPlaces, getCities, getCategories, getGuidesForPlace, getComparisonsForPlace, getSchemaTypeForCategory, getSectorForCategory, updatePlaceGoogleData } from "@/lib/data.supabase"
 import { generateLocalBusiness, generateFAQPage, generateWebPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
 import { safeJsonLd } from "@/lib/utils"
@@ -118,9 +118,11 @@ export default async function ProfilePage({ params }: Props) {
     lastUpdated: place.lastUpdated,
   })
 
-  // CRITICAL 3: BreadcrumbList JSON-LD
+  // BreadcrumbList JSON-LD — 4단계: 홈→대분류→소분류→업체
+  const sector = await getSectorForCategory(category)
   const breadcrumbJsonLd = generateBreadcrumbList([
     { name: '홈', url: baseUrl },
+    ...(sector ? [{ name: `${cityObj?.name ?? city} ${sector.name}`, url: `${baseUrl}/${city}` }] : []),
     { name: `${cityObj?.name ?? city} ${catObj?.name ?? category}`, url: `${baseUrl}/${city}/${category}` },
     { name: place.name, url: pageUrl },
   ])

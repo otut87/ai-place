@@ -94,7 +94,7 @@ export default async function KeywordLandingPage({ params }: Props) {
             <p className="mt-3 text-base text-[#222222] font-medium leading-relaxed">
               {page.summary}
             </p>
-            <p className="mt-1 text-xs text-[#6a6a6a]">최종 업데이트: {page.lastUpdated}</p>
+            <time dateTime={page.lastUpdated} className="mt-1 block text-xs text-[#6a6a6a]">최종 업데이트: {page.lastUpdated}</time>
 
             {/* Statistics */}
             <div className="mt-10">

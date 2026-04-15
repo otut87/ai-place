@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getCities, getCategories, getSectors, getAllPlaces, getAllComparisonTopics, getAllGuidePages } from '@/lib/data.supabase'
+import { getCities, getCategories, getSectors, getAllPlaces, getAllComparisonTopics, getAllGuidePages, getAllKeywordPages } from '@/lib/data.supabase'
 
 export async function GET() {
   const cities = await getCities()
@@ -8,6 +8,7 @@ export async function GET() {
   const allPlaces = await getAllPlaces()
   const comparisons = await getAllComparisonTopics()
   const guides = await getAllGuidePages()
+  const keywords = await getAllKeywordPages()
 
   const activeCategoryKeys = new Set(allPlaces.map(p => `${p.city}/${p.category}`))
   const baseUrl = 'https://aiplace.kr'
@@ -56,6 +57,14 @@ export async function GET() {
     text += `\n## 비교\n\n`
     for (const c of comparisons) {
       text += `- [${c.name}](${baseUrl}/compare/${c.city}/${c.category}/${c.slug})\n`
+    }
+  }
+
+  // Keywords
+  if (keywords.length > 0) {
+    text += `\n## AI 검색 키워드 페이지\n\n`
+    for (const kw of keywords) {
+      text += `- [${kw.targetQuery}](${baseUrl}/${kw.city}/${kw.category}/k/${kw.slug})\n`
     }
   }
 

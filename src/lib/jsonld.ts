@@ -218,6 +218,7 @@ export function generateArticle(opts: {
     '@id': opts.url,
     headline: opts.title,
     description: opts.description,
+    datePublished: opts.lastUpdated,
     dateModified: opts.lastUpdated,
     author,
     publisher: org,
