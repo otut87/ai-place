@@ -44,10 +44,30 @@
 - [x] 홈페이지 ItemList JSON-LD 추가
 - [x] IndexNow 재제출 (20 URL, 200 OK)
 
-### 4/17 ~ 4/18
-- [ ] P3: Supabase 스키마 설계 (마이그레이션 SQL)
-- [ ] P3: data.supabase.ts 초안 (data.ts와 동일 시그니처)
-- [ ] P3: 시드 스크립트 (data.ts → Supabase 이관)
+### 4/16 완료 (Phase 1~6 + 코드 리뷰)
+- [x] Phase 1: SQL 마이그레이션 001~008 (Supabase 실행 완료)
+- [x] Phase 2: data.supabase.ts + 시드 폴백 (read-client SSG 호환)
+- [x] Phase 3: middleware + admin 인증 (ADMIN_EMAILS allowlist)
+- [x] Phase 4: 업체 등록 폼 + Server Actions + Google Places Text Search
+- [x] Phase 5: 5개 카테고리 Schema.org 매핑
+- [x] Phase 6: 시드 데이터 동기화 (DB = data.ts 일치)
+- [x] GEO/SEO/AEO 런칭 체크리스트 하네스 (267 tests, 23페이지 0 오류)
+- [x] 전체 코드 리뷰 5회 + Codex 리뷰 1회 (CRITICAL 0)
+- [x] 업체 등록 자동화: Google 영문명/전화, 카카오 URL, Claude AI 서비스/FAQ/태그 생성
+- [x] Vercel 배포 완료
+
+### 다음 세션 TODO
+- [ ] `/check` GEO 무료 진단 도구 구현
+  - 업체명 입력 → Google/네이버/카카오 존재감 체크
+  - 홈페이지 URL 있으면 크롤링 → 전체 GEO/SEO/AEO 체크리스트 진단
+  - 종합 점수 (0~100) + 항목별 ✅/❌ + 개선 제안
+  - CTA: AI Place 등록 유도
+- [ ] 블로그 자동 발행 (Supabase CMS + 크론)
+  - blog_posts 테이블 활용 (004 마이그레이션 완료)
+  - Claude API로 GEO 친화적 블로그 글 자동 생성
+  - 주 2-3회 자동 발행 스케줄
+- [ ] DB 불완전 데이터 정리 (있으면)
+- [ ] 모바일 햄버거 메뉴 구현 (코드 리뷰 HIGH-6)
 
 ### 금요일 (4/18)
 - [ ] Bing Webmaster에서 인덱싱 상태 확인
