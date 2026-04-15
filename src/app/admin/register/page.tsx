@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { searchPlace, enrichPlace, registerPlace, type PlaceSearchResult } from '@/lib/actions/register-place'
+import { searchPlace, enrichPlace, registerPlace } from '@/lib/actions/register-place'
+import type { PlaceSearchResult } from '@/lib/google-places'
 
 type Step = 'search' | 'details' | 'content' | 'confirm'
 

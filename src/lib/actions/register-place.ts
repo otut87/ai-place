@@ -6,10 +6,9 @@
 // Step 3: 서비스/FAQ/설명 입력 → DB 저장 (status: pending)
 
 import { requireAuth } from '@/lib/auth'
-import { searchPlaceByText, getPlaceDetails, type PlaceSearchResult } from '@/lib/google-places'
+import { searchPlaceByText, getPlaceDetails } from '@/lib/google-places'
+import type { PlaceSearchResult } from '@/lib/google-places'
 import { createServerClient } from '@/lib/supabase/server'
-
-export type { PlaceSearchResult }
 
 export interface RegisterPlaceInput {
   // Step 1: 기본 정보
