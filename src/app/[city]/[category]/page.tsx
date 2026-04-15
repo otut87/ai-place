@@ -8,8 +8,8 @@ import { StatisticsBox } from "@/components/statistics-box"
 import { SourceList } from "@/components/source-list"
 import { safeJsonLd } from "@/lib/utils"
 import type { StatisticItem, Source } from "@/lib/types"
-import { getPlaces, getCities, getCategories, getComparisonTopics, getGuidePage, getCategoryFaqs } from "@/lib/data.supabase"
-import { generateItemList, generateFAQPage } from "@/lib/jsonld"
+import { getPlaces, getCities, getCategories, getComparisonTopics, getGuidePage } from "@/lib/data.supabase"
+import { generateItemList } from "@/lib/jsonld"
 import { generateBreadcrumbList, generateCategoryDAB } from "@/lib/seo"
 
 interface Props {
@@ -65,10 +65,6 @@ export default async function ListingPage({ params }: Props) {
     places,
     `${cityObj.name} ${catObj.name} 추천 목록`,
   )
-
-  // 카테고리 레벨 FAQ (개별 업체 FAQ가 아닌 카테고리 질문)
-  const categoryFaqs = await getCategoryFaqs(city, category)
-  const faqJsonLd = categoryFaqs.length > 0 ? generateFAQPage(categoryFaqs) : null
 
   // CRITICAL 3: BreadcrumbList JSON-LD
   const baseUrl = 'https://aiplace.kr'
@@ -173,31 +169,7 @@ export default async function ListingPage({ params }: Props) {
               </section>
             )}
 
-            {/* FAQ Section — 카테고리 레벨 */}
-            {categoryFaqs.length > 0 && (
-              <section className="mt-20">
-                <h2 className="text-[22px] font-semibold text-[#222222] leading-tight tracking-[-0.44px]">
-                  자주 묻는 질문
-                </h2>
-                <div className="mt-6 divide-y divide-[#c1c1c1]/50">
-                  {categoryFaqs.map((faq) => (
-                    <details key={faq.question} className="group py-4">
-                      <summary className="flex items-center justify-between cursor-pointer list-none text-base font-medium text-[#222222]">
-                        {faq.question}
-                        <svg
-                          className="w-5 h-5 text-[#6a6a6a] shrink-0 ml-4 group-open:rotate-180 transition-transform"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </summary>
-                      <p className="mt-2 text-sm text-[#6a6a6a] leading-relaxed">{faq.answer}</p>
-                    </details>
-                  ))}
-                </div>
-              </section>
-            )}
+            {/* FAQ: 블로그 자동 발행 시스템에서 확장 예정 */}
           </div>
         </section>
       </main>
@@ -208,12 +180,6 @@ export default async function ListingPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(itemListJsonLd) }}
       />
-      {faqJsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }}
-        />
-      )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
     </>
   )
