@@ -32,19 +32,17 @@ export function PlaceCard({ place }: { place: Place }) {
         {/* Info */}
         <div className="p-5">
           {/* Name + Rating */}
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-[22px] font-semibold text-[#222222] leading-tight tracking-[-0.44px]">
-              {place.name}
-            </h3>
-            {place.rating != null && (
-              <div className="flex items-center gap-1 shrink-0">
-                <span className="text-sm font-medium text-[#222222]">★ {place.rating}</span>
-                {place.reviewCount != null && (
-                  <span className="text-sm text-[#6a6a6a]">· 후기 {place.reviewCount}건</span>
-                )}
-              </div>
-            )}
-          </div>
+          <h3 className="text-base font-semibold text-[#222222] leading-tight line-clamp-1">
+            {place.name}
+          </h3>
+          {place.rating != null && (
+            <div className="mt-1 flex items-center gap-1">
+              <span className="text-xs font-medium text-[#222222]">★ {place.rating}</span>
+              {place.reviewCount != null && (
+                <span className="text-xs text-[#6a6a6a]">· 후기 {place.reviewCount}건</span>
+              )}
+            </div>
+          )}
 
           {/* Address */}
           <p className="mt-2 text-sm text-[#6a6a6a] leading-relaxed line-clamp-1">
@@ -53,11 +51,11 @@ export function PlaceCard({ place }: { place: Place }) {
 
           {/* Tags */}
           {place.tags.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {place.tags.slice(0, 4).map(tag => (
                 <span
                   key={tag}
-                  className="px-2.5 py-1 text-xs font-medium text-[#222222] border border-[#c1c1c1] rounded-[14px]"
+                  className="px-2 py-0.5 text-[11px] text-[#6a6a6a] border border-[#e0e0e0] rounded-full"
                 >
                   {tag}
                 </span>

@@ -81,7 +81,8 @@ const checks: Check[] = [
   {
     name: 'FAQPage JSON-LD',
     test: (html) => html.includes('"FAQPage"'),
-    required: ['home', 'category', 'profile', 'compare', 'guide', 'keyword'],
+    required: ['home', 'profile', 'compare', 'guide', 'keyword'],
+    // category: FAQ가 없는 신규 카테고리는 FAQPage 미생성이 정상
   },
   {
     name: 'BreadcrumbList JSON-LD',
