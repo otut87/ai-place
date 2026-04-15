@@ -193,7 +193,8 @@ const checks: Check[] = [
       const jsonLdBlocks = html.match(/<script[^>]*application\/ld\+json[^>]*>(.*?)<\/script>/gs) ?? []
       return jsonLdBlocks.some(block =>
         block.includes('"MedicalClinic"') || block.includes('"HairSalon"') ||
-        block.includes('"Dentist"') || block.includes('"HomeAndConstructionBusiness"')
+        block.includes('"Dentist"') || block.includes('"HomeAndConstructionBusiness"') ||
+        block.includes('"ProfessionalService"') || block.includes('"AutoRepair"')
       )
     },
     required: ['profile'],

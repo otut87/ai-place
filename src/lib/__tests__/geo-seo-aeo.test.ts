@@ -6,7 +6,7 @@
  * 이 테스트가 실패하면 배포 불가.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { existsSync, readFileSync } from 'fs'
+import { existsSync, readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 
 // ═══════════════════════════════════════════════
@@ -81,7 +81,7 @@ describe('[기술 기초]', () => {
     it('IndexNow 키 파일 존재 (public/*.txt)', () => {
       const publicDir = join(process.cwd(), 'public')
       const files = existsSync(publicDir)
-        ? require('fs').readdirSync(publicDir).filter((f: string) => /^[a-f0-9]{32}\.txt$/.test(f))
+        ? readdirSync(publicDir).filter((f: string) => /^[a-f0-9]{32}\.txt$/.test(f))
         : []
       expect(files.length, 'IndexNow 키 파일 없음 (public/{key}.txt)').toBeGreaterThan(0)
     })

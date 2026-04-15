@@ -15,7 +15,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Supabase 세션 갱신 + 인증 확인
-  let response = NextResponse.next({ request })
+  const response = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

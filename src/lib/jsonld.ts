@@ -11,6 +11,8 @@ const CATEGORY_SCHEMA_MAP: Record<string, string> = {
   dentistry: 'Dentist',
   hairsalon: 'HairSalon',
   interior: 'HomeAndConstructionBusiness',
+  webagency: 'ProfessionalService',
+  'auto-repair': 'AutoRepair',
 }
 
 /** openingHours 문자열을 OpeningHoursSpecification으로 변환 (§9.1) */
