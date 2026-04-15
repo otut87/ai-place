@@ -55,8 +55,10 @@ export async function searchPlace(query: string, city: string): Promise<ActionRe
 /** Step 2: Place ID로 상세 정보 가져오기 (자동 보강) */
 export async function enrichPlace(placeId: string): Promise<ActionResult<{
   name: string
+  nameEn?: string
   rating: number
   reviewCount: number
+  phone?: string
   googleMapsUri?: string
 }>> {
   await requireAuth()
@@ -70,8 +72,10 @@ export async function enrichPlace(placeId: string): Promise<ActionResult<{
     success: true,
     data: {
       name: details.name,
+      nameEn: details.nameEn,
       rating: details.rating,
       reviewCount: details.reviewCount,
+      phone: details.phone,
       googleMapsUri: details.googleMapsUri,
     },
   }

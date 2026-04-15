@@ -6,8 +6,10 @@ const BASE_URL = 'https://places.googleapis.com/v1'
 
 export interface PlaceDetailsResult {
   name: string
+  nameEn?: string
   rating: number
   reviewCount: number
+  phone?: string
   reviews: Array<{
     text: string
     rating: number
@@ -19,7 +21,7 @@ export interface PlaceDetailsResult {
 
 /** Place Details API (New) 호출 */
 export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResult | null> {
-  const fields = 'displayName,rating,userRatingCount,reviews,photos,googleMapsUri'
+  const fields = 'displayName,rating,userRatingCount,reviews,photos,googleMapsUri,nationalPhoneNumber'
   const url = `${BASE_URL}/places/${placeId}?fields=${fields}&languageCode=ko`
 
   try {
@@ -37,10 +39,23 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResu
 
     const data = await res.json()
 
+    // 영문 이름 별도 조회
+    let nameEn: string | undefined
+    try {
+      const enUrl = `${BASE_URL}/places/${placeId}?fields=displayName&languageCode=en`
+      const enRes = await fetch(enUrl, { headers: { 'X-Goog-Api-Key': API_KEY } })
+      if (enRes.ok) {
+        const enData = await enRes.json()
+        nameEn = enData.displayName?.text
+      }
+    } catch { /* 영문 이름 조회 실패는 무시 */ }
+
     return {
       name: data.displayName?.text ?? '',
+      nameEn,
       rating: data.rating ?? 0,
       reviewCount: data.userRatingCount ?? 0,
+      phone: data.nationalPhoneNumber ?? undefined,
       reviews: (data.reviews ?? []).map((r: { text?: { text?: string }; rating?: number; relativePublishTimeDescription?: string }) => ({
         text: r.text?.text ?? '',
         rating: r.rating ?? 0,

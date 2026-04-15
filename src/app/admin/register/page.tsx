@@ -7,6 +7,11 @@ import type { PlaceSearchResult } from '@/lib/google-places'
 
 type Step = 'search' | 'details' | 'content' | 'confirm'
 
+const CATEGORY_NAME_KR: Record<string, string> = {
+  dermatology: '피부과', interior: '인테리어', webagency: '웹에이전시',
+  'auto-repair': '자동차정비', hairsalon: '미용실',
+}
+
 export default function RegisterPage() {
   const router = useRouter()
   const [step, setStep] = useState<Step>('search')
@@ -48,12 +53,25 @@ export default function RegisterPage() {
 
   async function handleSelectPlace(place: PlaceSearchResult) {
     setSelectedPlace(place)
-    setSlug(place.name.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, ''))
     setLoading(true)
     const enriched = await enrichPlace(place.placeId)
     setLoading(false)
-    if (enriched.success && enriched.data.googleMapsUri) {
-      // googleMapsUri 자동 설정
+
+    if (enriched.success) {
+      const d = enriched.data
+      // 영문 이름 → 슬러그 자동 생성
+      if (d.nameEn) {
+        setNameEn(d.nameEn)
+        setSlug(d.nameEn.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, ''))
+      } else {
+        setSlug(place.name.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'new-place')
+      }
+      // 전화번호 자동 채우기
+      if (d.phone) setPhone(d.phone)
+      // 설명 자동 생성 (템플릿)
+      const area = place.address.split(' ').slice(1, 3).join(' ')
+      const catName = CATEGORY_NAME_KR[category] ?? category
+      setDescription(`${area} 위치. ${catName} 전문. 상세 설명은 직접 수정해주세요.`)
     }
     setStep('details')
   }
@@ -168,13 +186,18 @@ export default function RegisterPage() {
           <p className="text-sm text-[#6a6a6a]">선택: {selectedPlace.name} — {selectedPlace.address}</p>
 
           <div>
-            <label className="block text-sm font-medium text-[#484848] mb-1">영문 이름 (선택)</label>
+            <label className="block text-sm font-medium text-[#484848] mb-1">
+              영문 이름 <span className="text-xs text-[#6a6a6a]">(Google에서 자동 입력)</span>
+            </label>
             <input type="text" value={nameEn} onChange={e => setNameEn(e.target.value)} className="w-full h-12 px-4 rounded-lg border border-[#dddddd]" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#484848] mb-1">URL 슬러그</label>
+            <label className="block text-sm font-medium text-[#484848] mb-1">
+              URL 슬러그 <span className="text-xs text-[#6a6a6a]">(영문 이름에서 자동 생성)</span>
+            </label>
             <input type="text" value={slug} onChange={e => setSlug(e.target.value)} className="w-full h-12 px-4 rounded-lg border border-[#dddddd]" />
+            <p className="mt-1 text-xs text-[#6a6a6a]">aiplace.kr/{city}/{category}/{slug}</p>
           </div>
 
           <div>
@@ -201,12 +224,32 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-sm font-medium text-[#484848] mb-1">네이버 플레이스 URL</label>
-            <input type="url" value={naverPlaceUrl} onChange={e => setNaverPlaceUrl(e.target.value)} className="w-full h-12 px-4 rounded-lg border border-[#dddddd]" />
+            <div className="flex gap-2">
+              <input type="url" value={naverPlaceUrl} onChange={e => setNaverPlaceUrl(e.target.value)} className="flex-1 h-12 px-4 rounded-lg border border-[#dddddd]" placeholder="https://naver.me/..." />
+              <a
+                href={`https://map.naver.com/search/${encodeURIComponent(selectedPlace?.name ?? '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-12 px-4 inline-flex items-center rounded-lg border border-[#dddddd] text-sm text-[#484848] hover:border-[#222222] whitespace-nowrap"
+              >
+                네이버에서 검색
+              </a>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-[#484848] mb-1">카카오맵 URL</label>
-            <input type="url" value={kakaoMapUrl} onChange={e => setKakaoMapUrl(e.target.value)} className="w-full h-12 px-4 rounded-lg border border-[#dddddd]" />
+            <div className="flex gap-2">
+              <input type="url" value={kakaoMapUrl} onChange={e => setKakaoMapUrl(e.target.value)} className="flex-1 h-12 px-4 rounded-lg border border-[#dddddd]" placeholder="https://place.map.kakao.com/..." />
+              <a
+                href={`https://map.kakao.com/?q=${encodeURIComponent(selectedPlace?.name ?? '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-12 px-4 inline-flex items-center rounded-lg border border-[#dddddd] text-sm text-[#484848] hover:border-[#222222] whitespace-nowrap"
+              >
+                카카오에서 검색
+              </a>
+            </div>
           </div>
 
           <button onClick={() => setStep('content')} className="h-12 px-6 rounded-lg bg-[#222222] text-white font-medium">
