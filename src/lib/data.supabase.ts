@@ -106,7 +106,14 @@ async function supabaseCategories(): Promise<Category[] | null> {
 // --- Public API (data.ts와 동일 시그니처) ---
 
 export async function getPlaces(city: string, category: string): Promise<Place[]> {
-  return (await supabasePlaces(city, category)) ?? (await seed.getPlaces(city, category))
+  const dbPlaces = await supabasePlaces(city, category)
+  const seedPlaces = await seed.getPlaces(city, category)
+
+  if (!dbPlaces) return seedPlaces
+
+  const dbSlugs = new Set(dbPlaces.map(p => p.slug))
+  const seedOnly = seedPlaces.filter(p => !dbSlugs.has(p.slug))
+  return [...dbPlaces, ...seedOnly]
 }
 
 export async function getPlaceBySlug(city: string, category: string, slug: string): Promise<Place | undefined> {
@@ -131,7 +138,15 @@ export async function getSchemaTypeForCategory(categorySlug: string): Promise<st
 }
 
 export async function getAllPlaces(): Promise<Place[]> {
-  return (await supabaseAllPlaces()) ?? (await seed.getAllPlaces())
+  const dbPlaces = await supabaseAllPlaces()
+  const seedPlaces = await seed.getAllPlaces()
+
+  if (!dbPlaces) return seedPlaces
+
+  // DB + 시드 합치기 (slug 중복 시 DB 우선)
+  const dbSlugs = new Set(dbPlaces.map(p => p.slug))
+  const seedOnly = seedPlaces.filter(p => !dbSlugs.has(p.slug))
+  return [...dbPlaces, ...seedOnly]
 }
 
 // --- 비교/가이드/키워드 페이지: 아직 시드 데이터만 (Phase 6에서 DB 전환) ---

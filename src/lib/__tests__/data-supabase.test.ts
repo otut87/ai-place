@@ -128,12 +128,13 @@ describe('Supabase 성공 시', () => {
     expect(result!.nameEn).toBe('Test Clinic')
   })
 
-  it('getAllPlaces → DB active places 반환', async () => {
+  it('getAllPlaces → DB + 시드 합쳐서 반환', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: [mockDbPlace], error: null }))
 
     const { getAllPlaces } = await import('@/lib/data.supabase')
     const result = await getAllPlaces()
-    expect(result.length).toBe(1)
+    // DB 1건 + 시드(slug 중복 제외) 합산
+    expect(result.length).toBeGreaterThanOrEqual(1)
     expect(result[0].slug).toBe('test-clinic')
   })
 

@@ -133,7 +133,7 @@ export default async function HomePage() {
             <h2 className="text-[28px] font-bold text-[#222222] leading-[1.43]">최근 등록 업체</h2>
             <p className="mt-2 text-base text-[#222222]">천안 지역 {allPlaces.length}곳의 AI 최적화 프로필을 확인하세요.</p>
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {allPlaces.slice(0, 4).map(place => (
+              {allPlaces.slice(0, 8).map(place => (
                 <PlaceCard key={place.slug} place={place} />
               ))}
             </div>
