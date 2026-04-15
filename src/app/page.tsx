@@ -72,12 +72,12 @@ export default async function HomePage() {
         <section className="pt-24 pb-20 px-6">
           <div className="mx-auto max-w-[1200px] text-center">
             <h1 className="text-[28px] sm:text-[36px] font-bold text-[#222222] leading-tight tracking-tight">
-              AI가 추천하는 우리 동네 업체
+              당신의 업체, AI가 추천하게 만드세요
             </h1>
             {/* Direct Answer Block (§4.4 — 40-60자 자기완결 답변) */}
             <p className="mt-4 text-base text-[#222222] font-medium max-w-lg mx-auto">
-              ChatGPT, Claude, Gemini에서 검색되는 병원, 미용실, 인테리어를 찾아보세요.
-              천안 지역 {allPlaces.length}곳의 업체 정보를 AI 최적화 형태로 제공합니다.
+              AI Place에 등록된 업체는 ChatGPT, Claude, Gemini에서 검색될 수 있도록 구조화된 프로필을 갖게 됩니다.
+              현재 천안 지역 {categories.length}개 업종이 등록되어 있습니다.
             </p>
           </div>
         </section>
