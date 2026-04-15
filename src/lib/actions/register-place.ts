@@ -8,6 +8,7 @@
 import { requireAuth } from '@/lib/auth'
 import { searchPlaceByText, getPlaceDetails } from '@/lib/google-places'
 import type { PlaceSearchResult } from '@/lib/google-places'
+import { searchNaverPlace, searchKakaoPlace } from '@/lib/naver-kakao-search'
 import { createServerClient } from '@/lib/supabase/server'
 
 export interface RegisterPlaceInput {
@@ -52,18 +53,26 @@ export async function searchPlace(query: string, city: string): Promise<ActionRe
   return { success: true, data: results }
 }
 
-/** Step 2: Place ID로 상세 정보 가져오기 (자동 보강) */
-export async function enrichPlace(placeId: string): Promise<ActionResult<{
+/** Step 2: Place ID로 상세 정보 가져오기 (자동 보강) — Google + 네이버 + 카카오 병렬 조회 */
+export async function enrichPlace(placeId: string, placeName?: string): Promise<ActionResult<{
   name: string
   nameEn?: string
   rating: number
   reviewCount: number
   phone?: string
   googleMapsUri?: string
+  naverPlaceUrl?: string
+  kakaoMapUrl?: string
 }>> {
   await requireAuth()
 
-  const details = await getPlaceDetails(placeId)
+  // Google + 네이버 + 카카오 병렬 조회
+  const [details, naver, kakao] = await Promise.all([
+    getPlaceDetails(placeId),
+    placeName ? searchNaverPlace(placeName) : Promise.resolve(null),
+    placeName ? searchKakaoPlace(placeName) : Promise.resolve(null),
+  ])
+
   if (!details) {
     return { success: false, error: 'Google Places 상세 정보를 가져올 수 없습니다.' }
   }
@@ -77,6 +86,8 @@ export async function enrichPlace(placeId: string): Promise<ActionResult<{
       reviewCount: details.reviewCount,
       phone: details.phone,
       googleMapsUri: details.googleMapsUri,
+      naverPlaceUrl: naver?.link || undefined,
+      kakaoMapUrl: kakao?.placeUrl || undefined,
     },
   }
 }

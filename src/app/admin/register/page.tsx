@@ -54,7 +54,7 @@ export default function RegisterPage() {
   async function handleSelectPlace(place: PlaceSearchResult) {
     setSelectedPlace(place)
     setLoading(true)
-    const enriched = await enrichPlace(place.placeId)
+    const enriched = await enrichPlace(place.placeId, place.name)
     setLoading(false)
 
     if (enriched.success) {
@@ -68,6 +68,9 @@ export default function RegisterPage() {
       }
       // 전화번호 자동 채우기
       if (d.phone) setPhone(d.phone)
+      // 네이버/카카오 URL 자동 채우기
+      if (d.naverPlaceUrl) setNaverPlaceUrl(d.naverPlaceUrl)
+      if (d.kakaoMapUrl) setKakaoMapUrl(d.kakaoMapUrl)
       // 설명 자동 생성 (템플릿)
       const area = place.address.split(' ').slice(1, 3).join(' ')
       const catName = CATEGORY_NAME_KR[category] ?? category
