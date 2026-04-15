@@ -32,7 +32,7 @@ export function PlaceCard({ place }: { place: Place }) {
         {/* Info */}
         <div className="p-5">
           {/* Name + Rating */}
-          <h3 className="text-base font-semibold text-[#222222] leading-tight line-clamp-1">
+          <h3 className="text-[22px] font-semibold text-[#222222] leading-tight tracking-[-0.44px]">
             {place.name}
           </h3>
           {place.rating != null && (
