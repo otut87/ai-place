@@ -35,7 +35,7 @@ export function Footer() {
             <h3 className="text-sm font-semibold text-[#222222] mb-3">AI Place</h3>
             <ul className="space-y-2">
               <li><Link href="/about" className="text-sm text-[#6a6a6a] hover:text-[#008f6b]">소개</Link></li>
-              <li><Link href="/admin/register" className="text-sm text-[#6a6a6a] hover:text-[#008f6b]">업체 등록</Link></li>
+              <li><Link href="/about" className="text-sm text-[#6a6a6a] hover:text-[#008f6b]">업체 등록 문의</Link></li>
             </ul>
           </div>
         </div>

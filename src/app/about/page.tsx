@@ -2,6 +2,7 @@ import Link from "next/link"
 import type { Metadata } from "next"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { InquiryButton } from "@/components/inquiry-modal"
 import { safeJsonLd } from "@/lib/utils"
 import { generatePerson, generateProfilePage, generateFAQPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
@@ -175,12 +176,9 @@ export default function AboutPage() {
 
             {/* CTA */}
             <div className="mt-12 text-center">
-              <Link
-                href="/admin/register"
-                className="inline-flex h-12 px-6 items-center rounded-lg bg-[#008060] text-white font-medium hover:bg-[#006b4f] transition-colors"
-              >
+              <InquiryButton className="inline-flex h-12 px-6 items-center rounded-lg bg-[#008060] text-white font-medium hover:bg-[#006b4f] transition-colors">
                 업체 등록 문의
-              </Link>
+              </InquiryButton>
             </div>
 
             {/* FAQ */}

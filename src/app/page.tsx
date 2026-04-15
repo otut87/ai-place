@@ -3,6 +3,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PlaceCard } from "@/components/place-card"
 import { StatisticsBox } from "@/components/statistics-box"
+import { InquiryButton } from "@/components/inquiry-modal"
 import { getCities, getCategories, getPlaces, getAllPlaces, getAllComparisonTopics, getAllGuidePages, getAllKeywordPages } from "@/lib/data.supabase"
 import { generateFAQPage, generateWebSite, generateItemList } from "@/lib/jsonld"
 import { safeJsonLd } from "@/lib/utils"
@@ -218,12 +219,9 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="mt-8 text-center">
-              <Link
-                href="/admin/register"
-                className="inline-flex h-12 px-6 items-center rounded-lg bg-[#008060] text-white font-medium hover:bg-[#006b4f] transition-colors"
-              >
+              <InquiryButton className="inline-flex h-12 px-6 items-center rounded-lg bg-[#008060] text-white font-medium hover:bg-[#006b4f] transition-colors">
                 업체 등록 문의
-              </Link>
+              </InquiryButton>
             </div>
           </div>
         </section>

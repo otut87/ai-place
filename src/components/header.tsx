@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { InquiryButton } from "./inquiry-modal"
 
 export function Header() {
   return (
@@ -10,14 +11,11 @@ export function Header() {
         </Link>
 
         {/* CTA */}
-        <Link
-          href="/admin/register"
-          className="hidden sm:inline-flex h-10 px-5 items-center rounded-lg bg-[#008060] text-white text-sm font-medium hover:bg-[#006b4f] transition-colors"
-        >
+        <InquiryButton className="hidden sm:inline-flex h-10 px-5 items-center rounded-lg bg-[#008060] text-white text-sm font-medium hover:bg-[#006b4f] transition-colors">
           업체 등록
-        </Link>
+        </InquiryButton>
 
-        {/* Mobile hamburger - 모바일에서만 표시 */}
+        {/* Mobile hamburger */}
         <button
           className="sm:hidden p-2 rounded-lg hover:bg-[#f2f2f2] transition-colors"
           aria-label="메뉴 열기"

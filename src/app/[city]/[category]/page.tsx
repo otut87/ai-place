@@ -8,6 +8,7 @@ import { StatisticsBox } from "@/components/statistics-box"
 import { SourceList } from "@/components/source-list"
 import { safeJsonLd } from "@/lib/utils"
 import type { StatisticItem, Source } from "@/lib/types"
+import { InquiryButton } from "@/components/inquiry-modal"
 import { getPlaces, getCities, getCategories, getComparisonTopics, getGuidePage, getMetaDescriptorForCategory, getSectorForCategory, getSchemaTypeForCategory } from "@/lib/data.supabase"
 import { generateItemList } from "@/lib/jsonld"
 import { generateBreadcrumbList, generateCategoryDAB } from "@/lib/seo"
@@ -147,12 +148,9 @@ export default async function ListingPage({ params }: Props) {
                   <path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0H5m14 0h2m-16 0H3" />
                 </svg>
                 <p className="text-lg text-[#6a6a6a]">아직 등록된 업체가 없어요</p>
-                <Link
-                  href="/admin/register"
-                  className="mt-4 inline-flex h-10 px-5 items-center rounded-lg bg-[#008060] text-white text-sm font-medium hover:bg-[#006b4f] transition-colors"
-                >
+                <InquiryButton className="mt-4 inline-flex h-10 px-5 items-center rounded-lg bg-[#008060] text-white text-sm font-medium hover:bg-[#006b4f] transition-colors">
                   첫 번째 업체 등록하기
-                </Link>
+                </InquiryButton>
               </div>
             )}
 
