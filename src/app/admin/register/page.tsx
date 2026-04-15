@@ -278,13 +278,28 @@ export default function RegisterPage() {
                   </label>
                   {!h.closed && (
                     <>
-                      <input type="time" value={h.open} onChange={e => { const next = [...hours]; next[i] = { ...next[i], open: e.target.value }; setHours(next) }} className="h-8 px-2 rounded border border-[#dddddd] text-sm" />
+                      <input type="time" value={h.open} onChange={e => {
+                        const val = e.target.value
+                        setHours(prev => prev.map((item, j) => {
+                          if (j === i) return { ...item, open: val }
+                          if (!item.closed && !item.open) return { ...item, open: val }
+                          return item
+                        }))
+                      }} className="h-8 px-2 rounded border border-[#dddddd] text-sm" />
                       <span className="text-xs text-[#6a6a6a]">~</span>
-                      <input type="time" value={h.close} onChange={e => { const next = [...hours]; next[i] = { ...next[i], close: e.target.value }; setHours(next) }} className="h-8 px-2 rounded border border-[#dddddd] text-sm" />
+                      <input type="time" value={h.close} onChange={e => {
+                        const val = e.target.value
+                        setHours(prev => prev.map((item, j) => {
+                          if (j === i) return { ...item, close: val }
+                          if (!item.closed && !item.close) return { ...item, close: val }
+                          return item
+                        }))
+                      }} className="h-8 px-2 rounded border border-[#dddddd] text-sm" />
                     </>
                   )}
                 </div>
               ))}
+              <p className="text-xs text-[#6a6a6a] mt-1">첫 번째 시간 입력 시 빈 칸에 자동 복사됩니다</p>
             </div>
           </div>
 
