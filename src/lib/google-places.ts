@@ -23,9 +23,13 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResu
   const url = `${BASE_URL}/places/${placeId}?fields=${fields}&languageCode=ko`
 
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
     const res = await fetch(url, {
       headers: { 'X-Goog-Api-Key': API_KEY },
+      signal: controller.signal,
     })
+    clearTimeout(timeout)
     if (!res.ok) {
       console.error(`Google Places API error ${res.status}: ${await res.text()}`)
       return null
@@ -64,6 +68,8 @@ export interface PlaceSearchResult {
 
 export async function searchPlaceByText(query: string): Promise<PlaceSearchResult[] | null> {
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
     const res = await fetch(`${BASE_URL}/places:searchText`, {
       method: 'POST',
       headers: {
@@ -71,6 +77,7 @@ export async function searchPlaceByText(query: string): Promise<PlaceSearchResul
         'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.location',
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
       body: JSON.stringify({
         textQuery: query,
         languageCode: 'ko',
@@ -78,6 +85,7 @@ export async function searchPlaceByText(query: string): Promise<PlaceSearchResul
         maxResultCount: 5,
       }),
     })
+    clearTimeout(timeout)
 
     if (!res.ok) {
       console.error(`Google Places Text Search error ${res.status}: ${await res.text()}`)
@@ -109,7 +117,14 @@ export async function searchPlaceByText(query: string): Promise<PlaceSearchResul
   }
 }
 
-/** Photo URL 생성 (Places API New) */
+/**
+ * Photo URL 생성 (Places API New)
+ * WARNING: 서버 사이드에서만 사용할 것. 클라이언트에 반환하면 API 키 노출됨.
+ * 클라이언트에 이미지를 제공하려면 API route를 통해 프록시할 것.
+ */
 export function getPhotoUrl(photoRef: string, maxWidth = 400): string {
+  if (typeof window !== 'undefined') {
+    throw new Error('getPhotoUrl은 서버에서만 호출 가능합니다. API 키 노출 위험.')
+  }
   return `${BASE_URL}/${photoRef}/media?maxWidthPx=${maxWidth}&key=${API_KEY}`
 }

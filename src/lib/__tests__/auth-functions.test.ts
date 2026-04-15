@@ -55,12 +55,12 @@ describe('getUser', () => {
 // ===== requireAuth =====
 describe('requireAuth', () => {
   it('인증된 유저 반환 (리다이렉트 없음)', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: '1', email: 'admin@aiplace.kr' } } })
+    mockGetUser.mockResolvedValue({ data: { user: { id: '1', email: 'methoddesign7@gmail.com' } } })
 
     const { requireAuth } = await import('@/lib/auth')
     const user = await requireAuth()
 
-    expect(user).toEqual({ id: '1', email: 'admin@aiplace.kr' })
+    expect(user).toEqual({ id: '1', email: 'methoddesign7@gmail.com' })
     expect(mockRedirect).not.toHaveBeenCalled()
   })
 

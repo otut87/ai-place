@@ -28,7 +28,9 @@ export default async function HomePage() {
   const keywordPages = await getAllKeywordPages()
 
   // GEO: 통계 수치 (§2.2 Princeton — Statistics Addition)
-  const avgRating = allPlaces.reduce((sum, p) => sum + (p.rating ?? 0), 0) / allPlaces.length
+  const avgRating = allPlaces.length > 0
+    ? allPlaces.reduce((sum, p) => sum + (p.rating ?? 0), 0) / allPlaces.length
+    : 0
   const homeStats: StatisticItem[] = [
     { label: '등록 업체 수', value: `${allPlaces.length}곳`, note: '2026년 4월 기준' },
     { label: '등록 도시', value: `${cities.length}개 도시` },
