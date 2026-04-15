@@ -24,7 +24,7 @@ describe('sitemap generation', () => {
       !e.url.includes('/compare/') &&
       !e.url.includes('/guide/')
     )
-    expect(profiles.length).toBe(5)
+    expect(profiles.length).toBe(4)
   })
 
   it('should set correct priorities', async () => {
@@ -37,7 +37,7 @@ describe('sitemap generation', () => {
     const listing = entries.find(e => e.url.endsWith('/cheonan/dermatology'))
     expect(listing?.priority).toBe(0.9)
 
-    const profile = entries.find(e => e.url.includes('/soo-derm'))
+    const profile = entries.find(e => e.url.includes('/dr-evers'))
     expect(profile?.priority).toBe(0.8)
   })
 

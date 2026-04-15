@@ -137,6 +137,14 @@ export async function getSchemaTypeForCategory(categorySlug: string): Promise<st
   return seed.getSchemaTypeForCategory(categorySlug)
 }
 
+export async function getMetaDescriptorForCategory(categorySlug: string): Promise<string> {
+  return seed.getMetaDescriptorForCategory(categorySlug)
+}
+
+export async function getSectorForCategory(categorySlug: string) {
+  return seed.getSectorForCategory(categorySlug)
+}
+
 export async function getAllPlaces(): Promise<Place[]> {
   const dbPlaces = await supabaseAllPlaces()
   const seedPlaces = await seed.getAllPlaces()

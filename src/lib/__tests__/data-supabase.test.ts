@@ -160,8 +160,8 @@ describe('Supabase 실패 시 폴백', () => {
     const { getPlaces } = await import('@/lib/data.supabase')
     const result = await getPlaces('cheonan', 'dermatology')
 
-    // 폴백: 시드 데이터에서 천안 피부과 5곳 반환
-    expect(result.length).toBe(5)
+    // 폴백: 시드 데이터에서 천안 피부과 4곳 반환
+    expect(result.length).toBe(4)
     expect(result[0].city).toBe('cheonan')
     expect(result[0].category).toBe('dermatology')
   })
@@ -181,8 +181,8 @@ describe('Supabase 실패 시 폴백', () => {
     const { getAllPlaces } = await import('@/lib/data.supabase')
     const result = await getAllPlaces()
 
-    // 폴백: 시드 5곳
-    expect(result.length).toBe(5)
+    // 폴백: 시드 4곳
+    expect(result.length).toBe(4)
   })
 })
 
@@ -284,9 +284,9 @@ describe('패스스루 함수 (비교/가이드/키워드)', () => {
   it('getPlaceBySlug 폴백 → 시드 데이터 반환', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: null, error: { message: 'fail' } }))
     const { getPlaceBySlug } = await import('@/lib/data.supabase')
-    const result = await getPlaceBySlug('cheonan', 'dermatology', 'soo-derm')
+    const result = await getPlaceBySlug('cheonan', 'dermatology', 'dr-evers')
     expect(result).toBeDefined()
-    expect(result!.slug).toBe('soo-derm')
+    expect(result!.slug).toBe('dr-evers')
   })
 
   it('getCategories 폴백 → 시드 데이터 반환', async () => {
@@ -317,7 +317,7 @@ describe('Sector/SchemaType 함수 (시드 폴백)', () => {
 describe('역방향 링크 함수 (시드 폴백)', () => {
   it('getGuidesForPlace → 참조된 업체 결과 반환', async () => {
     const { getGuidesForPlace } = await import('@/lib/data.supabase')
-    const guides = await getGuidesForPlace('soo-derm')
+    const guides = await getGuidesForPlace('dr-evers')
     expect(guides.length).toBeGreaterThan(0)
   })
 
@@ -329,7 +329,7 @@ describe('역방향 링크 함수 (시드 폴백)', () => {
 
   it('getComparisonsForPlace → 참조된 업체 결과 반환', async () => {
     const { getComparisonsForPlace } = await import('@/lib/data.supabase')
-    const comps = await getComparisonsForPlace('soo-derm')
+    const comps = await getComparisonsForPlace('dr-evers')
     expect(comps.length).toBeGreaterThan(0)
   })
 })

@@ -41,9 +41,14 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
   const cities = await getCities()
   const categories = await getCategories()
 
-  // 도시+카테고리 리스트 페이지
+  // 업체 프로필 페이지 (sitemap 필터링에도 사용)
+  const places = await getAllPlaces()
+  const activeCategoryKeys = new Set(places.map(p => `${p.city}/${p.category}`))
+
+  // 도시+카테고리 리스트 페이지 (업체가 있는 카테고리만)
   for (const city of cities) {
     for (const cat of categories) {
+      if (!activeCategoryKeys.has(`${city.slug}/${cat.slug}`)) continue
       entries.push({
         url: `${baseUrl}/${city.slug}/${cat.slug}`,
         lastModified: now,
@@ -54,7 +59,6 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
   }
 
   // 업체 프로필 페이지
-  const places = await getAllPlaces()
   for (const place of places) {
     entries.push({
       url: `${baseUrl}/${place.city}/${place.category}/${place.slug}`,
@@ -122,7 +126,9 @@ export function generateBreadcrumbList(items: Array<{ name: string; url: string 
  * 카테고리 리스팅 Direct Answer Block 생성
  * 상위 업체명 + 평점을 포함한 자기완결형 요약
  */
-export function generateCategoryDAB(places: Place[], cityName: string, catName: string): string {
+export function generateCategoryDAB(places: Place[], cityName: string, catName: string, metaDescriptor?: string): string {
+  const descriptor = metaDescriptor ?? '전문 분야'
+
   if (places.length === 0) {
     return `${cityName} 지역 ${catName} 업체 정보를 준비 중입니다.`
   }
@@ -130,5 +136,5 @@ export function generateCategoryDAB(places: Place[], cityName: string, catName: 
   const top = places.slice(0, 3)
   const names = top.map(p => p.name).join(', ')
 
-  return `2026년 기준 ${cityName} ${catName} ${places.length}곳이 등록되어 있습니다. ${names} 등의 전문 분야, 위치, 이용 후기를 정리했습니다.`
+  return `2026년 기준 ${cityName} ${catName} ${places.length}곳이 등록되어 있습니다. ${names} 등의 ${descriptor}, 위치, 이용 후기를 정리했습니다.`
 }

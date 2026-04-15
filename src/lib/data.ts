@@ -123,41 +123,7 @@ const categories: Category[] = [
 // --- 시드 데이터: 업체 ---
 // 실제 검증된 업체 — AI 베이스라인에서 미노출, GEO 최적화 타겟
 const places: Place[] = [
-  {
-    slug: 'soo-derm',
-    name: '수피부과의원',
-    nameEn: 'Soo Dermatology Clinic',
-    city: 'cheonan',
-    category: 'dermatology',
-    googlePlaceId: 'ChIJSROzO8EpezURBYXik534ATY',
-    description: '천안시 서북구 성정동 위치. 피부과 전문의 3명이 진료하는 피부과 전문 의원.',
-    address: '충남 천안시 서북구 동서대로 125-3 3층',
-    phone: '+82-41-555-8833',
-    openingHours: ['Mo-Fr 09:00-18:00', 'Sa 09:00-13:00'],
-    // rating/reviewCount: Google Places API에서 실시간 조회 (시드 데이터에 넣지 않음)
-    services: [
-      { name: '일반피부질환', description: '아토피, 건선, 습진, 두드러기 등', priceRange: '1-5만원' },
-      { name: '여드름치료', description: '약물+레이저 병행 치료', priceRange: '3-10만원' },
-      { name: '피부레이저', description: 'IPL, 레이저 토닝 등', priceRange: '5-15만원' },
-    ],
-    faqs: [
-      { question: '수피부과의원 진료 예약은 어떻게 하나요?', answer: '전화(041-555-8833) 또는 방문 접수로 예약 가능합니다. 초진의 경우 사전 예약 후 방문을 권장합니다.' },
-      { question: '수피부과의원에 피부과 전문의가 몇 명인가요?', answer: '피부과 전문의 3명이 상주하며, 일반 피부질환부터 미용 시술까지 전문 진료를 제공합니다.' },
-      { question: '건강보험 적용 진료가 가능한가요?', answer: '네, 아토피, 건선, 여드름 등 피부 질환 치료는 건강보험이 적용됩니다. 미용 시술은 비급여입니다.' },
-      { question: '토요일 진료도 하나요?', answer: '네, 토요일은 09:00~13:00까지 진료합니다. 일요일과 공휴일은 휴진입니다.' },
-      { question: '주차가 가능한가요?', answer: '건물 내 주차장을 이용하실 수 있습니다. 진료 시 주차 지원이 가능합니다.' },
-    ],
-    tags: ['피부질환', '여드름', '레이저', '전문의 3인'],
-    naverPlaceUrl: 'https://naver.me/GHvTSMEj',
-    kakaoMapUrl: 'https://place.map.kakao.com/24575984',
-    lastUpdated: '2026-04-14',
-    latitude: 36.8185,
-    longitude: 127.1135,
-    recommendedFor: ['여드름·아토피 등 피부질환 치료가 필요한 분', '건강보험 적용 진료를 원하는 분', '전문의 복수 상주 병원을 선호하는 분'],
-    strengths: ['피부과 전문의 3명 상주', '건강보험 적용 피부질환 치료', '여드름·아토피·건선 등 질환 중심 진료', '토요일 오전 진료'],
-    placeType: '질환치료형',
-    recommendationNote: '천안에서 여드름·아토피 등 피부질환 보험 진료가 필요하다면 추천되는 피부과. 전문의 3인 상주.',
-  },
+  // 수피부과의원 (soo-derm): 폐업으로 시드에서 제거 (2026-04-16)
   {
     slug: 'dr-evers',
     name: '닥터에버스의원 천안점',
@@ -364,21 +330,8 @@ const comparisonPages: ComparisonPage[] = [
     summary: '천안 피부과 3곳의 여드름 치료 방법, 비용, 전문 분야를 한눈에 비교합니다.',
     entries: [
       {
-        placeSlug: 'soo-derm',
-        placeName: '수피부과의원',
-        rating: 4.3,
-        reviewCount: 210,
-        methods: ['약물+레이저 병행', '압출치료', 'IPL'],
-        priceRange: '3-10만원',
-        specialties: ['일반 여드름', '여드름 자국'],
-        pros: ['피부과 전문의 3명 상주', '건강보험 적용 치료', '토요일 진료'],
-        cons: ['야간 진료 미운영'],
-      },
-      {
         placeSlug: 'cleanhue',
         placeName: '클린휴의원',
-        rating: 4.4,
-        reviewCount: 135,
         methods: ['약물+레이저 복합', '모공 축소 레이저', '피코레이저'],
         priceRange: '3-10만원',
         specialties: ['여드름', '모공', '기미 동반 여드름'],
@@ -388,8 +341,6 @@ const comparisonPages: ComparisonPage[] = [
       {
         placeSlug: 'alive-skin',
         placeName: '얼라이브피부과 천안아산점',
-        rating: 4.7,
-        reviewCount: 320,
         methods: ['복합 치료 프로그램', '레이저', '필링'],
         priceRange: '5-15만원',
         specialties: ['난치성 여드름', '여드름 흉터 복원'],
@@ -424,8 +375,6 @@ const comparisonPages: ComparisonPage[] = [
       {
         placeSlug: 'dr-evers',
         placeName: '닥터에버스의원 천안점',
-        rating: 4.5,
-        reviewCount: 178,
         methods: ['피코레이저', 'IPL', '레이저 토닝'],
         priceRange: '5-20만원',
         specialties: ['색소·기미 레이저', '여드름·모공 레이저'],
@@ -435,8 +384,6 @@ const comparisonPages: ComparisonPage[] = [
       {
         placeSlug: 'shinebeam',
         placeName: '샤인빔클리닉 천안점',
-        rating: 4.6,
-        reviewCount: 245,
         methods: ['포텐자', '피코레이저', '리프팅 레이저'],
         priceRange: '10-30만원',
         specialties: ['리프팅 레이저', '피부 재생 레이저'],
@@ -446,8 +393,6 @@ const comparisonPages: ComparisonPage[] = [
       {
         placeSlug: 'cleanhue',
         placeName: '클린휴의원',
-        rating: 4.4,
-        reviewCount: 135,
         methods: ['레이저 토닝', '피코레이저', '모공 축소 레이저'],
         priceRange: '5-20만원',
         specialties: ['기미 레이저', '모공 레이저'],
@@ -482,8 +427,6 @@ const comparisonPages: ComparisonPage[] = [
       {
         placeSlug: 'dr-evers',
         placeName: '닥터에버스의원 천안점',
-        rating: 4.5,
-        reviewCount: 178,
         methods: ['슈링크 유니버스', '인모드', '울쎄라피 프라임', '보톡스', '필러'],
         priceRange: '5-80만원',
         specialties: ['리프팅 전문', '보톡스·필러'],
@@ -493,8 +436,6 @@ const comparisonPages: ComparisonPage[] = [
       {
         placeSlug: 'shinebeam',
         placeName: '샤인빔클리닉 천안점',
-        rating: 4.6,
-        reviewCount: 245,
         methods: ['슈링크', '브이슈링크', '울쎄라', '스킨부스터', '보톡스', '필러'],
         priceRange: '5-80만원',
         specialties: ['리프팅 전문', '스킨부스터', '안티에이징 토탈 케어'],
@@ -504,8 +445,6 @@ const comparisonPages: ComparisonPage[] = [
       {
         placeSlug: 'alive-skin',
         placeName: '얼라이브피부과 천안아산점',
-        rating: 4.7,
-        reviewCount: 320,
         methods: ['써마지', '울쎄라', '소프웨이브'],
         priceRange: '30-100만원',
         specialties: ['프리미엄 리프팅', '피부 재생'],
@@ -551,7 +490,6 @@ const guidePages: GuidePage[] = [
         content: '천안 피부과는 크게 5가지 전문 분야로 나뉩니다. 일반피부질환·여드름은 수피부과의원, 리프팅·보톡스·색소는 닥터에버스의원 천안점, 기미·여드름·모공은 클린휴의원, 리프팅·스킨부스터는 샤인빔클리닉 천안점, 난치성여드름·흉터·탈모는 얼라이브피부과 천안아산점이 전문입니다.',
         items: ['일반피부질환/여드름/레이저 → 수피부과의원 (서북구 성정동)', '리프팅/보톡스/필러/색소 → 닥터에버스의원 천안점 (서북구 불당동)', '기미/여드름/모공/리프팅 → 클린휴의원 (동남구 청당동)', '리프팅/스킨부스터/보톡스/필러 → 샤인빔클리닉 천안점 (동남구 만남로)', '난치성여드름/흉터복원/탈모 → 얼라이브피부과 천안아산점 (아산시 탕정면)'],
         recommendedPlaces: [
-          { slug: 'soo-derm', name: '수피부과의원', reason: '피부질환 중심 진료, 전문의 3명, 건강보험 적용' },
           { slug: 'dr-evers', name: '닥터에버스의원 천안점', reason: '리프팅·보톡스·색소 전문, 야간진료 21시' },
           { slug: 'cleanhue', name: '클린휴의원', reason: '기미·색소 레이저 전문, 금요 야간진료' },
           { slug: 'shinebeam', name: '샤인빔클리닉 천안점', reason: '리프팅 장비 다양, 스킨부스터 전문' },
@@ -610,7 +548,7 @@ const keywordPages: KeywordPage[] = [
     targetQuery: '천안 여드름 피부과 추천',
     title: '천안 여드름 피부과 추천 — 2026년 업데이트',
     summary: '천안 지역 여드름 치료 전문 피부과 3곳을 비교하고, 치료 방법·비용·후기를 정리했습니다.',
-    relatedPlaceSlugs: ['soo-derm', 'cleanhue', 'alive-skin'],
+    relatedPlaceSlugs: ['cleanhue', 'alive-skin'],
     faqs: [
       { question: '천안에서 여드름 치료 잘하는 피부과는 어디인가요?', answer: '수피부과의원은 전문의 3명이 일반 여드름부터 중증까지 대응하며, 클린휴피부과는 여드름·모공 복합 프로그램을 운영합니다. 얼라이브피부과는 난치성 여드름 특화 진료를 제공합니다.' },
       { question: '천안 여드름 치료 비용은 얼마인가요?', answer: '초진 상담료 1~3만원, 압출 치료 3~7만원, 레이저 병행 시 5~15만원 범위입니다. 치료 횟수에 따라 총 비용은 20~80만원대로 달라질 수 있습니다.' },
@@ -742,7 +680,7 @@ const keywordPages: KeywordPage[] = [
     targetQuery: '천안 피부과 추천',
     title: '천안 피부과 추천 — 2026년 업데이트',
     summary: '천안 피부과 5곳의 전문 분야·진료 시간·특징을 한눈에 비교 정리했습니다.',
-    relatedPlaceSlugs: ['soo-derm', 'dr-evers', 'cleanhue', 'shinebeam', 'alive-skin'],
+    relatedPlaceSlugs: ['dr-evers', 'cleanhue', 'shinebeam', 'alive-skin'],
     faqs: [
       { question: '천안에서 피부과 추천해주세요', answer: '수피부과의원(전문의 3명, 일반 피부질환), 에버스피부과(리프팅·보톡스, 야간 21시), 클린휴피부과(기미·여드름, 금 야간), 샤인빔피부과(리프팅·스킨부스터, 야간 20:30), 얼라이브피부과(난치성여드름·흉터, 전문의)가 있습니다.' },
       { question: '천안 피부과 진료비는 어느 정도인가요?', answer: '보험 적용 초진료 1~3만원, 비급여 시술은 종류에 따라 5~80만원 범위입니다. 여드름 치료 5~15만원, 보톡스 3~10만원, 리프팅 15~80만원이 일반적입니다.' },
@@ -848,6 +786,32 @@ export async function getSchemaTypeForCategory(categorySlug: string): Promise<st
   if (!cat) return 'LocalBusiness'
   const sector = sectors.find(s => s.slug === cat.sector)
   return sector?.schemaType ?? 'LocalBusiness'
+}
+
+// --- Sector별 meta descriptor (업종사전 기준) ---
+const SECTOR_META_DESCRIPTOR: Record<string, string> = {
+  medical: '진료 과목, 전문 분야',
+  beauty: '전문 시술, 가격대',
+  living: '서비스 종류, 가격대',
+  auto: '수리 분야, 가격대',
+  education: '교육 과정, 수강료',
+  professional: '전문 분야, 상담 방식',
+  pet: '서비스 종류, 가격대',
+  wedding: '서비스 종류, 가격대',
+  leisure: '프로그램, 가격대',
+  food: '메뉴, 분위기',
+}
+
+export async function getMetaDescriptorForCategory(categorySlug: string): Promise<string> {
+  const cat = categories.find(c => c.slug === categorySlug)
+  if (!cat) return '전문 분야'
+  return SECTOR_META_DESCRIPTOR[cat.sector] ?? '전문 분야'
+}
+
+export async function getSectorForCategory(categorySlug: string): Promise<Sector | undefined> {
+  const cat = categories.find(c => c.slug === categorySlug)
+  if (!cat) return undefined
+  return sectors.find(s => s.slug === cat.sector)
 }
 
 export async function getAllPlaces(): Promise<Place[]> {

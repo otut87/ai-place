@@ -89,14 +89,13 @@ describe('[기술 기초]', () => {
 
   // --- llms.txt ---
   describe('llms.txt', () => {
-    it('public/llms.txt 파일 존재', () => {
-      expect(existsSync(join(process.cwd(), 'public/llms.txt'))).toBe(true)
+    it('llms.txt 동적 라우트 존재', () => {
+      expect(existsSync(join(process.cwd(), 'src/app/llms.txt/route.ts'))).toBe(true)
     })
 
-    it('llms.txt에 사이트 설명 + 주요 URL 포함', () => {
-      const content = readFileSync(join(process.cwd(), 'public/llms.txt'), 'utf-8')
-      expect(content).toContain('aiplace.kr')
-      expect(content).toContain('Schema.org')
+    it('llms.txt 라우트가 GET 함수를 export', async () => {
+      const mod = await import('@/app/llms.txt/route')
+      expect(typeof mod.GET).toBe('function')
     })
   })
 })

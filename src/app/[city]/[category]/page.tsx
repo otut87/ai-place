@@ -8,7 +8,7 @@ import { StatisticsBox } from "@/components/statistics-box"
 import { SourceList } from "@/components/source-list"
 import { safeJsonLd } from "@/lib/utils"
 import type { StatisticItem, Source } from "@/lib/types"
-import { getPlaces, getCities, getCategories, getComparisonTopics, getGuidePage } from "@/lib/data.supabase"
+import { getPlaces, getCities, getCategories, getComparisonTopics, getGuidePage, getMetaDescriptorForCategory, getSectorForCategory, getSchemaTypeForCategory } from "@/lib/data.supabase"
 import { generateItemList } from "@/lib/jsonld"
 import { generateBreadcrumbList, generateCategoryDAB } from "@/lib/seo"
 
@@ -35,14 +35,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = `${cityObj.name} ${catObj.name} 추천 — 2026년 업데이트`
   const places = await getPlaces(city, category)
-  const description = places.length > 0
-    ? generateCategoryDAB(places, cityObj.name, catObj.name)
-    : `${cityObj.name}시에 위치한 ${catObj.name} 목록. 전문 분야, 위치, 리뷰 기반 정리.`
+  const hasPlaces = places.length > 0
+  const descriptor = await getMetaDescriptorForCategory(category)
+  const description = hasPlaces
+    ? generateCategoryDAB(places, cityObj.name, catObj.name, descriptor)
+    : `${cityObj.name}시에 위치한 ${catObj.name} 목록. ${descriptor}, 위치, 리뷰 기반 정리.`
   return {
     title,
     description,
     alternates: { canonical: `/${city}/${category}` },
     openGraph: { title, description, url: `/${city}/${category}` },
+    ...(hasPlaces ? {} : { robots: { index: false, follow: true } }),
   }
 }
 
@@ -61,17 +64,23 @@ export default async function ListingPage({ params }: Props) {
 
   if (!cityObj || !catObj) notFound()
 
+  const descriptor = await getMetaDescriptorForCategory(category)
+  const sector = await getSectorForCategory(category)
+  const schemaType = await getSchemaTypeForCategory(category)
+
   const itemListJsonLd = generateItemList(
     places,
     `${cityObj.name} ${catObj.name} 추천 목록`,
   )
 
-  // CRITICAL 3: BreadcrumbList JSON-LD
+  // BreadcrumbList JSON-LD — 3단계: 홈 → 도시+대분류 → 도시+소분류
   const baseUrl = 'https://aiplace.kr'
-  const breadcrumbJsonLd = generateBreadcrumbList([
+  const breadcrumbItems = [
     { name: '홈', url: baseUrl },
+    ...(sector ? [{ name: `${cityObj.name} ${sector.name}`, url: `${baseUrl}/${city}` }] : []),
     { name: `${cityObj.name} ${catObj.name}`, url: `${baseUrl}/${city}/${category}` },
-  ])
+  ]
+  const breadcrumbJsonLd = generateBreadcrumbList(breadcrumbItems)
 
   // GEO: 통계 + 출처 (Princeton §2.2)
   const avgRating = places.length > 0
@@ -101,6 +110,12 @@ export default async function ListingPage({ params }: Props) {
             {/* Breadcrumb */}
             <nav className="mb-8 text-sm text-[#6a6a6a]">
               <Link href="/" className="hover:text-[#008f6b]">홈</Link>
+              {sector && (
+                <>
+                  <span className="mx-2">›</span>
+                  <span>{cityObj.name} {sector.name}</span>
+                </>
+              )}
               <span className="mx-2">›</span>
               <span className="text-[#222222] font-medium">{cityObj.name} {catObj.name}</span>
             </nav>
@@ -110,7 +125,7 @@ export default async function ListingPage({ params }: Props) {
               {cityObj.name} {catObj.name} 추천 — 2026년 업데이트
             </h1>
             <p className="mt-3 text-base text-[#6a6a6a]">
-              {generateCategoryDAB(places, cityObj.name, catObj.name)}
+              {generateCategoryDAB(places, cityObj.name, catObj.name, descriptor)}
             </p>
             <time dateTime={new Date().toISOString().slice(0, 10)} className="mt-1 block text-xs text-[#6a6a6a]">최종 업데이트: {new Date().toISOString().slice(0, 10)}</time>
 
@@ -181,6 +196,19 @@ export default async function ListingPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: safeJsonLd(itemListJsonLd) }}
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
+      {places.length === 0 && schemaType !== 'LocalBusiness' && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd({
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          '@id': `${baseUrl}/${city}/${category}`,
+          name: `${cityObj.name} ${catObj.name} 추천`,
+          about: {
+            '@type': schemaType,
+            name: catObj.name,
+            areaServed: { '@type': 'City', name: cityObj.name },
+          },
+        })}} />
+      )}
     </>
   )
 }

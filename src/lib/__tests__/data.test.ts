@@ -301,7 +301,7 @@ describe('Data Repository', () => {
   describe('getGuidesForPlace', () => {
     it('가이드에서 참조된 업체는 결과 반환', async () => {
       const { getGuidesForPlace } = await import('@/lib/data')
-      const guides = await getGuidesForPlace('soo-derm')
+      const guides = await getGuidesForPlace('dr-evers')
       expect(guides.length).toBeGreaterThan(0)
       expect(guides[0].city).toBe('cheonan')
     })
@@ -316,7 +316,7 @@ describe('Data Repository', () => {
   describe('getComparisonsForPlace', () => {
     it('비교 페이지에 포함된 업체는 결과 반환', async () => {
       const { getComparisonsForPlace } = await import('@/lib/data')
-      const comps = await getComparisonsForPlace('soo-derm')
+      const comps = await getComparisonsForPlace('dr-evers')
       expect(comps.length).toBeGreaterThan(0)
     })
 

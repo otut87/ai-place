@@ -26,6 +26,12 @@ export default async function HomePage() {
   const guidePages = await getAllGuidePages()
   const keywordPages = await getAllKeywordPages()
 
+  // 업체가 있는 카테고리/도시만 필터링
+  const activeCategorySlugs = new Set(allPlaces.map(p => p.category))
+  const activeCitySlugs = new Set(allPlaces.map(p => p.city))
+  const activeCategories = categories.filter(c => activeCategorySlugs.has(c.slug))
+  const activeCities = cities.filter(c => activeCitySlugs.has(c.slug))
+
   // GEO: 통계 수치 (§2.2 Princeton — Statistics Addition)
   const avgRating = allPlaces.length > 0
     ? allPlaces.reduce((sum, p) => sum + (p.rating ?? 0), 0) / allPlaces.length
@@ -93,12 +99,12 @@ export default async function HomePage() {
         <section className="py-20 px-6">
           <div className="mx-auto max-w-[1200px]">
             <h2 className="text-[28px] font-bold text-[#222222] leading-[1.43]">인기 도시</h2>
-            <p className="mt-2 text-base text-[#222222]">현재 {cities.length}개 도시의 로컬 업체를 등록하고 있습니다.</p>
+            <p className="mt-2 text-base text-[#222222]">현재 {activeCities.length}개 도시의 로컬 업체를 등록하고 있습니다.</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              {cities.map(city => (
+              {activeCities.map(city => (
                 <Link
                   key={city.slug}
-                  href={`/${city.slug}/${categories[0]?.slug ?? 'dermatology'}`}
+                  href={`/${city.slug}/${activeCategories[0]?.slug ?? 'dermatology'}`}
                   className="px-5 py-2.5 text-sm font-medium text-[#222222] border border-[#c1c1c1] rounded-lg hover:bg-[#f2f2f2] transition-colors"
                 >
                   {city.name}
@@ -112,9 +118,9 @@ export default async function HomePage() {
         <section className="py-20 px-6 bg-[#f2f2f2]">
           <div className="mx-auto max-w-[1200px]">
             <h2 className="text-[28px] font-bold text-[#222222] leading-[1.43]">인기 업종</h2>
-            <p className="mt-2 text-base text-[#222222]">{categories.length}개 업종의 업체를 AI 검색에 최적화합니다.</p>
+            <p className="mt-2 text-base text-[#222222]">{activeCategories.length}개 업종의 업체를 AI 검색에 최적화합니다.</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              {categories.map(cat => (
+              {activeCategories.map(cat => (
                 <Link
                   key={cat.slug}
                   href={`/cheonan/${cat.slug}`}
