@@ -7,7 +7,7 @@ import { PlaceCard } from "@/components/place-card"
 import { StatisticsBox } from "@/components/statistics-box"
 import { SourceList } from "@/components/source-list"
 import { safeJsonLd } from "@/lib/utils"
-import { getKeywordPage, getAllKeywordPages, getPlaces, getCities, getCategories } from "@/lib/data"
+import { getKeywordPage, getAllKeywordPages, getPlaces, getCities, getCategories } from "@/lib/data.supabase"
 import { generateArticle, generateFAQPage, generateItemList } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
 

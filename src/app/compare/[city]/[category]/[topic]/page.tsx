@@ -7,7 +7,7 @@ import { ComparisonTable } from "@/components/comparison-table"
 import { StatisticsBox } from "@/components/statistics-box"
 import { SourceList } from "@/components/source-list"
 import { safeJsonLd } from "@/lib/utils"
-import { getComparisonPage, getAllComparisonTopics, getCities, getCategories } from "@/lib/data"
+import { getComparisonPage, getAllComparisonTopics, getCities, getCategories } from "@/lib/data.supabase"
 import { generateArticle, generateFAQPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
 

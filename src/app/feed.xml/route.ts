@@ -1,4 +1,4 @@
-import { getAllPlaces, getCities, getCategories } from '@/lib/data'
+import { getAllPlaces, getCities, getCategories } from '@/lib/data.supabase'
 
 export async function GET() {
   const places = await getAllPlaces()

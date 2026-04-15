@@ -203,7 +203,7 @@ const categoryFaqsData: Array<{ city: string; category: string; faqs: FAQ[] }> =
 const comparisonPages: ComparisonPage[] = [
   {
     topic: { slug: 'acne-treatment', name: '여드름 치료 비교', city: 'cheonan', category: 'dermatology' },
-    summary: '천안 피부과 3곳의 여드름 치료 방법, 비용, 전문 분야를 비교합니다.',
+    summary: '천안 피부과 3곳의 여드름 치료 방법, 비용, 전문 분야를 한눈에 비교합니다.',
     entries: [
       {
         placeSlug: 'soo-derm',
@@ -261,7 +261,7 @@ const comparisonPages: ComparisonPage[] = [
   },
   {
     topic: { slug: 'laser-treatment', name: '레이저 시술 비교', city: 'cheonan', category: 'dermatology' },
-    summary: '천안 피부과 3곳의 레이저 시술 종류, 비용, 특장점을 비교합니다.',
+    summary: '천안 피부과 3곳의 레이저 시술 종류, 비용, 특장점을 비교 정리했습니다.',
     entries: [
       {
         placeSlug: 'dr-evers',
@@ -319,7 +319,7 @@ const comparisonPages: ComparisonPage[] = [
   },
   {
     topic: { slug: 'anti-aging', name: '안티에이징 비교', city: 'cheonan', category: 'dermatology' },
-    summary: '천안 피부과 3곳의 보톡스, 필러, 리프팅 시술을 비교합니다.',
+    summary: '천안 피부과 3곳의 보톡스, 필러, 리프팅 시술 비용과 특징을 비교합니다.',
     entries: [
       {
         placeSlug: 'dr-evers',

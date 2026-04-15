@@ -1,5 +1,5 @@
 // Supabase Database Types
-// 자동 생성 대신 수동 정의. 나중에 supabase gen types로 교체 가능.
+// 001~005 마이그레이션 반영. 나중에 supabase gen types로 교체 가능.
 
 export interface Database {
   public: {
@@ -24,13 +24,60 @@ export interface Database {
           tags: string[]
           naver_place_url: string | null
           kakao_map_url: string | null
+          google_business_url: string | null      // 002
+          google_place_id: string | null           // 002
+          review_summaries: ReviewSummaryJson[] | null  // 002
+          images: PlaceImageJson[] | null          // 002
           latitude: number | null
           longitude: number | null
+          owner_id: string | null                  // 003
+          status: 'active' | 'pending' | 'rejected'  // 003
           created_at: string
           updated_at: string
         }
         Insert: Omit<Database['public']['Tables']['places']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['places']['Insert']>
+      }
+      cities: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          name_en: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['cities']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['cities']['Insert']>
+      }
+      categories: {
+        Row: {
+          id: string
+          slug: string
+          name: string
+          name_en: string
+          icon: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['categories']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['categories']['Insert']>
+      }
+      blog_posts: {
+        Row: {
+          id: string
+          slug: string
+          title: string
+          summary: string
+          content: string
+          city: string
+          category: string | null
+          tags: string[]
+          status: 'draft' | 'published'
+          published_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['blog_posts']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['blog_posts']['Insert']>
       }
       test_prompts: {
         Row: {
@@ -74,4 +121,18 @@ interface ServiceJson {
 interface FaqJson {
   question: string
   answer: string
+}
+
+interface ReviewSummaryJson {
+  source: string
+  positiveThemes: string[]
+  negativeThemes: string[]
+  sampleQuote?: string
+  lastChecked: string
+}
+
+interface PlaceImageJson {
+  url: string
+  alt: string
+  type: 'exterior' | 'interior' | 'treatment' | 'staff' | 'equipment'
 }

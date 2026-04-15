@@ -115,6 +115,46 @@ describe('getPlaceDetails', () => {
 
     vi.unstubAllGlobals()
   })
+
+  it('should return null on network error (catch branch)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network failure')))
+
+    const { getPlaceDetails } = await import('@/lib/google-places')
+    const result = await getPlaceDetails('ChIJ_test')
+
+    expect(result).toBeNull()
+
+    vi.unstubAllGlobals()
+  })
+
+  it('should handle missing optional fields gracefully', async () => {
+    const mockResponse = {
+      displayName: undefined,
+      rating: undefined,
+      userRatingCount: undefined,
+      reviews: undefined,
+      photos: undefined,
+      googleMapsUri: undefined,
+    }
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    }))
+
+    const { getPlaceDetails } = await import('@/lib/google-places')
+    const result = await getPlaceDetails('ChIJ_empty')
+
+    expect(result).not.toBeNull()
+    expect(result!.name).toBe('')
+    expect(result!.rating).toBe(0)
+    expect(result!.reviewCount).toBe(0)
+    expect(result!.reviews).toEqual([])
+    expect(result!.photoRefs).toEqual([])
+    expect(result!.googleMapsUri).toBeUndefined()
+
+    vi.unstubAllGlobals()
+  })
 })
 
 describe('getPhotoUrl', () => {
@@ -128,8 +168,7 @@ describe('getPhotoUrl', () => {
 })
 
 describe('Place with Google Places fields', () => {
-  it('should accept googlePlaceId on Place', async () => {
-    const { default: _noop } = await import('@/lib/types').catch(() => ({ default: null }))
+  it('should accept googlePlaceId on Place', () => {
     // Type check: Place should accept googlePlaceId
     const place = {
       slug: 'test',

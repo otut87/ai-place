@@ -8,7 +8,7 @@ import { StatisticsBox } from "@/components/statistics-box"
 import { SourceList } from "@/components/source-list"
 import { safeJsonLd } from "@/lib/utils"
 import type { StatisticItem, Source } from "@/lib/types"
-import { getPlaces, getCities, getCategories, getComparisonTopics, getGuidePage, getCategoryFaqs } from "@/lib/data"
+import { getPlaces, getCities, getCategories, getComparisonTopics, getGuidePage, getCategoryFaqs } from "@/lib/data.supabase"
 import { generateItemList, generateFAQPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
 

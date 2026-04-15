@@ -160,6 +160,75 @@ const checks: Check[] = [
     },
     required: ['profile'],
   },
+
+  // === 추가: 부록 A 런칭 체크리스트 갭 ===
+
+  // H1 1개 제한
+  {
+    name: 'H1 태그 정확히 1개',
+    test: (html) => {
+      const matches = html.match(/<h1[\s>]/gi) ?? []
+      return matches.length === 1
+    },
+    required: ['home', 'category', 'profile', 'compare', 'guide', 'keyword'],
+  },
+
+  // H2/H3 순서 — H3이 H2 전에 나오면 안 됨
+  {
+    name: 'Heading 순서 (H2 before H3)',
+    test: (html) => {
+      const h2Pos = html.search(/<h2[\s>]/i)
+      const h3Pos = html.search(/<h3[\s>]/i)
+      if (h3Pos === -1) return true  // H3 없으면 OK
+      if (h2Pos === -1) return false // H3 있는데 H2 없음
+      return h2Pos < h3Pos
+    },
+    required: ['category', 'profile', 'compare', 'guide', 'keyword'],
+  },
+
+  // LocalBusiness subtype (MedicalClinic 등)
+  {
+    name: 'LocalBusiness subtype (not generic)',
+    test: (html) => {
+      const jsonLdBlocks = html.match(/<script[^>]*application\/ld\+json[^>]*>(.*?)<\/script>/gs) ?? []
+      return jsonLdBlocks.some(block =>
+        block.includes('"MedicalClinic"') || block.includes('"HairSalon"') ||
+        block.includes('"Dentist"') || block.includes('"HomeAndConstructionBusiness"')
+      )
+    },
+    required: ['profile'],
+  },
+
+  // sameAs URL 존재
+  {
+    name: 'sameAs in JSON-LD',
+    test: (html) => {
+      const jsonLdBlocks = html.match(/<script[^>]*application\/ld\+json[^>]*>(.*?)<\/script>/gs) ?? []
+      return jsonLdBlocks.some(block => block.includes('"sameAs"'))
+    },
+    required: ['profile'],
+  },
+
+  // aggregateRating 존재
+  {
+    name: 'aggregateRating in JSON-LD',
+    test: (html) => {
+      const jsonLdBlocks = html.match(/<script[^>]*application\/ld\+json[^>]*>(.*?)<\/script>/gs) ?? []
+      return jsonLdBlocks.some(block => block.includes('"AggregateRating"'))
+    },
+    required: ['profile'],
+  },
+
+  // img alt 텍스트 (img 있으면 alt 필수)
+  {
+    name: 'img alt 텍스트',
+    test: (html) => {
+      const imgs = html.match(/<img\s[^>]*>/gi) ?? []
+      if (imgs.length === 0) return true // 이미지 없으면 pass
+      return imgs.every(img => /alt="[^"]+"/i.test(img))
+    },
+    required: ['home', 'category', 'profile', 'compare', 'guide', 'keyword'],
+  },
 ]
 
 // ── 실행 ──

@@ -2,7 +2,7 @@
 // robots.txt, sitemap, BreadcrumbList 생성
 // GEO 딥리서치 §5.1, §5.3, §5.4 기반
 
-import { getAllPlaces, getCities, getCategories, getAllComparisonTopics, getAllGuidePages, getAllKeywordPages } from './data'
+import { getAllPlaces, getCities, getCategories, getAllComparisonTopics, getAllGuidePages, getAllKeywordPages } from './data.supabase'
 
 /**
  * robots.txt 생성

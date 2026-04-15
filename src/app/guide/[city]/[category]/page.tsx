@@ -7,7 +7,7 @@ import { GuideSection } from "@/components/guide-section"
 import { StatisticsBox } from "@/components/statistics-box"
 import { SourceList } from "@/components/source-list"
 import { safeJsonLd } from "@/lib/utils"
-import { getGuidePage, getAllGuidePages, getCities, getCategories, getComparisonTopics } from "@/lib/data"
+import { getGuidePage, getAllGuidePages, getCities, getCategories, getComparisonTopics } from "@/lib/data.supabase"
 import { generateArticle, generateFAQPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
 
