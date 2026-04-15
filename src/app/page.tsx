@@ -34,7 +34,7 @@ export default async function HomePage() {
   const homeStats: StatisticItem[] = [
     { label: '등록 업체 수', value: `${allPlaces.length}곳`, note: '2026년 4월 기준' },
     { label: '등록 도시', value: `${cities.length}개 도시` },
-    { label: '평균 평점', value: `${avgRating.toFixed(1)}점`, note: '네이버 플레이스 기준' },
+    { label: '평균 평점', value: `${avgRating.toFixed(1)}점`, note: 'Google Places 기준' },
     { label: '비교·가이드 콘텐츠', value: `${comparisonTopics.length + guidePages.length}편` },
   ]
   const homeSources: Source[] = [

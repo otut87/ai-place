@@ -221,9 +221,9 @@ export default function RegisterPage() {
             <h2 className="text-lg font-semibold text-[#222222] mb-3">서비스 (최소 1개)</h2>
             {services.map((s, i) => (
               <div key={i} className="grid grid-cols-3 gap-2 mb-2">
-                <input placeholder="서비스명" value={s.name} onChange={e => { const next = [...services]; next[i].name = e.target.value; setServices(next) }} className="h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
-                <input placeholder="설명" value={s.description} onChange={e => { const next = [...services]; next[i].description = e.target.value; setServices(next) }} className="h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
-                <input placeholder="가격대" value={s.priceRange} onChange={e => { const next = [...services]; next[i].priceRange = e.target.value; setServices(next) }} className="h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
+                <input placeholder="서비스명" value={s.name} onChange={e => { const next = [...services]; next[i] = { ...next[i], name: e.target.value }; setServices(next) }} className="h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
+                <input placeholder="설명" value={s.description} onChange={e => { const next = [...services]; next[i] = { ...next[i], description: e.target.value }; setServices(next) }} className="h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
+                <input placeholder="가격대" value={s.priceRange} onChange={e => { const next = [...services]; next[i] = { ...next[i], priceRange: e.target.value }; setServices(next) }} className="h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
               </div>
             ))}
             <button onClick={() => setServices([...services, { name: '', description: '', priceRange: '' }])} className="text-sm text-[#00a67c]">+ 서비스 추가</button>
@@ -233,8 +233,8 @@ export default function RegisterPage() {
             <h2 className="text-lg font-semibold text-[#222222] mb-3">FAQ (최소 3개, 물음표로 끝나야 함)</h2>
             {faqs.map((f, i) => (
               <div key={i} className="space-y-1 mb-3">
-                <input placeholder="질문 (예: 예약은 어떻게 하나요?)" value={f.question} onChange={e => { const next = [...faqs]; next[i].question = e.target.value; setFaqs(next) }} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
-                <input placeholder="답변" value={f.answer} onChange={e => { const next = [...faqs]; next[i].answer = e.target.value; setFaqs(next) }} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
+                <input placeholder="질문 (예: 예약은 어떻게 하나요?)" value={f.question} onChange={e => { const next = [...faqs]; next[i] = { ...next[i], question: e.target.value }; setFaqs(next) }} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
+                <input placeholder="답변" value={f.answer} onChange={e => { const next = [...faqs]; next[i] = { ...next[i], answer: e.target.value }; setFaqs(next) }} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
               </div>
             ))}
             <button onClick={() => setFaqs([...faqs, { question: '', answer: '' }])} className="text-sm text-[#00a67c]">+ FAQ 추가</button>

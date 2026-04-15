@@ -35,7 +35,7 @@ export default async function AdminPlacesPage() {
                 <p className="font-medium text-[#222222]">{place.name}</p>
                 <p className="text-sm text-[#6a6a6a]">
                   {place.city} · {place.category}
-                  {place.rating && ` · ★ ${place.rating}`}
+                  {place.rating != null && ` · ★ ${place.rating}`}
                 </p>
               </div>
               <span className={`text-xs px-2 py-1 rounded-full ${

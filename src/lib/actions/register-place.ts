@@ -107,6 +107,15 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
     return { success: false, error: '업체명은 100자 이내여야 합니다.' }
   }
 
+  const validCities = ['cheonan']
+  const validCategories = ['dermatology', 'interior', 'webagency', 'auto-repair', 'hairsalon']
+  if (!validCities.includes(input.city)) {
+    return { success: false, error: `유효하지 않은 도시입니다: ${input.city}` }
+  }
+  if (!validCategories.includes(input.category)) {
+    return { success: false, error: `유효하지 않은 카테고리입니다: ${input.category}` }
+  }
+
   const supabase = await createServerClient()
   const insertData = {
     slug: input.slug,

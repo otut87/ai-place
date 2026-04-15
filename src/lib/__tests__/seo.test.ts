@@ -1,38 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-describe('robots.txt', () => {
-  it('should allow all AI search crawlers', async () => {
-    const { generateRobotsTxt } = await import('@/lib/seo')
-    const robots = generateRobotsTxt('https://aiplace.kr')
-
-    // 검색·답변용 크롤러 (GEO 딥리서치 §5.1 — 필수 허용)
-    expect(robots).toContain('User-agent: OAI-SearchBot')
-    expect(robots).toContain('User-agent: ChatGPT-User')
-    expect(robots).toContain('User-agent: PerplexityBot')
-    expect(robots).toContain('User-agent: Claude-User')
-    expect(robots).toContain('User-agent: Claude-SearchBot')
-    expect(robots).toContain('User-agent: Googlebot')
-
-    // 학습용 크롤러 (허용)
-    expect(robots).toContain('User-agent: GPTBot')
-    expect(robots).toContain('User-agent: ClaudeBot')
-    expect(robots).toContain('User-agent: Google-Extended')
-
-    // Allow 지시
-    expect(robots).toContain('Allow: /')
-
-    // Sitemap 참조
-    expect(robots).toContain('Sitemap: https://aiplace.kr/sitemap.xml')
-  })
-
-  it('should disallow admin and api paths', async () => {
-    const { generateRobotsTxt } = await import('@/lib/seo')
-    const robots = generateRobotsTxt('https://aiplace.kr')
-
-    expect(robots).toContain('Disallow: /admin')
-    expect(robots).toContain('Disallow: /api')
-  })
-})
+// robots.txt 테스트는 geo-seo-aeo.test.ts에서 app/robots.ts 기반으로 검증.
 
 describe('sitemap generation', () => {
   it('should include all static and dynamic pages', async () => {
