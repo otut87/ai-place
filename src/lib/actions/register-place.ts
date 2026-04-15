@@ -148,7 +148,12 @@ export async function generatePlaceContent(input: {
       return { success: false, error: 'LLM 응답을 파싱할 수 없습니다.' }
     }
 
-    const data = JSON.parse(jsonMatch[0])
+    // LLM이 trailing comma를 넣는 경우 대비: ,] → ] , ,} → }
+    const cleaned = jsonMatch[0]
+      .replace(/,\s*]/g, ']')
+      .replace(/,\s*}/g, '}')
+
+    const data = JSON.parse(cleaned)
     return {
       success: true,
       data: {
