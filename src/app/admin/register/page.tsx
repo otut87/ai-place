@@ -62,12 +62,11 @@ export default function RegisterPage() {
     const enriched = await enrichPlace(place.placeId, place.name)
     if (enriched.success) {
       const d = enriched.data
-      if (d.nameEn) {
-        setNameEn(d.nameEn)
-        setSlug(d.nameEn.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, ''))
-      } else {
-        setSlug(place.name.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'new-place')
-      }
+      if (d.nameEn) setNameEn(d.nameEn)
+      // 슬러그: 영문 이름에서 생성, 영문 없으면 카테고리+랜덤
+      const nameForSlug = d.nameEn ?? place.name
+      const slugCandidate = nameForSlug.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '')
+      setSlug(slugCandidate || `${category}-${Date.now().toString(36).slice(-4)}`)
       if (d.phone) setPhone(d.phone)
       // Google 영업시간 파싱 → 구조화 입력
       if (d.openingHours) {
