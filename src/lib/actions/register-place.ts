@@ -8,7 +8,7 @@
 import { requireAuth } from '@/lib/auth'
 import { searchPlaceByText, getPlaceDetails } from '@/lib/google-places'
 import type { PlaceSearchResult } from '@/lib/google-places'
-import { searchNaverPlace, searchKakaoPlace } from '@/lib/naver-kakao-search'
+import { searchKakaoPlace } from '@/lib/naver-kakao-search'
 import { createServerClient } from '@/lib/supabase/server'
 
 export interface RegisterPlaceInput {
@@ -61,15 +61,13 @@ export async function enrichPlace(placeId: string, placeName?: string): Promise<
   reviewCount: number
   phone?: string
   googleMapsUri?: string
-  naverPlaceUrl?: string
   kakaoMapUrl?: string
 }>> {
   await requireAuth()
 
-  // Google + 네이버 + 카카오 병렬 조회
-  const [details, naver, kakao] = await Promise.all([
+  // Google + 카카오 병렬 조회 (네이버는 고유 URL API 미제공)
+  const [details, kakao] = await Promise.all([
     getPlaceDetails(placeId),
-    placeName ? searchNaverPlace(placeName) : Promise.resolve(null),
     placeName ? searchKakaoPlace(placeName) : Promise.resolve(null),
   ])
 
@@ -86,7 +84,6 @@ export async function enrichPlace(placeId: string, placeName?: string): Promise<
       reviewCount: details.reviewCount,
       phone: details.phone,
       googleMapsUri: details.googleMapsUri,
-      naverPlaceUrl: naver?.link || undefined,
       kakaoMapUrl: kakao?.placeUrl || undefined,
     },
   }

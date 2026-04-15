@@ -7,7 +7,7 @@ const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY ?? ''
 
 export interface NaverPlaceResult {
   title: string
-  link: string       // 네이버 플레이스 URL
+  link: string       // 네이버 플레이스 검색 URL (고유 URL은 API 미제공)
   address: string
 }
 
@@ -42,9 +42,12 @@ export async function searchNaverPlace(query: string): Promise<NaverPlaceResult 
     const item = data.items?.[0]
     if (!item) return null
 
+    // 네이버 지역검색 API의 link는 업체 외부 홈페이지이므로,
+    // 네이버 플레이스 검색 URL을 생성하여 반환
+    const cleanTitle = item.title.replace(/<[^>]+>/g, '')
     return {
-      title: item.title.replace(/<[^>]+>/g, ''),
-      link: item.link ?? '',
+      title: cleanTitle,
+      link: `https://m.place.naver.com/place/search/${encodeURIComponent(cleanTitle)}`,
       address: item.roadAddress ?? item.address ?? '',
     }
   } catch {

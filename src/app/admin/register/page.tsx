@@ -68,8 +68,7 @@ export default function RegisterPage() {
       }
       // 전화번호 자동 채우기
       if (d.phone) setPhone(d.phone)
-      // 네이버/카카오 URL 자동 채우기
-      if (d.naverPlaceUrl) setNaverPlaceUrl(d.naverPlaceUrl)
+      // 카카오 URL 자동 채우기 (네이버는 고유 URL API 미제공 → 검색 버튼 사용)
       if (d.kakaoMapUrl) setKakaoMapUrl(d.kakaoMapUrl)
       // 설명 자동 생성 (템플릿)
       const area = place.address.split(' ').slice(1, 3).join(' ')
@@ -226,7 +225,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#484848] mb-1">네이버 플레이스 URL</label>
+            <label className="block text-sm font-medium text-[#484848] mb-1">
+              네이버 플레이스 URL <span className="text-xs text-[#6a6a6a]">(검색 후 URL 복사)</span>
+            </label>
             <div className="flex gap-2">
               <input type="url" value={naverPlaceUrl} onChange={e => setNaverPlaceUrl(e.target.value)} className="flex-1 h-12 px-4 rounded-lg border border-[#dddddd]" placeholder="https://naver.me/..." />
               <a
@@ -241,7 +242,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#484848] mb-1">카카오맵 URL</label>
+            <label className="block text-sm font-medium text-[#484848] mb-1">
+              카카오맵 URL <span className="text-xs text-green-600">(자동 입력)</span>
+            </label>
             <div className="flex gap-2">
               <input type="url" value={kakaoMapUrl} onChange={e => setKakaoMapUrl(e.target.value)} className="flex-1 h-12 px-4 rounded-lg border border-[#dddddd]" placeholder="https://place.map.kakao.com/..." />
               <a
