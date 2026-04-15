@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { searchPlace, enrichPlace, registerPlace } from '@/lib/actions/register-place'
+import { searchPlace, enrichPlace, registerPlace, generatePlaceContent } from '@/lib/actions/register-place'
 import type { PlaceSearchResult } from '@/lib/google-places'
 
 type Step = 'search' | 'details' | 'content' | 'confirm'
@@ -264,6 +264,32 @@ export default function RegisterPage() {
       {/* Step 3: 서비스 + FAQ */}
       {step === 'content' && (
         <div className="space-y-6">
+          <button
+            onClick={async () => {
+              if (!selectedPlace) return
+              setLoading(true)
+              setError(null)
+              const result = await generatePlaceContent({
+                name: selectedPlace.name,
+                category,
+                address: selectedPlace.address,
+                description,
+              })
+              setLoading(false)
+              if (result.success) {
+                setServices(result.data.services)
+                setFaqs(result.data.faqs)
+                setTags(result.data.tags.join(', '))
+              } else {
+                setError(result.error)
+              }
+            }}
+            disabled={loading}
+            className="w-full h-12 rounded-lg bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {loading ? 'AI 생성 중...' : 'AI로 서비스/FAQ/태그 자동 생성'}
+          </button>
+
           <div>
             <h2 className="text-lg font-semibold text-[#222222] mb-3">서비스 (최소 1개)</h2>
             {services.map((s, i) => (

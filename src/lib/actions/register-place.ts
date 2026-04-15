@@ -92,6 +92,78 @@ export async function enrichPlace(placeId: string, placeName?: string): Promise<
   }
 }
 
+/** Step 2.5: LLM으로 서비스/FAQ/태그 자동 생성 */
+export async function generatePlaceContent(input: {
+  name: string
+  category: string
+  address: string
+  description?: string
+}): Promise<ActionResult<{
+  services: Array<{ name: string; description: string; priceRange: string }>
+  faqs: Array<{ question: string; answer: string }>
+  tags: string[]
+}>> {
+  await requireAuth()
+
+  const Anthropic = (await import('@anthropic-ai/sdk')).default
+  const client = new Anthropic()
+
+  const categoryNames: Record<string, string> = {
+    dermatology: '피부과', interior: '인테리어', webagency: '웹에이전시',
+    'auto-repair': '자동차정비', hairsalon: '미용실',
+  }
+  const catName = categoryNames[input.category] ?? input.category
+
+  try {
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      messages: [{
+        role: 'user',
+        content: `한국 로컬 업체 "${input.name}" (${catName}, ${input.address})의 정보를 생성해주세요.
+
+반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만:
+
+{
+  "services": [
+    {"name": "서비스명", "description": "한줄 설명", "priceRange": "가격대 (예: 5-10만원)"}
+  ],
+  "faqs": [
+    {"question": "질문? (반드시 물음표로 끝남)", "answer": "답변 (2-3문장)"}
+  ],
+  "tags": ["태그1", "태그2"]
+}
+
+조건:
+- services: 3-5개, 해당 업종에 맞는 실제 서비스
+- faqs: 5개, 실제 고객이 검색할 형태의 질문 (업체명 포함), 답변은 구체적
+- tags: 5-8개, 검색 키워드로 활용 가능한 태그
+- 모든 내용은 한국어
+- 가격대는 해당 지역/업종의 실제 시세 반영`,
+      }],
+    })
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : ''
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      return { success: false, error: 'LLM 응답을 파싱할 수 없습니다.' }
+    }
+
+    const data = JSON.parse(jsonMatch[0])
+    return {
+      success: true,
+      data: {
+        services: data.services ?? [],
+        faqs: data.faqs ?? [],
+        tags: data.tags ?? [],
+      },
+    }
+  } catch (err) {
+    console.error('[generatePlaceContent] LLM call failed:', err)
+    return { success: false, error: 'AI 콘텐츠 생성에 실패했습니다.' }
+  }
+}
+
 /** Step 3: 업체 등록 (DB 저장) */
 export async function registerPlace(input: RegisterPlaceInput): Promise<ActionResult<{ slug: string }>> {
   const user = await requireAuth()
