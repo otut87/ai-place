@@ -157,6 +157,52 @@ describe('getPlaceDetails', () => {
   })
 })
 
+describe('searchPlaceByText', () => {
+  it('should search and return place results', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        places: [{
+          id: 'ChIJtest',
+          displayName: { text: '테스트' },
+          formattedAddress: '천안시',
+          rating: 4.5,
+          userRatingCount: 50,
+          location: { latitude: 36.8, longitude: 127.1 },
+        }],
+      }),
+    }))
+
+    const { searchPlaceByText } = await import('@/lib/google-places')
+    const results = await searchPlaceByText('테스트 천안')
+    expect(results).not.toBeNull()
+    expect(results![0].placeId).toBe('ChIJtest')
+    expect(results![0].latitude).toBe(36.8)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('should return null on API error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false, status: 400, text: () => Promise.resolve('Bad Request'),
+    }))
+
+    const { searchPlaceByText } = await import('@/lib/google-places')
+    expect(await searchPlaceByText('bad')).toBeNull()
+
+    vi.unstubAllGlobals()
+  })
+
+  it('should return null on network error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network')))
+
+    const { searchPlaceByText } = await import('@/lib/google-places')
+    expect(await searchPlaceByText('test')).toBeNull()
+
+    vi.unstubAllGlobals()
+  })
+})
+
 describe('getPhotoUrl', () => {
   it('should construct photo URL with API key', async () => {
     const { getPhotoUrl } = await import('@/lib/google-places')

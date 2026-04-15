@@ -35,8 +35,8 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['places']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['places']['Insert']>
+        Insert: PlacesInsert
+        Update: Partial<PlacesInsert>
       }
       cities: {
         Row: {
@@ -135,4 +135,33 @@ interface PlaceImageJson {
   url: string
   alt: string
   type: 'exterior' | 'interior' | 'treatment' | 'staff' | 'equipment'
+}
+
+/** places 테이블 Insert 타입 (id, timestamps 제외) */
+interface PlacesInsert {
+  slug: string
+  name: string
+  name_en?: string | null
+  city: string
+  category: string
+  description: string
+  address: string
+  phone?: string | null
+  opening_hours?: string[] | null
+  image_url?: string | null
+  rating?: number | null
+  review_count?: number | null
+  services?: ServiceJson[]
+  faqs?: FaqJson[]
+  tags?: string[]
+  naver_place_url?: string | null
+  kakao_map_url?: string | null
+  google_business_url?: string | null
+  google_place_id?: string | null
+  review_summaries?: ReviewSummaryJson[] | null
+  images?: PlaceImageJson[] | null
+  latitude?: number | null
+  longitude?: number | null
+  owner_id?: string | null
+  status?: 'active' | 'pending' | 'rejected'
 }

@@ -51,6 +51,64 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResu
   }
 }
 
+/** Text Search API (New) — 업체명으로 검색 */
+export interface PlaceSearchResult {
+  placeId: string
+  name: string
+  address: string
+  rating?: number
+  reviewCount?: number
+  latitude?: number
+  longitude?: number
+}
+
+export async function searchPlaceByText(query: string): Promise<PlaceSearchResult[] | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/places:searchText`, {
+      method: 'POST',
+      headers: {
+        'X-Goog-Api-Key': API_KEY,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.location',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        textQuery: query,
+        languageCode: 'ko',
+        regionCode: 'KR',
+        maxResultCount: 5,
+      }),
+    })
+
+    if (!res.ok) {
+      console.error(`Google Places Text Search error ${res.status}: ${await res.text()}`)
+      return null
+    }
+
+    const data = await res.json()
+    const places = data.places ?? []
+
+    return places.map((p: {
+      id?: string
+      displayName?: { text?: string }
+      formattedAddress?: string
+      rating?: number
+      userRatingCount?: number
+      location?: { latitude?: number; longitude?: number }
+    }) => ({
+      placeId: p.id ?? '',
+      name: p.displayName?.text ?? '',
+      address: p.formattedAddress ?? '',
+      rating: p.rating,
+      reviewCount: p.userRatingCount,
+      latitude: p.location?.latitude,
+      longitude: p.location?.longitude,
+    }))
+  } catch (err) {
+    console.error('[google-places] searchPlaceByText failed:', err)
+    return null
+  }
+}
+
 /** Photo URL 생성 (Places API New) */
 export function getPhotoUrl(photoRef: string, maxWidth = 400): string {
   return `${BASE_URL}/${photoRef}/media?maxWidthPx=${maxWidth}&key=${API_KEY}`
