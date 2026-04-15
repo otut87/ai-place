@@ -101,7 +101,13 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
     })
   }
 
-  return entries
+  // URL 중복 제거
+  const seen = new Set<string>()
+  return entries.filter(e => {
+    if (seen.has(e.url)) return false
+    seen.add(e.url)
+    return true
+  })
 }
 
 /**
