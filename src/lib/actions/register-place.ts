@@ -62,6 +62,7 @@ export async function enrichPlace(placeId: string, placeName?: string): Promise<
   phone?: string
   googleMapsUri?: string
   kakaoMapUrl?: string
+  reviews?: Array<{ text: string; rating: number }>
 }>> {
   await requireAuth()
 
@@ -85,15 +86,19 @@ export async function enrichPlace(placeId: string, placeName?: string): Promise<
       phone: details.phone,
       googleMapsUri: details.googleMapsUri,
       kakaoMapUrl: kakao?.placeUrl || undefined,
+      reviews: details.reviews.slice(0, 5).map(r => ({ text: r.text, rating: r.rating })),
     },
   }
 }
 
-/** Step 2.5: LLM으로 서비스/FAQ/태그 자동 생성 */
+/** Step 2.5: LLM으로 설명/서비스/FAQ/태그 자동 생성 (Google 리뷰 데이터 기반) */
 export async function generatePlaceContent(input: {
   name: string
   category: string
   address: string
+  rating?: number
+  reviewCount?: number
+  reviews?: Array<{ text: string; rating: number }>
 }): Promise<ActionResult<{
   description: string
   services: Array<{ name: string; description: string; priceRange: string }>
@@ -111,6 +116,11 @@ export async function generatePlaceContent(input: {
   }
   const catName = categoryNames[input.category] ?? input.category
 
+  // 리뷰 데이터를 프롬프트용 텍스트로 변환
+  const reviewText = (input.reviews && input.reviews.length > 0)
+    ? `\n\nGoogle Reviews (${input.rating ?? 0}점, ${input.reviewCount ?? 0}건):\n${input.reviews.map(r => `- [${r.rating}점] ${r.text}`).join('\n')}`
+    : ''
+
   try {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -118,18 +128,19 @@ export async function generatePlaceContent(input: {
       system: 'You are a JSON generator. Output ONLY valid JSON. No markdown, no explanation, no code blocks. Just raw JSON.',
       messages: [{
         role: 'user',
-        content: `Generate info for Korean business "${input.name}" (${catName}, ${input.address}).
+        content: `Generate info for Korean business "${input.name}" (${catName}, ${input.address}).${reviewText}
 
 Return this exact JSON structure:
-{"description":"40-60 char Korean description with location and specialty","services":[{"name":"서비스명","description":"설명","priceRange":"5-10만원"}],"faqs":[{"question":"질문?","answer":"답변"}],"tags":["태그"]}
+{"description":"50자 내외 한국어 설명","services":[{"name":"서비스명","description":"설명","priceRange":"5-10만원"}],"faqs":[{"question":"질문?","answer":"답변"}],"tags":["태그"]}
 
 Rules:
-- description: Korean, 40-60 characters, format "OO 위치. OO 전문."
-- services: 3-5 items, realistic for this business type
-- faqs: 5 items, questions end with ?, include business name, answers are 2-3 sentences
-- tags: 5-8 Korean keywords
-- prices: realistic for this region/industry
-- ALL content in Korean`,
+- description: Korean, TARGET 50 characters (must be 45-55), format "{지역} 위치. {구체적 전문분야/특징} 전문." Include specifics from reviews if available.
+- services: 3-5 items based on what this business actually offers (infer from reviews and category)
+- faqs: 5 items, realistic customer questions with "${input.name}" in the question, answers reference actual business details from reviews
+- tags: 5-8 Korean search keywords
+- prices: realistic for ${input.address.split(' ').slice(0, 2).join(' ')} region
+- ALL content in Korean
+- Base content on the actual Google reviews data above, not generic templates`,
       }],
     })
 
