@@ -117,14 +117,19 @@ export function generateLocalBusiness(place: Place, pageUrl?: string): JsonLd {
           name: s.name,
           ...(s.description && { description: s.description }),
         },
-        ...(s.priceRange && { priceRange: s.priceRange }),
+        ...(s.priceRange && {
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            price: s.priceRange,
+            priceCurrency: 'KRW',
+          },
+        }),
       })),
     }
   }
 
-  if (place.lastUpdated) {
-    jsonld.dateModified = place.lastUpdated
-  }
+  // dateModified는 CreativeWork 계열에서만 유효 — MedicalClinic 등 LocalBusiness에서는 사용 불가
+  // lastUpdated는 페이지 HTML에만 표시
 
   const sameAs: string[] = []
   if (place.naverPlaceUrl) sameAs.push(place.naverPlaceUrl)
