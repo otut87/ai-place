@@ -4,7 +4,7 @@ import { Footer } from "@/components/footer"
 import { PlaceCard } from "@/components/place-card"
 import { StatisticsBox } from "@/components/statistics-box"
 import { getCities, getCategories, getPlaces, getAllPlaces, getAllComparisonTopics, getAllGuidePages, getAllKeywordPages } from "@/lib/data"
-import { generateFAQPage, generateWebSite } from "@/lib/jsonld"
+import { generateFAQPage, generateWebSite, generateItemList } from "@/lib/jsonld"
 import { safeJsonLd } from "@/lib/utils"
 import type { FAQ, StatisticItem, Source } from "@/lib/types"
 
@@ -49,6 +49,7 @@ export default async function HomePage() {
 
   const webSiteJsonLd = generateWebSite("https://aiplace.kr")
   const faqJsonLd = generateFAQPage(homeFaqs)
+  const itemListJsonLd = generateItemList(recentPlaces, '천안 피부과 추천 업체')
 
   return (
     <>
@@ -236,6 +237,7 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(orgJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(webSiteJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(itemListJsonLd) }} />
     </>
   )
 }

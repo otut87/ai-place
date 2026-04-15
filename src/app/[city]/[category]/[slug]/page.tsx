@@ -9,6 +9,7 @@ import { getPlaceBySlug, getPlaces, getCities, getCategories } from "@/lib/data"
 import { generateLocalBusiness, generateFAQPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
 import { safeJsonLd } from "@/lib/utils"
+import { getPlaceDetails } from "@/lib/google-places"
 
 interface Props {
   params: Promise<{ city: string; category: string; slug: string }>
@@ -75,6 +76,11 @@ export default async function ProfilePage({ params }: Props) {
 
   const baseUrl = 'https://aiplace.kr'
   const pageUrl = `${baseUrl}/${city}/${category}/${slug}`
+
+  // Google Places API — 리뷰 가져오기 (빌드 시 호출)
+  const googleData = place.googlePlaceId
+    ? await getPlaceDetails(place.googlePlaceId)
+    : null
 
   // CRITICAL 5: @id + mainEntityOfPage
   const localBusinessJsonLd = generateLocalBusiness(place, pageUrl)
@@ -214,6 +220,30 @@ export default async function ProfilePage({ params }: Props) {
               </div>
             )}
 
+            {/* Google Reviews */}
+            {googleData && googleData.reviews.length > 0 && (
+              <section id="reviews" className="mt-12">
+                <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">이용 후기</h2>
+                <p className="text-sm text-[#222222] mb-4">
+                  Google 리뷰 기반 평점 {googleData.rating}점 (후기 {googleData.reviewCount}건)
+                </p>
+                <div className="space-y-4">
+                  {googleData.reviews.slice(0, 5).map((review, i) => (
+                    <div key={i} className="p-4 bg-[#f2f2f2] rounded-[14px]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-medium text-[#222222]">
+                          {'★'.repeat(Math.round(review.rating))}{'☆'.repeat(5 - Math.round(review.rating))}
+                        </span>
+                        <span className="text-xs text-[#6a6a6a]">{review.relativeTime}</span>
+                      </div>
+                      <p className="text-sm text-[#222222] leading-relaxed line-clamp-3">{review.text}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-[#6a6a6a]">출처: Google 리뷰 (요약)</p>
+              </section>
+            )}
+
             {/* FAQ */}
             {place.faqs.length > 0 && (
               <section id="faq" className="mt-12">
@@ -252,6 +282,16 @@ export default async function ProfilePage({ params }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(localBusinessJsonLd) }} />
       {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }} />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
+      {googleData && googleData.reviews.length > 0 && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd({
+          '@context': 'https://schema.org',
+          '@type': 'AggregateRating',
+          itemReviewed: { '@type': 'MedicalClinic', name: place.name },
+          ratingValue: googleData.rating,
+          reviewCount: googleData.reviewCount,
+          bestRating: 5,
+        }) }} />
+      )}
     </>
   )
 }

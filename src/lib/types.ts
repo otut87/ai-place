@@ -52,6 +52,27 @@ export interface Place {
   lastUpdated?: string      // "2026-04-14" (ISO 8601, Freshness §4.2)
   latitude?: number
   longitude?: number
+  googlePlaceId?: string    // Google Places API place_id
+  reviewSummaries?: ReviewSummary[]
+  images?: PlaceImage[]
+}
+
+// --- Google Places API 연동 타입 ---
+
+/** 리뷰 요약 (Google Places API에서 추출) */
+export interface ReviewSummary {
+  source: string              // "Google"
+  positiveThemes: string[]    // ["친절한 상담", "대기시간 짧음"]
+  negativeThemes: string[]    // ["주차 불편"]
+  sampleQuote?: string        // 패러프레이즈 (Google ToS 준수)
+  lastChecked: string         // ISO 8601
+}
+
+/** 업체 이미지 (alt 구조화) */
+export interface PlaceImage {
+  url: string
+  alt: string                 // "수피부과의원 진료실 내부"
+  type: 'exterior' | 'interior' | 'treatment' | 'staff' | 'equipment'
 }
 
 // --- Phase 2: 비교/가이드 콘텐츠 타입 ---
