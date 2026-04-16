@@ -29,19 +29,26 @@ export default function RegisterPage() {
 
   // 카테고리/도시 옵션
   const [cities, setCities] = useState<Array<{ slug: string; name: string }>>([{ slug: 'cheonan', name: '천안' }])
+  const [sectors, setSectors] = useState<Array<{ slug: string; name: string }>>([])
   const [allCategories, setAllCategories] = useState<Array<{ slug: string; name: string; sector: string }>>([])
+  const [selectedSector, setSelectedSector] = useState('')
   const [catSearch, setCatSearch] = useState('')
 
   useEffect(() => {
     getAdminOptions().then(opts => {
       setCities(opts.cities)
+      setSectors(opts.sectors)
       setAllCategories(opts.categories)
     })
   }, [])
 
-  const filteredCategories = catSearch
-    ? allCategories.filter(c => c.name.includes(catSearch) || c.slug.includes(catSearch.toLowerCase()))
-    : allCategories
+  const filteredCategories = allCategories.filter(c => {
+    const matchesSector = selectedSector ? c.sector === selectedSector : true
+    const matchesSearch = catSearch
+      ? c.name.includes(catSearch) || c.slug.includes(catSearch.toLowerCase())
+      : true
+    return matchesSector && matchesSearch
+  })
 
   // 검색
   const [city, setCity] = useState('cheonan')
@@ -203,32 +210,48 @@ export default function RegisterPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#484848] mb-1">카테고리</label>
-            <input
-              type="text"
-              value={catSearch}
-              onChange={e => { setCatSearch(e.target.value); setCategory('') }}
-              placeholder="업종 검색 (예: 치과, 카페, 인테리어)"
-              className="w-full h-12 px-4 rounded-lg border border-[#dddddd] text-sm"
-            />
-            {catSearch && filteredCategories.length > 0 && !category && (
-              <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-[#dddddd] bg-white">
-                {filteredCategories.map(c => (
-                  <button
-                    key={c.slug}
-                    type="button"
-                    onClick={() => { setCategory(c.slug); setCatSearch(c.name) }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-[#f2f2f2] transition-colors"
-                  >
-                    {c.name} <span className="text-[#c1c1c1]">({c.slug})</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {category && (
-              <p className="mt-1 text-xs text-[#008060]">선택됨: {allCategories.find(c => c.slug === category)?.name} ({category})</p>
-            )}
+            <label className="block text-sm font-medium text-[#484848] mb-1">대분류</label>
+            <select
+              value={selectedSector}
+              onChange={e => { setSelectedSector(e.target.value); setCategory(''); setCatSearch('') }}
+              className="w-full h-12 px-4 rounded-lg border border-[#dddddd]"
+            >
+              <option value="">전체 업종</option>
+              {sectors.map(s => <option key={s.slug} value={s.slug}>{s.name}</option>)}
+            </select>
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[#484848] mb-1">소분류</label>
+          <input
+            type="text"
+            value={catSearch}
+            onChange={e => { setCatSearch(e.target.value); setCategory('') }}
+            placeholder="업종 검색 (예: 치과, 카페)"
+            className="w-full h-12 px-4 rounded-lg border border-[#dddddd] text-sm"
+          />
+          {filteredCategories.length > 0 && !category && (
+            <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-[#dddddd] bg-white">
+              {filteredCategories.map(c => (
+                <button
+                  key={c.slug}
+                  type="button"
+                  onClick={() => {
+                    setCategory(c.slug)
+                    setCatSearch(c.name)
+                    if (!selectedSector) setSelectedSector(c.sector)
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f2f2f2] transition-colors"
+                >
+                  {c.name} <span className="text-[#c1c1c1]">({c.slug})</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {category && (
+            <p className="mt-1 text-xs text-[#008060]">선택됨: {allCategories.find(c => c.slug === category)?.name} ({category})</p>
+          )}
         </div>
 
         <div>
