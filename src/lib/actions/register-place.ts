@@ -350,3 +350,14 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
 
   return { success: true, data: { slug: input.slug } }
 }
+
+/** 어드민용: 카테고리 + 도시 목록 조회 */
+export async function getAdminOptions(): Promise<{ cities: Array<{ slug: string; name: string }>; categories: Array<{ slug: string; name: string; sector: string }> }> {
+  const { getCities, getCategories } = await import('@/lib/data')
+  const cities = await getCities()
+  const categories = await getCategories()
+  return {
+    cities: cities.map(c => ({ slug: c.slug, name: c.name })),
+    categories: categories.map(c => ({ slug: c.slug, name: c.name, sector: c.sector ?? '' })),
+  }
+}

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { searchPlace, enrichPlace, registerPlace, generatePlaceContent } from '@/lib/actions/register-place'
+import { searchPlace, enrichPlace, registerPlace, generatePlaceContent, getAdminOptions } from '@/lib/actions/register-place'
 import type { PlaceSearchResult } from '@/lib/google-places'
 
 // 30분 단위 시간 드롭다운
@@ -27,9 +27,25 @@ export default function RegisterPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // 카테고리/도시 옵션
+  const [cities, setCities] = useState<Array<{ slug: string; name: string }>>([{ slug: 'cheonan', name: '천안' }])
+  const [allCategories, setAllCategories] = useState<Array<{ slug: string; name: string; sector: string }>>([])
+  const [catSearch, setCatSearch] = useState('')
+
+  useEffect(() => {
+    getAdminOptions().then(opts => {
+      setCities(opts.cities)
+      setAllCategories(opts.categories)
+    })
+  }, [])
+
+  const filteredCategories = catSearch
+    ? allCategories.filter(c => c.name.includes(catSearch) || c.slug.includes(catSearch.toLowerCase()))
+    : allCategories
+
   // 검색
   const [city, setCity] = useState('cheonan')
-  const [category, setCategory] = useState('dermatology')
+  const [category, setCategory] = useState('')
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState<PlaceSearchResult[]>([])
 
@@ -183,18 +199,35 @@ export default function RegisterPage() {
           <div>
             <label className="block text-sm font-medium text-[#484848] mb-1">도시</label>
             <select value={city} onChange={e => setCity(e.target.value)} className="w-full h-12 px-4 rounded-lg border border-[#dddddd]">
-              <option value="cheonan">천안</option>
+              {cities.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-[#484848] mb-1">카테고리</label>
-            <select value={category} onChange={e => setCategory(e.target.value)} className="w-full h-12 px-4 rounded-lg border border-[#dddddd]">
-              <option value="dermatology">피부과</option>
-              <option value="interior">인테리어</option>
-              <option value="webagency">웹에이전시</option>
-              <option value="auto-repair">자동차정비</option>
-              <option value="hairsalon">미용실</option>
-            </select>
+            <input
+              type="text"
+              value={catSearch}
+              onChange={e => { setCatSearch(e.target.value); setCategory('') }}
+              placeholder="업종 검색 (예: 치과, 카페, 인테리어)"
+              className="w-full h-12 px-4 rounded-lg border border-[#dddddd] text-sm"
+            />
+            {catSearch && filteredCategories.length > 0 && !category && (
+              <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-[#dddddd] bg-white">
+                {filteredCategories.map(c => (
+                  <button
+                    key={c.slug}
+                    type="button"
+                    onClick={() => { setCategory(c.slug); setCatSearch(c.name) }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-[#f2f2f2] transition-colors"
+                  >
+                    {c.name} <span className="text-[#c1c1c1]">({c.slug})</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {category && (
+              <p className="mt-1 text-xs text-[#008060]">선택됨: {allCategories.find(c => c.slug === category)?.name} ({category})</p>
+            )}
           </div>
         </div>
 
