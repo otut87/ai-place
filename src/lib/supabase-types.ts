@@ -62,7 +62,7 @@ export interface DbCategory {
   created_at: string
 }
 
-/** blog_posts 테이블 row */
+/** blog_posts 테이블 row (T-010a 확장 후) */
 export interface DbBlogPost {
   id: string
   slug: string
@@ -72,10 +72,20 @@ export interface DbBlogPost {
   city: string
   category: string | null
   tags: string[]
-  status: 'draft' | 'published'
+  status: 'draft' | 'active' | 'archived'
   published_at: string | null
   created_at: string
   updated_at: string
+  // T-010a 확장 컬럼
+  sector: string                                                   // 의료/뷰티/리빙 등 대분류
+  post_type: 'keyword' | 'compare' | 'guide' | 'general'
+  related_place_slugs: string[]
+  target_query: string | null                                      // 키워드 페이지의 SEO 쿼리
+  faqs: Array<{ question: string; answer: string }>
+  statistics: Array<{ label: string; value: string; note?: string }>
+  sources: Array<{ title: string; url: string }>
+  view_count: number
+  quality_score: number | null
 }
 
 // --- Transformation Functions ---

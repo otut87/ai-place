@@ -13,8 +13,8 @@ export interface TaskStatusResult {
   violations: TaskStatusViolation[]
 }
 
-const TASK_REF_REGEX = /\bT-\d{3}\b/g
-const TASK_HEADING_REGEX = /^##\s+(T-\d{3})\b(.*)$/gm
+const TASK_REF_REGEX = /\bT-\d{3}[a-z]?\b/g
+const TASK_HEADING_REGEX = /^##\s+(T-\d{3}[a-z]?)\b(.*)$/gm
 
 export function extractTaskRefs(text: string): string[] {
   const matches = text.match(TASK_REF_REGEX) ?? []

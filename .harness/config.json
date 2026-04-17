@@ -2,7 +2,7 @@
   "$schema": "./config.schema.json",
   "version": "1.0.0",
   "baseBranch": "master",
-  "taskRefPattern": "(T-\\d{3}|WO-#\\d+)",
+  "taskRefPattern": "(T-\\d{3}[a-z]?|WO-#\\d+)",
   "taskDocPath": "docs/리뷰/TASKS.md",
   "coverage": {
     "threshold": 80,

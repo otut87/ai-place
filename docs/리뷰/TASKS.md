@@ -443,9 +443,16 @@ scripts/harness/
 > **WO 참조**: #47, #2, #12, #28 (4개 항목 동시 해소)
 > **CEO 플랜**: 2026-04-16 승인 — view_count, place↔blog 양방향 링크, /blog SEO 랜딩, quality_score
 
-## T-010a. DB 스키마: blog_posts 테이블 [SEO][GEO]
+## T-010a. DB 스키마: blog_posts 테이블 [SEO][GEO] ✅
 
 **예상 공수**: 1h
+**완료**: 2026-04-17
+**구현**:
+- [supabase/migrations/011_blog_posts_extend.sql](supabase/migrations/011_blog_posts_extend.sql) — 9개 컬럼 추가 + status enum (draft/published → draft/active/archived) + RLS 정책 갱신
+- [src/lib/supabase-types.ts](src/lib/supabase-types.ts) — DbBlogPost 타입 확장
+- [src/lib/supabase/database.types.ts](src/lib/supabase/database.types.ts) — Row 타입 동기화
+- [src/lib/__tests__/supabase-schema.test.ts](src/lib/__tests__/supabase-schema.test.ts) — 13개 신규 schema 테스트 + 2개 타입 테스트 추가
+- 하네스 sub-task 패턴(T-NNNa) 지원: config.json + record-review.ts + task-status.ts 갱신
 
 **작업**
 - [ ] `supabase/migrations/NNNN_create_blog_posts.sql` 작성

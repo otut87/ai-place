@@ -311,12 +311,21 @@ describe('DbBlogPost type', () => {
       city: 'cheonan',
       category: 'dermatology',
       tags: ['피부과', '천안'],
-      status: 'published',
+      status: 'active',
       published_at: '2026-04-15T00:00:00Z',
       created_at: '2026-04-14T00:00:00Z',
       updated_at: '2026-04-15T00:00:00Z',
+      sector: 'medical',
+      post_type: 'guide',
+      related_place_slugs: [],
+      target_query: null,
+      faqs: [],
+      statistics: [],
+      sources: [],
+      view_count: 0,
+      quality_score: null,
     }
-    expect(post.status).toBe('published')
+    expect(post.status).toBe('active')
     expect(post.tags).toHaveLength(2)
     expect(post.category).toBe('dermatology')
   })
@@ -335,9 +344,131 @@ describe('DbBlogPost type', () => {
       published_at: null,
       created_at: '2026-04-14T00:00:00Z',
       updated_at: '2026-04-14T00:00:00Z',
+      sector: 'medical',
+      post_type: 'general',
+      related_place_slugs: [],
+      target_query: null,
+      faqs: [],
+      statistics: [],
+      sources: [],
+      view_count: 0,
+      quality_score: null,
     }
     expect(post.category).toBeNull()
     expect(post.published_at).toBeNull()
+  })
+
+  it('should support extended fields (T-010a)', () => {
+    const post: DbBlogPost = {
+      id: '3',
+      slug: 'cheonan-dermatology-acne',
+      title: '천안 여드름 피부과',
+      summary: '천안에서 여드름 치료를 잘하는 피부과 4곳',
+      content: '<p>본문</p>',
+      city: 'cheonan',
+      category: 'dermatology',
+      tags: ['여드름', '피부과'],
+      status: 'active',
+      published_at: '2026-04-15T00:00:00Z',
+      created_at: '2026-04-14T00:00:00Z',
+      updated_at: '2026-04-15T00:00:00Z',
+      sector: 'medical',
+      post_type: 'keyword',
+      related_place_slugs: ['chnp-derm', 'chen-derm'],
+      target_query: '천안 여드름 피부과 추천',
+      faqs: [{ question: 'q', answer: 'a' }],
+      statistics: [{ label: '활성 업체', value: '4곳' }],
+      sources: [{ title: '건강보험심사평가원', url: 'https://hira.or.kr' }],
+      view_count: 120,
+      quality_score: 85,
+    }
+    expect(post.sector).toBe('medical')
+    expect(post.post_type).toBe('keyword')
+    expect(post.related_place_slugs).toHaveLength(2)
+    expect(post.status).toBe('active')
+    expect(post.view_count).toBe(120)
+  })
+
+  it('should accept archived status', () => {
+    const post: DbBlogPost = {
+      id: '4', slug: 's', title: 't', summary: 's', content: 'c',
+      city: 'cheonan', category: null, tags: [],
+      status: 'archived',
+      published_at: null,
+      created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
+      sector: 'general', post_type: 'general',
+      related_place_slugs: [], target_query: null,
+      faqs: [], statistics: [], sources: [],
+      view_count: 0, quality_score: null,
+    }
+    expect(post.status).toBe('archived')
+  })
+})
+
+// ===== 8.5. 011 마이그레이션: blog_posts 확장 (T-010a) =====
+describe('011_blog_posts_extend.sql', () => {
+  it('exists', () => {
+    expect(existsSync(join(MIGRATIONS_DIR, '011_blog_posts_extend.sql'))).toBe(true)
+  })
+
+  it('adds sector column (NOT NULL with default)', () => {
+    const sql = readMigration('011_blog_posts_extend.sql')
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+sector\s+text/i)
+  })
+
+  it('adds post_type column with check constraint', () => {
+    const sql = readMigration('011_blog_posts_extend.sql')
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+post_type\s+text/i)
+    expect(sql).toMatch(/post_type[\s\S]*keyword[\s\S]*compare[\s\S]*guide[\s\S]*general/i)
+  })
+
+  it('adds related_place_slugs text array', () => {
+    const sql = readMigration('011_blog_posts_extend.sql')
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+related_place_slugs\s+text\[\]/i)
+  })
+
+  it('adds target_query optional column', () => {
+    const sql = readMigration('011_blog_posts_extend.sql')
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+target_query\s+text/i)
+  })
+
+  it('adds faqs/statistics/sources jsonb columns', () => {
+    const sql = readMigration('011_blog_posts_extend.sql')
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+faqs\s+jsonb/i)
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+statistics\s+jsonb/i)
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+sources\s+jsonb/i)
+  })
+
+  it('adds view_count and quality_score', () => {
+    const sql = readMigration('011_blog_posts_extend.sql')
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+view_count\s+integer/i)
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+quality_score\s+integer/i)
+  })
+
+  it('updates status check to include active/archived', () => {
+    const sql = readMigration('011_blog_posts_extend.sql')
+    // 새 check constraint 가 active 와 archived 를 포함해야 함
+    expect(sql).toMatch(/check[\s\S]*draft[\s\S]*active[\s\S]*archived/i)
+  })
+
+  it('migrates existing published rows to active', () => {
+    const sql = readMigration('011_blog_posts_extend.sql')
+    expect(sql).toMatch(/update\s+blog_posts[\s\S]*set\s+status\s*=\s*'active'[\s\S]*where\s+status\s*=\s*'published'/i)
+  })
+
+  it('creates composite index on (city, sector)', () => {
+    const sql = readMigration('011_blog_posts_extend.sql')
+    expect(sql).toMatch(/create\s+index[\s\S]*blog_posts.*\(city,\s*sector\)/i)
+  })
+
+  it('creates GIN index on related_place_slugs', () => {
+    const sql = readMigration('011_blog_posts_extend.sql')
+    expect(sql).toMatch(/create\s+index[\s\S]*using\s+gin\s*\(related_place_slugs\)/i)
+  })
+
+  it('updates RLS read policy to status=active', () => {
+    const sql = readMigration('011_blog_posts_extend.sql')
+    expect(sql).toMatch(/blog_posts_read[\s\S]*status\s*=\s*'active'/i)
   })
 })
 

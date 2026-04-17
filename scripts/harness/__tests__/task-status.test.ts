@@ -22,8 +22,16 @@ describe('extractTaskRefs', () => {
     expect(extractTaskRefs('WIP change')).toEqual([])
   })
 
-  it('only matches T-NNN (ignores T-NN or T-NNNN)', () => {
+  it('only matches T-NNN or T-NNNa (ignores T-NN or T-NNNN)', () => {
     expect(extractTaskRefs('T-001 T-01 T-0001')).toEqual(['T-001'])
+  })
+
+  it('extracts sub-task refs like T-010a', () => {
+    expect(extractTaskRefs('feat: T-010a blog 확장')).toEqual(['T-010a'])
+  })
+
+  it('distinguishes T-010 from T-010a', () => {
+    expect(extractTaskRefs('T-010 and T-010a are different')).toEqual(['T-010', 'T-010a'])
   })
 })
 

@@ -2,7 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { validateTaskRef } from '../gates/task-ref'
 
 describe('validateTaskRef', () => {
-  const pattern = '(T-\\d{3}|WO-#\\d+)'
+  const pattern = '(T-\\d{3}[a-z]?|WO-#\\d+)'
+
+  it('accepts sub-task references like T-010a', () => {
+    const commits = [{ hash: 'abc', message: 'feat: T-010a blog_posts 확장', body: '' }]
+    const result = validateTaskRef(commits, pattern)
+    expect(result.ok).toBe(true)
+    expect(result.violations).toHaveLength(0)
+  })
 
   it('passes when commit message contains T-NNN reference', () => {
     const commits = [{ hash: 'abc', message: 'feat: T-001 수피부과 제거', body: '' }]

@@ -64,8 +64,8 @@ function main(): void {
     printUsage()
     process.exit(1)
   }
-  if (!/^T-\d{3}$/.test(args.taskId)) {
-    log.error(`Invalid TASK ID: ${args.taskId} (expected T-NNN)`)
+  if (!/^T-\d{3}[a-z]?$/.test(args.taskId)) {
+    log.error(`Invalid TASK ID: ${args.taskId} (expected T-NNN or T-NNNa)`)
     process.exit(1)
   }
 

@@ -71,10 +71,20 @@ export interface Database {
           city: string
           category: string | null
           tags: string[]
-          status: 'draft' | 'published'
+          status: 'draft' | 'active' | 'archived'
           published_at: string | null
           created_at: string
           updated_at: string
+          // 011_blog_posts_extend.sql
+          sector: string
+          post_type: 'keyword' | 'compare' | 'guide' | 'general'
+          related_place_slugs: string[]
+          target_query: string | null
+          faqs: Array<{ question: string; answer: string }>
+          statistics: Array<{ label: string; value: string; note?: string }>
+          sources: Array<{ title: string; url: string }>
+          view_count: number
+          quality_score: number | null
         }
         Insert: Omit<Database['public']['Tables']['blog_posts']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['blog_posts']['Insert']>
