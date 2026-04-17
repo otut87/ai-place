@@ -26,6 +26,11 @@
     "baseline:test": "tsx scripts/baseline-test.ts",
     "indexnow": "tsx scripts/indexnow.ts",
     "indexnow:dry": "tsx scripts/indexnow.ts --dry-run",
+    "backfill:sameas": "tsx scripts/backfill-same-as.ts",
+    "backfill:sameas:dry": "tsx scripts/backfill-same-as.ts --dry-run",
+    "seed:category-guides": "tsx scripts/seed-thin-category-guides.ts",
+    "seed:category-guides:dry": "tsx scripts/seed-thin-category-guides.ts --dry-run",
+    "seed:category-guides:force": "tsx scripts/seed-thin-category-guides.ts --force",
     "prepare": "husky"
   },
   "dependencies": {

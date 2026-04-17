@@ -135,6 +135,22 @@ describe('JSON-LD Generation', () => {
       expect(jsonld.numberOfItems).toBe(0)
       expect(jsonld.itemListElement).toHaveLength(0)
     })
+
+    // T-031: 비교형 블로그 글에서 각 항목이 업체 상세로 링크 가능해야 한다.
+    it('ListItem 과 item 에 각각 url 이 포함됨', async () => {
+      const { generateItemList } = await import('@/lib/jsonld')
+      const jsonld = generateItemList([mockPlace], '비교 목록')
+      const entry = jsonld.itemListElement[0]
+      expect(entry.url).toBe(`https://aiplace.kr/${mockPlace.city}/${mockPlace.category}/${mockPlace.slug}`)
+      expect(entry.item.url).toBe(entry.url)
+      expect(entry.item['@id']).toBe(entry.url)
+    })
+
+    it('baseUrl 옵션 override', async () => {
+      const { generateItemList } = await import('@/lib/jsonld')
+      const jsonld = generateItemList([mockPlace], 'x', { baseUrl: 'https://staging.example.com' })
+      expect(jsonld.itemListElement[0].url).toContain('staging.example.com')
+    })
   })
 
   describe('generateFAQPage', () => {

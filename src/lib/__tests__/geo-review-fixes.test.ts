@@ -37,4 +37,14 @@ describe('C. 카테고리 리스팅 DAB 정보밀도', () => {
     expect(dab).toContain('천안')
     expect(dab).toContain('피부과')
   })
+
+  // T-035: 연도는 getFullYear() 로 동적으로 채워지며 2026 하드코딩이 없어야 한다.
+  it('DAB 는 하드코딩된 2026 대신 현재 연도를 사용', async () => {
+    const { getPlaces } = await import('@/lib/data')
+    const { generateCategoryDAB } = await import('@/lib/seo')
+    const places = await getPlaces('cheonan', 'dermatology')
+    const dab = generateCategoryDAB(places, '천안', '피부과')
+    const currentYear = new Date().getFullYear()
+    expect(dab).toContain(`${currentYear}년`)
+  })
 })

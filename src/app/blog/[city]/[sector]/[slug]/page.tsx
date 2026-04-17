@@ -20,7 +20,7 @@ import {
   getBlogPostsBySector,
 } from '@/lib/blog/data.supabase'
 import { getCities, getSectors, getCategories, getPlaceBySlug } from '@/lib/data.supabase'
-import { generateArticle, generateFAQPage } from '@/lib/jsonld'
+import { generateArticle, generateFAQPage, generateItemList } from '@/lib/jsonld'
 import { generateBreadcrumbList, buildBlogBreadcrumb } from '@/lib/seo'
 import { safeJsonLd } from '@/lib/utils'
 import type { Place, BlogPostSummary } from '@/lib/types'
@@ -109,6 +109,12 @@ export default async function BlogPostPage({ params }: Props) {
   })
   const breadcrumbJsonLd = generateBreadcrumbList(breadcrumbItems)
 
+  // T-031: post_type === 'compare' 이면 ItemList JSON-LD 로 비교 대상 업체 노출.
+  const itemListJsonLd =
+    post.postType === 'compare' && relatedPlaces.length > 0
+      ? generateItemList(relatedPlaces, post.title, { baseUrl: BASE_URL })
+      : null
+
   const typeLabel: Record<string, string> = {
     keyword: '키워드',
     compare: '비교',
@@ -127,6 +133,9 @@ export default async function BlogPostPage({ params }: Props) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }} />
       )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
+      {itemListJsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(itemListJsonLd) }} />
+      )}
 
       <main className="flex-1">
         {/* Hero */}

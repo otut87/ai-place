@@ -18,3 +18,11 @@
 {"commit":"1da3c894f035012175a08a4fcf84da238ac03c9a","timestamp":"2026-04-17T07:16:55.275Z","reviewer":"self","taskId":"T-024","files":["src/lib/__tests__/recommendation.test.ts"]}
 {"commit":"1da3c894f035012175a08a4fcf84da238ac03c9a","timestamp":"2026-04-17T07:17:02.483Z","reviewer":"self","taskId":"T-015","files":["src/lib/__tests__/classification/category-map.test.ts"]}
 {"commit":"1da3c894f035012175a08a4fcf84da238ac03c9a","timestamp":"2026-04-17T07:17:03.469Z","reviewer":"self","taskId":"T-015","files":["src/lib/__tests__/classification/llm-detector.test.ts"]}
+{"commit":"8b66f63de59eff27e35bf3b6a13cf44d29f0e4f2","timestamp":"2026-04-17T07:31:30.058Z","reviewer":"self","taskId":"T-021","files":["src/lib/naver/blog-search.ts","src/lib/__tests__/naver/blog-search.test.ts"]}
+{"commit":"8b66f63de59eff27e35bf3b6a13cf44d29f0e4f2","timestamp":"2026-04-17T07:31:31.614Z","reviewer":"self","taskId":"T-022","files":["src/lib/naver/cafe-search.ts","src/lib/__tests__/naver/cafe-search.test.ts"]}
+{"commit":"8b66f63de59eff27e35bf3b6a13cf44d29f0e4f2","timestamp":"2026-04-17T07:31:32.525Z","reviewer":"self","taskId":"T-023","files":["src/lib/ai/haiku-preprocess.ts","src/lib/__tests__/ai/haiku-preprocess.test.ts"]}
+{"commit":"8b66f63de59eff27e35bf3b6a13cf44d29f0e4f2","timestamp":"2026-04-17T07:31:34.105Z","reviewer":"self","taskId":"T-026","files":["src/lib/ai/exemplars.ts","src/lib/__tests__/ai/exemplars.test.ts"]}
+{"commit":"8b66f63de59eff27e35bf3b6a13cf44d29f0e4f2","timestamp":"2026-04-17T07:31:34.937Z","reviewer":"self","taskId":"T-027","files":["src/lib/ai/quality-score.ts","src/lib/__tests__/ai/quality-score.test.ts"]}
+{"commit":"8b66f63de59eff27e35bf3b6a13cf44d29f0e4f2","timestamp":"2026-04-17T07:31:35.923Z","reviewer":"self","taskId":"T-028","files":["src/lib/ai/telemetry.ts","src/lib/__tests__/ai/telemetry.test.ts"]}
+{"commit":"8b66f63de59eff27e35bf3b6a13cf44d29f0e4f2","timestamp":"2026-04-17T07:31:36.857Z","reviewer":"self","taskId":"T-024","files":["src/lib/__tests__/generate-content.test.ts"]}
+{"commit":"8b66f63de59eff27e35bf3b6a13cf44d29f0e4f2","timestamp":"2026-04-17T07:31:38.057Z","reviewer":"self","taskId":"T-035","files":["src/lib/__tests__/geo-review-fixes.test.ts"]}

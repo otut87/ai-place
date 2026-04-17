@@ -120,7 +120,12 @@ export function generateLocalBusiness(place: Place, pageUrl?: string, schemaType
   return jsonld
 }
 
-export function generateItemList(places: Place[], title: string): JsonLd {
+export function generateItemList(
+  places: Place[],
+  title: string,
+  opts: { baseUrl?: string } = {},
+): JsonLd {
+  const baseUrl = opts.baseUrl ?? 'https://aiplace.kr'
   return {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -129,11 +134,14 @@ export function generateItemList(places: Place[], title: string): JsonLd {
     itemListElement: places.map((place, index) => ({
       '@type': 'ListItem',
       position: index + 1,
+      url: `${baseUrl}/${place.city}/${place.category}/${place.slug}`,
       item: {
         '@type': CATEGORY_SCHEMA_MAP[place.category] ?? 'LocalBusiness',
+        '@id': `${baseUrl}/${place.city}/${place.category}/${place.slug}`,
         name: place.name,
         description: place.description,
         address: place.address,
+        url: `${baseUrl}/${place.city}/${place.category}/${place.slug}`,
         ...(place.rating != null && {
           aggregateRating: {
             '@type': 'AggregateRating',

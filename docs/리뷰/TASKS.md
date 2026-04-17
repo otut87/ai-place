@@ -1294,7 +1294,7 @@ IndexNow [DRY-RUN]: 29개 URL
 
 # Phase 4 — GEO·AEO 구조화 데이터 (2-3일)
 
-## T-029. sameAs 데이터 입력 파이프라인 [GEO]
+## T-029. sameAs 데이터 입력 파이프라인 [GEO] ✅
 
 **WO 참조**: #17
 **축**: GEO (핵심 신호)
@@ -1319,7 +1319,7 @@ IndexNow [DRY-RUN]: 29개 URL
 **잔여 책임**
 - [ ] T-010h 완료 후 모든 페이지에서 breadcrumb 일관성 시각 검증
 
-## T-031. 블로그 글 ItemList 스키마 (compare 타입) [AEO]
+## T-031. 블로그 글 ItemList 스키마 (compare 타입) [AEO] ✅
 
 **WO 참조**: #19
 **축**: AEO
@@ -1340,7 +1340,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] Google Rich Results Test — ItemList 인식
 - [ ] 비교 대상 업체가 Service 엔트리로 출력
 
-## T-032. robots.ts — Yeti/Daum/Bingbot 추가 [SEO][GEO]
+## T-032. robots.ts — Yeti/Daum/Bingbot 추가 [SEO][GEO] ✅
 
 **WO 참조**: #16
 **축**: SEO, GEO
@@ -1358,7 +1358,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] `https://aiplace.kr/robots.txt` 에 3개 추가 User-Agent 표시
 - [ ] Naver Search Central 인식 확인
 
-## T-033. OG/Twitter 메타 보강 [SEO]
+## T-033. OG/Twitter 메타 보강 [SEO] ✅
 
 **WO 참조**: #20
 **축**: SEO
@@ -1377,7 +1377,7 @@ IndexNow [DRY-RUN]: 29개 URL
 **DoD**
 - [ ] Twitter Card Validator 통과
 
-## T-034. Thin 카테고리 처리 — 가이드 본문 채우기 [SEO]
+## T-034. Thin 카테고리 처리 — 가이드 본문 채우기 [SEO] ✅
 
 **WO 참조**: #6
 **축**: SEO
@@ -1404,7 +1404,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] 페이지 thin content 신호 해소 (Google Search Console 모니터링)
 - [ ] 블로그 시스템 마이그레이션 완료 후 가이드 콘텐츠가 `/blog/cheonan/[sector]/...-guide` 에 노출
 
-## T-035. 날짜 자동화 [GEO]
+## T-035. 날짜 자동화 [GEO] ✅
 
 **WO 참조**: #22
 **축**: GEO (freshness)

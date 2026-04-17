@@ -12,6 +12,10 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: 'Claude-User', allow: '/', disallow: ['/admin', '/api'] },
       { userAgent: 'Claude-SearchBot', allow: '/', disallow: ['/admin', '/api'] },
       { userAgent: 'Googlebot', allow: '/', disallow: ['/admin', '/api'] },
+      // 한국 검색엔진 (Naver/Daum) + MS Bing (T-032)
+      { userAgent: 'Yeti', allow: '/', disallow: ['/admin', '/api'] },
+      { userAgent: 'Daumoa', allow: '/', disallow: ['/admin', '/api'] },
+      { userAgent: 'Bingbot', allow: '/', disallow: ['/admin', '/api'] },
       // 학습용 크롤러
       { userAgent: 'GPTBot', allow: '/', disallow: ['/admin', '/api'] },
       { userAgent: 'ClaudeBot', allow: '/', disallow: ['/admin', '/api'] },

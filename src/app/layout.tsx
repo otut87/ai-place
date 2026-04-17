@@ -14,6 +14,15 @@ export const metadata: Metadata = {
     type: "website",
     locale: "ko_KR",
     siteName: "AI Place",
+    title: "AI Place — AI가 추천하는 우리 동네 업체",
+    description:
+      "ChatGPT, Claude, Gemini에서 추천되는 로컬 업체를 찾아보세요. 피부과, 치과, 미용실, 인테리어 등.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI Place — AI가 추천하는 우리 동네 업체",
+    description:
+      "ChatGPT, Claude, Gemini에서 추천되는 로컬 업체를 찾아보세요.",
   },
   robots: {
     index: true,
