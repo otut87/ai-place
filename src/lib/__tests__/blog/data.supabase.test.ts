@@ -182,6 +182,31 @@ describe('getPopularBlogPosts', () => {
   })
 })
 
+describe('getAllActiveBlogPosts (T-010d generateStaticParams)', () => {
+  it('모든 active 글의 라우팅 키 반환 (city/sector/slug)', async () => {
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnValue(makeChain({ data: [sampleRow], error: null })),
+    })
+    const { getAllActiveBlogPosts } = await import('@/lib/blog/data.supabase')
+    const out = await getAllActiveBlogPosts()
+    expect(out).toHaveLength(1)
+    expect(out[0]).toEqual({
+      city: 'cheonan',
+      sector: 'medical',
+      slug: 'cheonan-dermatology-acne',
+    })
+  })
+
+  it('실패 시 빈 배열', async () => {
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnValue(makeChain({ data: null, error: { message: 'fail' } })),
+    })
+    const { getAllActiveBlogPosts } = await import('@/lib/blog/data.supabase')
+    const out = await getAllActiveBlogPosts()
+    expect(out).toEqual([])
+  })
+})
+
 describe('getBlogPostsByPlace', () => {
   it('related_place_slugs 역방향 조회 (placeSlug 포함)', async () => {
     mockFrom.mockReturnValue({

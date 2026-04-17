@@ -527,7 +527,24 @@ scripts/harness/
 - [ ] JSON-LD CollectionPage + ItemList
 - [ ] BreadcrumbList (홈 → 블로그)
 
-## T-010d. 블로그 글 상세 라우트 [SEO][AEO][GEO] 🔜
+## T-010d. 블로그 글 상세 라우트 [SEO][AEO][GEO] ✅
+
+**완료**: 2026-04-17
+**구현**:
+- [src/app/blog/[city]/[sector]/[slug]/page.tsx](src/app/blog/%5Bcity%5D/%5Bsector%5D/%5Bslug%5D/page.tsx) — generateStaticParams + Metadata + Article/FAQPage/BreadcrumbList JSON-LD + 5단계 breadcrumb
+- [src/lib/blog/markdown.ts](src/lib/blog/markdown.ts) — unified pipeline(remark-parse → remark-rehype → rehype-sanitize → stringify), 클라이언트 번들 0
+- [src/components/blog-markdown.tsx](src/components/blog-markdown.tsx) — Server Component, prose 스타일 적용
+- [src/components/blog-view-tracker.tsx](src/components/blog-view-tracker.tsx) — Client Component, useEffect ref guard 로 1회만 발화
+- [src/lib/actions/blog-views.ts](src/lib/actions/blog-views.ts) — `incrementBlogPostView(slug)` server action
+- [src/lib/blog/data.supabase.ts](src/lib/blog/data.supabase.ts) — `getAllActiveBlogPosts` 추가 (generateStaticParams 용)
+- [src/lib/__tests__/blog/markdown.test.ts](src/lib/__tests__/blog/markdown.test.ts) — 9개 XSS sanitization 테스트 (script/iframe/onevent/javascript:/style)
+
+**검증** (next build + start, /blog/cheonan/medical/cheonan-dermatology-acne):
+- 12개 SSG prerender 성공
+- Article + FAQPage + BreadcrumbList JSON-LD 모두 출력
+- 5단계 breadcrumb: 홈 › 블로그 › 천안 › 의료 › [글] ✓
+- Markdown 본문 H2/H3/list/blockquote 정상 렌더 (3개 섹션)
+- 관련 업체 카드 표시 (related_place_slugs 조회)
 
 **예상 공수**: 4h
 

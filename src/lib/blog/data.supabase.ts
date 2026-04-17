@@ -112,6 +112,29 @@ export function getPopularBlogPosts(limit: number): Promise<BlogPostSummary[]> {
   )
 }
 
+/**
+ * generateStaticParams 용 — 모든 active 글의 라우팅 키 반환.
+ * 페이로드 가벼우나 select * 를 그대로 사용 (별도 분기 회피).
+ */
+export async function getAllActiveBlogPosts(): Promise<
+  Array<{ city: string; sector: string; slug: string }>
+> {
+  try {
+    const supabase = getReadClient()
+    if (!supabase) return []
+    const initial = supabase.from('blog_posts').select('*') as unknown as Chain
+    const { data, error } = (await initial.eq('status', ACTIVE)) as unknown as {
+      data: DbBlogPost[] | null
+      error: unknown
+    }
+    if (error || !data) return []
+    return data.map(r => ({ city: r.city, sector: r.sector, slug: r.slug }))
+  } catch (err) {
+    console.error('[blog/data.supabase] getAllActiveBlogPosts failed:', err)
+    return []
+  }
+}
+
 /** 특정 업체 slug 와 연결된 글 (양방향 링크, related_place_slugs 배열 contains) */
 export function getBlogPostsByPlace(placeSlug: string): Promise<BlogPostSummary[]> {
   return runListQuery(q =>
