@@ -2,6 +2,7 @@
 // AI 크롤러가 구조적으로 읽을 수 있는 Schema.org 데이터 생성
 
 import type { Place, FAQ, BlogPostSummary } from './types'
+import { toSchemaOrgHours } from './format/hours'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type JsonLd = Record<string, any>
@@ -15,40 +16,6 @@ const CATEGORY_SCHEMA_MAP: Record<string, string> = {
   interior: 'HomeAndConstructionBusiness',
   webagency: 'ProfessionalService',
   'auto-repair': 'AutoRepair',
-}
-
-/** openingHours 문자열을 OpeningHoursSpecification으로 변환 (§9.1) */
-const DAY_MAP: Record<string, string> = {
-  Mo: 'Monday', Tu: 'Tuesday', We: 'Wednesday', Th: 'Thursday',
-  Fr: 'Friday', Sa: 'Saturday', Su: 'Sunday',
-}
-
-function parseOpeningHours(hours: string[]): JsonLd[] {
-  const specs: JsonLd[] = []
-  for (const entry of hours) {
-    const match = entry.match(/^([A-Za-z,-]+)\s+(\d{2}:\d{2})-(\d{2}:\d{2})$/)
-    if (!match) continue
-    const [, daysPart, opens, closes] = match
-    // Handle "Mo-Fr" or "Mo" or "Mo,We,Fr"
-    const dayRangeMatch = daysPart.match(/^(\w{2})-(\w{2})$/)
-    if (dayRangeMatch) {
-      const dayKeys = Object.keys(DAY_MAP)
-      const start = dayKeys.indexOf(dayRangeMatch[1])
-      const end = dayKeys.indexOf(dayRangeMatch[2])
-      if (start >= 0 && end >= 0) {
-        for (let i = start; i <= end; i++) {
-          specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: DAY_MAP[dayKeys[i]], opens, closes })
-        }
-      }
-    } else {
-      // Single day like "Sa" or "Th"
-      const day = DAY_MAP[daysPart]
-      if (day) {
-        specs.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: day, opens, closes })
-      }
-    }
-  }
-  return specs
 }
 
 export function generateLocalBusiness(place: Place, pageUrl?: string, schemaType?: string): JsonLd {
@@ -91,7 +58,7 @@ export function generateLocalBusiness(place: Place, pageUrl?: string, schemaType
 
   if (place.openingHours) {
     jsonld.openingHours = place.openingHours
-    const specs = parseOpeningHours(place.openingHours)
+    const specs = toSchemaOrgHours(place.openingHours)
     if (specs.length > 0) {
       jsonld.openingHoursSpecification = specs
     }

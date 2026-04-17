@@ -376,7 +376,11 @@ scripts/harness/
 
 # Phase 1 — 템플릿 정리 (2일)
 
-## T-006. 업체 상세 H1 포맷 통일 [SEO][AEO][GEO]
+## T-006. 업체 상세 H1 포맷 통일 [SEO][AEO][GEO] ✅
+
+**완료**: 2026-04-17
+- [src/app/[city]/[category]/[slug]/page.tsx](src/app/%5Bcity%5D/%5Bcategory%5D/%5Bslug%5D/page.tsx) L163: `{place.name}` → `{place.name} — {cityObj?.name ?? city} {catObj?.name ?? category}`
+- 검증 (curl): "닥터에버스의원 천안점 — 천안 피부과" 출력 ✓
 
 **WO 참조**: #7
 **축**: GEO (entity 식별), SEO, AEO
@@ -395,7 +399,11 @@ scripts/harness/
 - [ ] 전체 업체 상세 페이지 H1 패턴 `"{이름} — {도시} {카테고리}"` 통일
 - [ ] title metadata 와 중복·불일치 없음
 
-## T-007. "비교 비교" 중복 버그 수정 [AEO]
+## T-007. "비교 비교" 중복 버그 수정 [AEO] ✅
+
+**완료**: 2026-04-17 (T-010g 캐스케이드로 자동 해소)
+- T-010g 에서 place detail 의 `relatedComparisons.map(comp => ${comp.topic.name} 비교)` 블록 자체가 `getBlogPostsByPlace` + `post.title` 로 교체됨 → 중복 "비교 비교" 패턴 불가능
+- `grep "topic.name} 비교" src/app/` → 0건
 
 **WO 참조**: #13
 **축**: AEO (답변 정확도)
@@ -415,7 +423,11 @@ scripts/harness/
 - [ ] `"레이저 시술 비교 비교"` 같은 출력 0건
 - [ ] 관련 콘텐츠 링크 텍스트 정상
 
-## T-008. AggregateRating JSON-LD 버그 수정 [AEO][GEO]
+## T-008. AggregateRating JSON-LD 버그 수정 [AEO][GEO] ✅
+
+**완료**: 2026-04-17
+- [src/app/[city]/[category]/[slug]/page.tsx](src/app/%5Bcity%5D/%5Bcategory%5D/%5Bslug%5D/page.tsx) L387-396 단독 AggregateRating 스크립트 블록 **완전 삭제**
+- LocalBusiness 내부 aggregateRating (generateLocalBusiness) 으로 충분
 
 **WO 참조**: #11
 **축**: AEO (Rich Snippet), GEO (schema 정확도)
@@ -431,7 +443,15 @@ scripts/harness/
 - [ ] Google Rich Results Test 에서 경고 없이 MedicalClinic·AggregateRating 인식
 - [ ] JSON-LD 중복 출력 제거
 
-## T-009. 리뷰/평점 포맷 유틸 (`lib/format/rating.ts`) [AEO]
+## T-009. 리뷰/평점 포맷 유틸 (`lib/format/rating.ts`) [AEO] ✅
+
+**완료**: 2026-04-17
+- [src/lib/format/rating.ts](src/lib/format/rating.ts) — `formatRatingLine(rating, count, source)`: "★ 4.5 · 리뷰 178건 (Google)" 형식
+  - Math.round 반올림 (toFixed banker's rounding 회피)
+  - count=0 → "리뷰 없음"
+  - mixed 소스 → 출처 미표기
+- 적용: place-card.tsx + place detail page
+- [src/lib/__tests__/format/rating.test.ts](src/lib/__tests__/format/rating.test.ts) — 6개 테스트
 
 **WO 참조**: #11
 **축**: AEO
@@ -453,7 +473,16 @@ scripts/harness/
 - [ ] 모든 평점 표기 한 가지 포맷으로 일관
 - [ ] 유닛 테스트 `src/lib/__tests__/format-rating.test.ts`
 
-## T-010. 영업시간·가격·주소 포맷 유틸 [AEO]
+## T-010. 영업시간·가격·주소 포맷 유틸 [AEO] ✅
+
+**완료**: 2026-04-17
+- [src/lib/format/hours.ts](src/lib/format/hours.ts) — `formatHoursKo()` ("월-금 09:00-18:00") + `toSchemaOrgHours()` (Schema.org OpeningHoursSpecification[])
+- [src/lib/format/price.ts](src/lib/format/price.ts) — `formatPriceRange()` (한글 유지, 숫자는 천단위, 빈 값 "상담 후 결정")
+- [src/lib/format/address.ts](src/lib/format/address.ts) — `normalizeAddress()` (도/광역시 17종 약어 매핑, 공백 축약)
+- 적용:
+  - place detail: 영업시간 `formatHoursKo` + 주소 `normalizeAddress` (본문 + meta description)
+  - jsonld.ts: `parseOpeningHours` → `toSchemaOrgHours` 재사용
+- 테스트: 3개 파일, 25개 테스트 (hours 10 + price 5 + address 10)
 
 **WO 참조**: #8, #9, #10
 **축**: AEO (답변박스), GEO

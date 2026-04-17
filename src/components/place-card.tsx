@@ -1,6 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import type { Place } from "@/lib/types"
+import { formatRatingLine } from "@/lib/format/rating"
 
 export function PlaceCard({ place }: { place: Place }) {
   return (
@@ -37,10 +38,9 @@ export function PlaceCard({ place }: { place: Place }) {
           </h3>
           {place.rating != null && (
             <div className="mt-1 flex items-center gap-1">
-              <span className="text-xs font-medium text-[#222222]">★ {place.rating}</span>
-              {place.reviewCount != null && (
-                <span className="text-xs text-[#6a6a6a]">· Google 리뷰 {place.reviewCount}건</span>
-              )}
+              <span className="text-xs font-medium text-[#222222]">
+                {formatRatingLine(place.rating, place.reviewCount ?? 0, 'google')}
+              </span>
             </div>
           )}
 

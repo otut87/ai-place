@@ -6,6 +6,9 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PhoneButton } from "@/components/phone-button"
 import { Disclaimer } from "@/components/business/disclaimer"
+import { formatRatingLine } from "@/lib/format/rating"
+import { formatHoursKo } from "@/lib/format/hours"
+import { normalizeAddress } from "@/lib/format/address"
 import { getPlaceBySlug, getPlaces, getCities, getCategories, getSchemaTypeForCategory, getSectorForCategory, updatePlaceGoogleData } from "@/lib/data.supabase"
 import { getBlogPostsByPlace } from "@/lib/blog/data.supabase"
 import { generateLocalBusiness, generateFAQPage, generateWebPage } from "@/lib/jsonld"
@@ -45,7 +48,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const catObj = categories.find(c => c.slug === category)
 
   const title = `${place.name} - ${cityObj?.name ?? city} ${catObj?.name ?? category}`
-  const description = `${cityObj?.name} ${catObj?.name} ${place.name} — ${place.services.map(s => s.name).join(', ')}. 주소: ${place.address}. ${place.rating ? `평점 ${place.rating}점.` : ''}`
+  const description = `${cityObj?.name} ${catObj?.name} ${place.name} — ${place.services.map(s => s.name).join(', ')}. 주소: ${normalizeAddress(place.address)}. ${place.rating ? `평점 ${place.rating}점.` : ''}`
 
   return {
     title,
@@ -160,14 +163,18 @@ export default async function ProfilePage({ params }: Props) {
             </div>
 
             {/* H1 + Rating (Google Places 데이터 우선, 없으면 수동 데이터) */}
-            <h1 className="text-[28px] font-bold text-[#222222] leading-[1.43]">{place.name}</h1>
+            <h1 className="text-[28px] font-bold text-[#222222] leading-[1.43]">
+              {place.name} — {cityObj?.name ?? city} {catObj?.name ?? category}
+            </h1>
             {(googleData?.rating ?? place.rating) != null && (
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-base font-medium text-[#222222]">★ {googleData?.rating ?? place.rating}</span>
-                {(googleData?.reviewCount ?? place.reviewCount) != null && (
-                  <span className="text-base text-[#6a6a6a]">· 후기 {googleData?.reviewCount ?? place.reviewCount}건</span>
-                )}
-                {googleData && <span className="text-xs text-[#6a6a6a]">(Google)</span>}
+                <span className="text-base font-medium text-[#222222]">
+                  {formatRatingLine(
+                    googleData?.rating ?? place.rating ?? 0,
+                    googleData?.reviewCount ?? place.reviewCount ?? 0,
+                    googleData ? 'google' : 'mixed',
+                  )}
+                </span>
               </div>
             )}
 
@@ -243,7 +250,7 @@ export default async function ProfilePage({ params }: Props) {
               <dl className="space-y-3">
                 <div className="flex gap-3">
                   <dt className="text-sm font-medium text-[#6a6a6a] w-20 shrink-0">주소</dt>
-                  <dd className="text-sm text-[#222222]">{place.address}</dd>
+                  <dd className="text-sm text-[#222222]">{normalizeAddress(place.address)}</dd>
                 </div>
                 {place.phone && (
                   <div className="flex gap-3">
@@ -254,12 +261,7 @@ export default async function ProfilePage({ params }: Props) {
                 {place.openingHours && (
                   <div className="flex gap-3">
                     <dt className="text-sm font-medium text-[#6a6a6a] w-20 shrink-0">영업시간</dt>
-                    <dd className="text-sm text-[#222222]">{place.openingHours.map(h => {
-                      // 영문 약어 → 한글 변환 (Mo-Fr 09:00-18:00 → 월~금 09:00-18:00)
-                      return h.replace(/Mo/g, '월').replace(/Tu/g, '화').replace(/We/g, '수')
-                        .replace(/Th/g, '목').replace(/Fr/g, '금').replace(/Sa/g, '토').replace(/Su/g, '일')
-                        .replace(/-(?=[\uC6D4\uD654\uC218\uBAA9\uAE08\uD1A0\uC77C])/g, '~')
-                    }).join(', ')}</dd>
+                    <dd className="text-sm text-[#222222]">{formatHoursKo(place.openingHours)}</dd>
                   </div>
                 )}
               </dl>
@@ -382,16 +384,9 @@ export default async function ProfilePage({ params }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(webPageJsonLd) }} />
       {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }} />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
-      {googleData && googleData.reviews.length > 0 && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd({
-          '@context': 'https://schema.org',
-          '@type': 'AggregateRating',
-          itemReviewed: { '@type': 'MedicalClinic', name: place.name },
-          ratingValue: googleData.rating,
-          reviewCount: googleData.reviewCount,
-          bestRating: 5,
-        }) }} />
-      )}
+      {/* T-008: 단독 AggregateRating JSON-LD 제거.
+           LocalBusiness 내부 aggregateRating(localBusinessJsonLd) 으로 충분하며,
+           단독 출력은 비표준이고 Rich Results Test 경고 유발. */}
     </>
   )
 }
