@@ -129,6 +129,62 @@ export function generateBreadcrumbList(items: Array<{ name: string; url: string 
 }
 
 /**
+ * 업체 페이지 breadcrumb (4단계)
+ * 홈 › [도시] › [카테고리] › [업체]
+ *
+ * WO #12: sector 중간 hub("천안 의료") 제거 — 도시명/카테고리명만 노출.
+ * placeName 미지정 시 3단계 (홈 › 도시 › 카테고리)
+ */
+export function buildBusinessBreadcrumb(args: {
+  baseUrl: string
+  cityName: string
+  citySlug: string
+  categoryName: string
+  categorySlug: string
+  placeName?: string
+  placeSlug?: string
+}): Array<{ name: string; url: string }> {
+  const { baseUrl, cityName, citySlug, categoryName, categorySlug, placeName, placeSlug } = args
+  const items = [
+    { name: '홈', url: baseUrl },
+    { name: cityName, url: `${baseUrl}/${citySlug}` },
+    { name: categoryName, url: `${baseUrl}/${citySlug}/${categorySlug}` },
+  ]
+  if (placeName && placeSlug) {
+    items.push({
+      name: placeName,
+      url: `${baseUrl}/${citySlug}/${categorySlug}/${placeSlug}`,
+    })
+  }
+  return items
+}
+
+/**
+ * 블로그 글 breadcrumb (5단계)
+ * 홈 › 블로그 › [도시] › [대분류] › [글]
+ *
+ * 키워드/비교/가이드 통합 라우트(/blog/[city]/[sector]/[slug])용.
+ */
+export function buildBlogBreadcrumb(args: {
+  baseUrl: string
+  cityName: string
+  citySlug: string
+  sectorName: string
+  sectorSlug: string
+  title: string
+  slug: string
+}): Array<{ name: string; url: string }> {
+  const { baseUrl, cityName, citySlug, sectorName, sectorSlug, title, slug } = args
+  return [
+    { name: '홈', url: baseUrl },
+    { name: '블로그', url: `${baseUrl}/blog` },
+    { name: cityName, url: `${baseUrl}/blog/${citySlug}` },
+    { name: sectorName, url: `${baseUrl}/blog/${citySlug}/${sectorSlug}` },
+    { name: title, url: `${baseUrl}/blog/${citySlug}/${sectorSlug}/${slug}` },
+  ]
+}
+
+/**
  * 카테고리 리스팅 Direct Answer Block 생성
  * 상위 업체명 + 평점을 포함한 자기완결형 요약
  */

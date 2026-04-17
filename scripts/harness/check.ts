@@ -104,10 +104,17 @@ async function main(): Promise<void> {
   }))
 
   // G5: TASK status
+  // refs는 subject + body 의 명시적 "Refs " 라인만 카운트
+  // (body 본문 forward-reference 가 false positive 를 만들지 않도록)
   outcomes.push(await runGate('G5 TASK Status', skipSet, () => {
     const allRefs = new Set<string>()
     for (const c of commits) {
-      for (const r of extractTaskRefs(`${c.message}\n${c.body}`)) allRefs.add(r)
+      for (const r of extractTaskRefs(c.message)) allRefs.add(r)
+      // body 에서는 "Refs T-NNN" 또는 "Refs: T-NNN" 같이 명시한 라인만 인정
+      const refLines = c.body.split('\n').filter(l => /^\s*refs?\s*[:]?\s/i.test(l))
+      for (const line of refLines) {
+        for (const r of extractTaskRefs(line)) allRefs.add(r)
+      }
     }
     const statuses = loadTaskStatuses(cfg.taskDocPath)
     const res = validateTaskStatus(Array.from(allRefs), statuses)

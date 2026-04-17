@@ -499,7 +499,7 @@ scripts/harness/
 - [src/lib/__tests__/blog/data.supabase.test.ts](src/lib/__tests__/blog/data.supabase.test.ts) — 12개 테스트 (mock 체인 + camelCase 변환 + 폴백 검증)
 - 폴백 정책: Supabase 실패 시 `getBlogPost` → null, 목록 → `[]` (T-010e 마이그레이션 완료 전 안전)
 
-## T-010c. 블로그 홈 라우트 /blog [SEO][GEO]
+## T-010c. 블로그 홈 라우트 /blog [SEO][GEO] 🔜
 
 **예상 공수**: 3h
 
@@ -515,7 +515,7 @@ scripts/harness/
 - [ ] JSON-LD CollectionPage + ItemList
 - [ ] BreadcrumbList (홈 → 블로그)
 
-## T-010d. 블로그 글 상세 라우트 [SEO][AEO][GEO]
+## T-010d. 블로그 글 상세 라우트 [SEO][AEO][GEO] 🔜
 
 **예상 공수**: 4h
 
@@ -534,7 +534,7 @@ scripts/harness/
 - [ ] Markdown XSS sanitization 유닛 테스트
 - [ ] 관련 업체 카드 렌더 확인
 
-## T-010e. 마이그레이션 스크립트 [SEO][GEO]
+## T-010e. 마이그레이션 스크립트 [SEO][GEO] 🔜
 
 **예상 공수**: 4h
 
@@ -552,7 +552,7 @@ scripts/harness/
 - [ ] 12개 레코드 정상 insert
 - [ ] 로컬 환경에서 검증 후 프로덕션 실행
 
-## T-010f. 301 Redirect 설정 [SEO]
+## T-010f. 301 Redirect 설정 [SEO] 🔜
 
 **예상 공수**: 2h
 
@@ -576,7 +576,7 @@ scripts/harness/
 - [ ] 새 URL 200 응답 확인
 - [ ] Google Search Console "URL 변경" 요청
 
-## T-010g. 기존 라우트 제거 [SEO]
+## T-010g. 기존 라우트 제거 [SEO] 🔜
 
 **예상 공수**: 1.5h
 **선행**: T-010e (마이그레이션) + T-010f (redirect) 완료 후
@@ -593,24 +593,22 @@ scripts/harness/
 - [ ] `grep -rn "k/\|/compare\|/guide" src/app/` → 라우트 없음
 - [ ] 관련 jsonld 빌더 blog용으로 변경
 
-## T-010h. Breadcrumb 2종 분리 (WO #12) [SEO][AEO]
+## T-010h. Breadcrumb 2종 분리 (WO #12) [SEO][AEO] ✅
 
 **예상 공수**: 3h
+**완료**: 2026-04-17 (util + 컴포넌트). 페이지 적용은 T-010d 에서 통합.
 
-**파일**
-- `src/components/breadcrumb.tsx` 신규 (HTML breadcrumb 컴포넌트)
-- `src/lib/seo.ts`:
-  - `buildBusinessBreadcrumb(city, category, placeName?)` — 4단계
-  - `buildBlogBreadcrumb(city, sector, title)` — 5단계
-- Sector 경유(`천안 의료`) 중간 hub 제거
+**구현**:
+- [src/lib/seo.ts](src/lib/seo.ts) — `buildBusinessBreadcrumb` (4단계, sector hub 제거) + `buildBlogBreadcrumb` (5단계)
+- [src/components/breadcrumb.tsx](src/components/breadcrumb.tsx) — HTML 컴포넌트 (aria-current, ChevronRight)
+- [src/lib/__tests__/seo.test.ts](src/lib/__tests__/seo.test.ts) — 7개 신규 테스트 + JSON-LD 통합 검증
 
-**DoD**
-- [ ] 업체 페이지 4단계 적용 (`홈 › 천안 › 피부과 › 업체`)
-- [ ] 블로그 페이지 5단계 적용 (`홈 › 블로그 › 천안 › 의료 › 글`)
-- [ ] JSON-LD `BreadcrumbList` 동일 구조
-- [ ] 유닛 테스트 2개
+**잔여**:
+- [ ] 업체 페이지(/[city]/[category]/[slug]) 적용 → T-010d 시점에 통합
+- [ ] 블로그 페이지 적용 → T-010d
+- [ ] 기존 generateBreadcrumbList 인라인 호출 5곳 → T-010g 정리 시 builder 로 교체
 
-## T-010i. 사이트맵·llms.txt·IndexNow [SEO][GEO]
+## T-010i. 사이트맵·llms.txt·IndexNow [SEO][GEO] 🔜
 
 **예상 공수**: 1.5h
 

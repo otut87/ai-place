@@ -109,3 +109,113 @@ describe('BreadcrumbList JSON-LD', () => {
     expect(crumbs.itemListElement[2].position).toBe(3)
   })
 })
+
+// T-010h: Breadcrumb 2종 분리 (WO #12)
+describe('buildBusinessBreadcrumb (4단계)', () => {
+  const baseUrl = 'https://aiplace.kr'
+
+  it('업체 포함 4단계: 홈 › 천안 › 피부과 › [업체]', async () => {
+    const { buildBusinessBreadcrumb } = await import('@/lib/seo')
+    const items = buildBusinessBreadcrumb({
+      baseUrl,
+      cityName: '천안', citySlug: 'cheonan',
+      categoryName: '피부과', categorySlug: 'dermatology',
+      placeName: '차앤박피부과의원 천안점',
+      placeSlug: 'chnp-derm-cheonan',
+    })
+    expect(items).toHaveLength(4)
+    expect(items[0]).toEqual({ name: '홈', url: baseUrl })
+    expect(items[1]).toEqual({ name: '천안', url: `${baseUrl}/cheonan` })
+    expect(items[2]).toEqual({ name: '피부과', url: `${baseUrl}/cheonan/dermatology` })
+    expect(items[3]).toEqual({
+      name: '차앤박피부과의원 천안점',
+      url: `${baseUrl}/cheonan/dermatology/chnp-derm-cheonan`,
+    })
+  })
+
+  it('업체 없으면 3단계 (홈 › 천안 › 피부과)', async () => {
+    const { buildBusinessBreadcrumb } = await import('@/lib/seo')
+    const items = buildBusinessBreadcrumb({
+      baseUrl,
+      cityName: '천안', citySlug: 'cheonan',
+      categoryName: '피부과', categorySlug: 'dermatology',
+    })
+    expect(items).toHaveLength(3)
+    expect(items[2].name).toBe('피부과')
+  })
+
+  it('sector 중간 hub("천안 의료") 미포함 (WO #12)', async () => {
+    const { buildBusinessBreadcrumb } = await import('@/lib/seo')
+    const items = buildBusinessBreadcrumb({
+      baseUrl,
+      cityName: '천안', citySlug: 'cheonan',
+      categoryName: '피부과', categorySlug: 'dermatology',
+    })
+    const names = items.map(i => i.name)
+    expect(names).not.toContain('천안 의료')
+    expect(names).not.toContain('의료')
+  })
+
+  it('도시명만 표시 ("천안"), 카테고리명만 표시 ("피부과") — 합치지 않음', async () => {
+    const { buildBusinessBreadcrumb } = await import('@/lib/seo')
+    const items = buildBusinessBreadcrumb({
+      baseUrl,
+      cityName: '천안', citySlug: 'cheonan',
+      categoryName: '피부과', categorySlug: 'dermatology',
+    })
+    expect(items[1].name).toBe('천안')
+    expect(items[2].name).toBe('피부과')
+  })
+})
+
+describe('buildBlogBreadcrumb (5단계)', () => {
+  const baseUrl = 'https://aiplace.kr'
+
+  it('5단계: 홈 › 블로그 › 천안 › 의료 › [글]', async () => {
+    const { buildBlogBreadcrumb } = await import('@/lib/seo')
+    const items = buildBlogBreadcrumb({
+      baseUrl,
+      cityName: '천안', citySlug: 'cheonan',
+      sectorName: '의료', sectorSlug: 'medical',
+      title: '천안 여드름 피부과 추천',
+      slug: 'cheonan-dermatology-acne',
+    })
+    expect(items).toHaveLength(5)
+    expect(items[0]).toEqual({ name: '홈', url: baseUrl })
+    expect(items[1]).toEqual({ name: '블로그', url: `${baseUrl}/blog` })
+    expect(items[2]).toEqual({ name: '천안', url: `${baseUrl}/blog/cheonan` })
+    expect(items[3]).toEqual({ name: '의료', url: `${baseUrl}/blog/cheonan/medical` })
+    expect(items[4]).toEqual({
+      name: '천안 여드름 피부과 추천',
+      url: `${baseUrl}/blog/cheonan/medical/cheonan-dermatology-acne`,
+    })
+  })
+
+  it('각 항목이 실제 URL 경로 패턴과 일치', async () => {
+    const { buildBlogBreadcrumb } = await import('@/lib/seo')
+    const items = buildBlogBreadcrumb({
+      baseUrl,
+      cityName: '천안', citySlug: 'cheonan',
+      sectorName: '뷰티', sectorSlug: 'beauty',
+      title: 'X', slug: 'x',
+    })
+    expect(items[3].url).toBe(`${baseUrl}/blog/cheonan/beauty`)
+    expect(items[4].url).toBe(`${baseUrl}/blog/cheonan/beauty/x`)
+  })
+})
+
+describe('breadcrumb builders → JSON-LD 통합', () => {
+  it('builder 결과를 generateBreadcrumbList에 그대로 전달 가능', async () => {
+    const { buildBusinessBreadcrumb, generateBreadcrumbList } = await import('@/lib/seo')
+    const items = buildBusinessBreadcrumb({
+      baseUrl: 'https://aiplace.kr',
+      cityName: '천안', citySlug: 'cheonan',
+      categoryName: '피부과', categorySlug: 'dermatology',
+      placeName: '테스트', placeSlug: 'test',
+    })
+    const jsonld = generateBreadcrumbList(items)
+    expect(jsonld['@type']).toBe('BreadcrumbList')
+    expect(jsonld.itemListElement).toHaveLength(4)
+    expect(jsonld.itemListElement[3].name).toBe('테스트')
+  })
+})
