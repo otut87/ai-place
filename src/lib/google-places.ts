@@ -1,8 +1,13 @@
 // Google Places API (New) — Place Details + Photos
 // 문서: https://developers.google.com/maps/documentation/places/web-service/place-details
 
-const API_KEY = process.env.GOOGLE_PLACES_API_KEY ?? ''
 const BASE_URL = 'https://places.googleapis.com/v1'
+
+// ESM 호이스팅 대비: scripts 가 @next/env 를 먼저 호출할 수 있도록
+// 환경변수 접근을 함수 내부로 지연시킨다.
+function getApiKey(): string {
+  return process.env.GOOGLE_PLACES_API_KEY ?? ''
+}
 
 export interface PlaceDetailsResult {
   name: string
@@ -31,7 +36,7 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResu
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 10000)
     const res = await fetch(url, {
-      headers: { 'X-Goog-Api-Key': API_KEY },
+      headers: { 'X-Goog-Api-Key': getApiKey() },
       signal: controller.signal,
     })
     clearTimeout(timeout)
@@ -46,7 +51,7 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResu
     let nameEn: string | undefined
     try {
       const enUrl = `${BASE_URL}/places/${placeId}?fields=displayName&languageCode=en`
-      const enRes = await fetch(enUrl, { headers: { 'X-Goog-Api-Key': API_KEY } })
+      const enRes = await fetch(enUrl, { headers: { 'X-Goog-Api-Key': getApiKey() } })
       if (enRes.ok) {
         const enData = await enRes.json()
         nameEn = enData.displayName?.text
@@ -94,7 +99,7 @@ export async function searchPlaceByText(query: string): Promise<PlaceSearchResul
     const res = await fetch(`${BASE_URL}/places:searchText`, {
       method: 'POST',
       headers: {
-        'X-Goog-Api-Key': API_KEY,
+        'X-Goog-Api-Key': getApiKey(),
         'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.location',
         'Content-Type': 'application/json',
       },
@@ -147,5 +152,5 @@ export function getPhotoUrl(photoRef: string, maxWidth = 400): string {
   if (typeof window !== 'undefined') {
     throw new Error('getPhotoUrl은 서버에서만 호출 가능합니다. API 키 노출 위험.')
   }
-  return `${BASE_URL}/${photoRef}/media?maxWidthPx=${maxWidth}&key=${API_KEY}`
+  return `${BASE_URL}/${photoRef}/media?maxWidthPx=${maxWidth}&key=${getApiKey()}`
 }

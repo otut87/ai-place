@@ -72,18 +72,22 @@ function needsBackfill(row: PlaceRow): boolean {
   )
 }
 
-async function matchRow(row: PlaceRow): Promise<UpdatePayload | null> {
-  // 이름만으로 먼저 검색 (주소는 카카오/네이버가 이미 포함해서 반환)
+type MatchOutcome =
+  | { kind: 'no-search-results' }
+  | { kind: 'no-matching-candidate'; candidates: number }
+  | { kind: 'matched-no-new-urls' }
+  | { kind: 'update'; payload: UpdatePayload }
+
+async function matchRow(row: PlaceRow): Promise<MatchOutcome> {
   const results = await unifiedSearch(row.name)
-  if (results.length === 0) return null
-  // 주소 또는 좌표로 동일 업체 필터링
-  const match = results.find(c => {
-    const aAddr = row.address
-    return isSameBusiness(
+  if (results.length === 0) return { kind: 'no-search-results' }
+
+  const match = results.find(c =>
+    isSameBusiness(
       {
         name: row.name,
-        roadAddress: aAddr,
-        jibunAddress: aAddr,
+        roadAddress: row.address,
+        jibunAddress: row.address,
         latitude: row.latitude ?? undefined,
         longitude: row.longitude ?? undefined,
       },
@@ -94,9 +98,9 @@ async function matchRow(row: PlaceRow): Promise<UpdatePayload | null> {
         latitude: c.latitude,
         longitude: c.longitude,
       },
-    )
-  })
-  if (!match) return null
+    ),
+  )
+  if (!match) return { kind: 'no-matching-candidate', candidates: results.length }
 
   const payload: UpdatePayload = {}
   // sameAs URL 보강 (이미 있으면 유지)
@@ -118,7 +122,9 @@ async function matchRow(row: PlaceRow): Promise<UpdatePayload | null> {
     const naverUrl = match.sameAs.find(u => u.includes('naver'))
     if (naverUrl) payload.naver_place_url = naverUrl
   }
-  return Object.keys(payload).length > 0 ? payload : null
+  return Object.keys(payload).length > 0
+    ? { kind: 'update', payload }
+    : { kind: 'matched-no-new-urls' }
 }
 
 async function main() {
@@ -132,30 +138,48 @@ async function main() {
 
   const client = getAdminClient()!
   let applied = 0
+  const stats = { noSearch: 0, noMatch: 0, noNewUrls: 0 }
   for (const row of targets) {
     try {
-      const payload = await matchRow(row)
-      if (!payload) {
-        console.log(`  · ${row.name} (${row.slug}) — 매칭 실패, 스킵`)
-        continue
-      }
-      console.log(`  ✓ ${row.name} (${row.slug}): ${Object.keys(payload).join(', ')}`)
-      if (!args.dryRun) {
-        const { error } = await (client.from('places') as ReturnType<typeof client.from>)
-          .update(payload as never)
-          .eq('id', row.id)
-        if (error) {
-          console.error(`    update 실패: ${error.message}`)
-          continue
+      const outcome = await matchRow(row)
+      switch (outcome.kind) {
+        case 'no-search-results':
+          console.log(`  · ${row.name} (${row.slug}) — 검색 결과 0건`)
+          stats.noSearch += 1
+          break
+        case 'no-matching-candidate':
+          console.log(`  · ${row.name} (${row.slug}) — 후보 ${outcome.candidates}건 있으나 주소/좌표 불일치`)
+          stats.noMatch += 1
+          break
+        case 'matched-no-new-urls':
+          console.log(`  · ${row.name} (${row.slug}) — 매칭됨, 추가할 sameAs URL 0개 (Kakao/Naver 미등록 또는 이미 설정됨)`)
+          stats.noNewUrls += 1
+          break
+        case 'update': {
+          const keys = Object.keys(outcome.payload).join(', ')
+          console.log(`  ✓ ${row.name} (${row.slug}): ${keys}`)
+          if (!args.dryRun) {
+            const { error } = await (client.from('places') as ReturnType<typeof client.from>)
+              .update(outcome.payload as never)
+              .eq('id', row.id)
+            if (error) {
+              console.error(`    update 실패: ${error.message}`)
+              break
+            }
+            applied += 1
+          }
+          break
         }
-        applied += 1
       }
     } catch (err) {
       console.error(`  ✗ ${row.name}: ${err instanceof Error ? err.message : err}`)
     }
   }
 
-  console.log(`\n[backfill-sameas] 완료 — ${args.dryRun ? '(DRY-RUN)' : `${applied}건 업데이트`}`)
+  console.log(
+    `\n[backfill-sameas] 완료 — ${args.dryRun ? '(DRY-RUN)' : `업데이트 ${applied}`} ` +
+      `| 검색 0건: ${stats.noSearch}, 후보 불일치: ${stats.noMatch}, 추가 URL 없음: ${stats.noNewUrls}`,
+  )
 }
 
 main().catch(err => {
