@@ -25,6 +25,7 @@
     "seed:places": "tsx scripts/seed-places.ts",
     "baseline:test": "tsx scripts/baseline-test.ts",
     "indexnow": "tsx scripts/indexnow.ts",
+    "indexnow:dry": "tsx scripts/indexnow.ts --dry-run",
     "prepare": "husky"
   },
   "dependencies": {

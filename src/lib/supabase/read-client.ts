@@ -1,21 +1,19 @@
 // 읽기 전용 Supabase 클라이언트 — cookies 미사용, SSG 호환
 // 데이터 조회에만 사용. 인증 불필요.
 //
-// 모듈 레벨 싱글톤: anon key + 읽기 전용이므로 요청 간 공유 안전.
-// 키 로테이션 시 프로세스 재시작 필요 (Vercel 배포 시 자동).
+// 싱글톤 캐시 + 환경변수는 함수 호출 시점에 읽기 (ESM top-level 평가 문제 회피).
+// scripts/* 에서 @next/env loadEnvConfig 호출 후에도 동작 보장.
 
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
 let client: ReturnType<typeof createClient<Database>> | null = null
 
 export function getReadClient() {
+  if (client) return client
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!supabaseUrl || !supabaseAnonKey) return null
-  if (!client) {
-    client = createClient<Database>(supabaseUrl, supabaseAnonKey)
-  }
+  client = createClient<Database>(supabaseUrl, supabaseAnonKey)
   return client
 }

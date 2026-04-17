@@ -710,7 +710,33 @@ node --env-file=.env.local --import tsx scripts/migrate-to-blog.ts --force
 - [ ] 블로그 페이지 적용 → T-010d
 - [ ] 기존 generateBreadcrumbList 인라인 호출 5곳 → T-010g 정리 시 builder 로 교체
 
-## T-010i. 사이트맵·llms.txt·IndexNow [SEO][GEO] 🔜
+## T-010i. 사이트맵·llms.txt·IndexNow [SEO][GEO] ✅
+
+**완료**: 2026-04-17
+**구현**:
+- **sitemap** ([src/lib/seo.ts](src/lib/seo.ts)) — T-010g 에서 이미 `/compare/` `/guide/` `/k/` 제거하고 `/blog` + `/blog/[city]/[sector]/[slug]` 추가
+- **llms.txt** ([src/app/llms.txt/route.ts](src/app/llms.txt/route.ts)) — T-010g 에서 이미 blog 중심으로 재구성 (getRecentBlogPosts 50개)
+- **indexnow** ([scripts/indexnow.ts](scripts/indexnow.ts)) — 동적 URL 생성으로 refactor
+  - getAllPlaces + getAllActiveBlogPosts 기반 → 업체/블로그 자동 포함
+  - `--dry-run` 플래그 추가 (외부 호출 전 검증)
+  - npm scripts: `npm run indexnow`, `npm run indexnow:dry`
+
+**부가 수정** (근본 원인):
+- [src/lib/supabase/read-client.ts](src/lib/supabase/read-client.ts) — 싱글톤의 env 읽기를 모듈 top-level → 함수 내부로 이동
+  - **이유**: ESM import 가 `loadEnvConfig()` 보다 먼저 평가되므로 script 컨텍스트에서 env 가 undefined
+  - **결과**: `npm run indexnow:dry` → 29개 URL 정상 생성 (4 base + 5 listing + 8 places + 12 blog)
+
+**검증** (npm run indexnow:dry):
+```
+IndexNow [DRY-RUN]: 29개 URL
+  https://aiplace.kr
+  https://aiplace.kr/about
+  https://aiplace.kr/blog
+  ... (29개 전체)
+```
+
+**잔여 작업 (사용자 실행)**:
+- [ ] `npm run indexnow` — 실제 Bing/Naver/Yandex 알림 (프로덕션 배포 후 권장)
 
 **예상 공수**: 1.5h
 
