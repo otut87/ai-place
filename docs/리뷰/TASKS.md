@@ -1421,7 +1421,7 @@ IndexNow [DRY-RUN]: 29개 URL
 
 # Phase 5 — SEO·CWV·접근성 (3일)
 
-## T-036. Pretendard self-host [SEO]
+## T-036. Pretendard self-host [SEO] ✅
 
 **WO 참조**: #23
 **축**: SEO (CWV)
@@ -1436,7 +1436,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] Lighthouse CWV — LCP 개선 확인
 - [ ] 외부 CDN 요청 0
 
-## T-037. 이미지 sizes 감사 [SEO]
+## T-037. 이미지 sizes 감사 [SEO] ✅
 
 **WO 참조**: #24
 **축**: SEO
@@ -1449,7 +1449,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] 모든 Image 컴포넌트 반응형 sizes
 - [ ] LCP 후보에 priority 적용
 
-## T-038. 접근성 보강 [SEO]
+## T-038. 접근성 보강 [SEO] ✅
 
 **WO 참조**: #26
 **축**: SEO
@@ -1459,7 +1459,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - `#6a6a6a` 컬러 핵심 정보 (운영시간·가격)는 `#222222` 로 상향
 - `prefers-reduced-motion` CSS 추가
 
-## T-039. CWV 측정 도입 [SEO]
+## T-039. CWV 측정 도입 [SEO] ✅
 
 **WO 참조**: #25
 **축**: SEO
@@ -1468,7 +1468,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - `@vercel/speed-insights` 또는 Lighthouse CI
 - PR 단위 회귀 감지 설정
 
-## T-040. 보안 헤더 점검 [SEO]
+## T-040. 보안 헤더 점검 [SEO] ✅
 
 **WO 참조**: #27
 **축**: SEO
@@ -1477,7 +1477,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - `next.config.mjs` `headers()` 함수 추가
 - HSTS, CSP, X-Frame-Options, Referrer-Policy, Permissions-Policy
 
-## T-041. 태그 표기 점검 [SEO]
+## T-041. 태그 표기 점검 [SEO] ✅
 
 **WO 참조**: #14
 **축**: SEO
@@ -1487,7 +1487,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - 배열화 migration
 - [src/components/place-card.tsx](src/components/place-card.tsx) 정상 동작 확인
 
-## T-042. `/admin/register` 직접 링크 grep [SEO]
+## T-042. `/admin/register` 직접 링크 grep [SEO] ✅
 
 **WO 참조**: #15
 **축**: SEO (crawl budget)
@@ -1496,7 +1496,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - `grep -rn "/admin/register" src/` 로 헤더 외 위치 확인
 - 외부에 노출된 링크 있으면 공개 경로로 교체
 
-## T-043. 업체 슬러그 규칙 통일 [SEO]
+## T-043. 업체 슬러그 규칙 통일 [SEO] ✅
 
 **WO 참조**: #18
 **축**: SEO (유지보수)
@@ -1506,7 +1506,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - 자동생성(`restaurant-6kty` 류) 슬러그 → 수동 슬러그로 수정
 - 301 리다이렉트 설정
 
-## T-044. 홈 "83개 업종" 해석 명확화 [SEO][AEO]
+## T-044. 홈 "83개 업종" 해석 명확화 [SEO][AEO] ✅
 
 **WO 참조**: #3
 **축**: SEO, AEO
@@ -1515,7 +1515,7 @@ IndexNow [DRY-RUN]: 29개 URL
 
 - "83개 업종 커버리지, 현재 {activeCategories}개 운영 중" 식으로 문구 개선
 
-## T-045. 업체 상세 템플릿 점검 [SEO]
+## T-045. 업체 상세 템플릿 점검 [SEO] ✅
 
 **WO 참조**: #13
 **축**: SEO

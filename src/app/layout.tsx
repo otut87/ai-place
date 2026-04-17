@@ -1,6 +1,17 @@
 import type { Metadata } from "next"
+import localFont from "next/font/local"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@/components/analytics"
 import "./globals.css"
+
+// T-036: Pretendard self-host (next/font/local 이 자동 woff2 preload + font-display:swap 설정)
+const pretendard = localFont({
+  src: "./fonts/PretendardVariable.woff2",
+  display: "swap",
+  variable: "--font-pretendard",
+  weight: "45 920",
+  preload: true,
+})
 
 export const metadata: Metadata = {
   title: {
@@ -42,24 +53,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ko" className="h-full antialiased">
-      <head>
-        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
-        <link
-          rel="preload"
-          as="style"
-          crossOrigin="anonymous"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
-        />
-        <link
-          rel="stylesheet"
-          crossOrigin="anonymous"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
-        />
-      </head>
+    <html lang="ko" className={`h-full antialiased ${pretendard.variable}`}>
       <body className="min-h-full flex flex-col font-sans text-[#222222] bg-white">
         {children}
         <Analytics />
+        {/* T-039 CWV: Vercel Speed Insights — LCP/CLS/INP 실측 수집 */}
+        <SpeedInsights />
       </body>
     </html>
   )

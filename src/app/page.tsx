@@ -87,7 +87,7 @@ export default async function HomePage() {
             {/* Direct Answer Block (§4.4 — 40-60자 자기완결 답변) */}
             <p className="mt-4 text-base text-[#222222] font-medium max-w-lg mx-auto">
               AI Place에 등록된 업체는 ChatGPT, Claude, Gemini에서 검색될 수 있도록 구조화된 프로필을 갖게 됩니다.
-              현재 천안 지역 {categories.length}개 업종이 등록되어 있습니다.
+              천안 지역 {categories.length}개 업종을 커버하며, 현재 {activeCategories.length}개 업종에 업체가 운영 중입니다.
             </p>
           </div>
         </section>

@@ -13,7 +13,36 @@ import type { NextConfig } from 'next'
  *   /compare/{city}/{category}/{topic}   → /blog/{city}/{sector}/{city}-{category}-{topic}
  *   /guide/{city}/{category}             → /blog/{city}/{sector}/{city}-{category}-guide
  */
+// T-040: 보안 헤더 (HSTS / Frame / Referrer / Permissions).
+// CSP 는 Next 의 inline script (/ reaction) 와 Vercel Analytics 로 인해
+// 경로별 nonce 설정이 필요하므로 별도 TASK 로 분리.
+const SECURITY_HEADERS = [
+  // HSTS: 2년 + 서브도메인 + preload (aiplace.kr 은 HTTPS only)
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+  // Clickjacking 방어
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  // MIME sniff 방지
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  // Referrer 정책 — 크로스 오리진 시 origin 만 전송
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  // 권한 최소화
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+  },
+  // XSS 방어 구식 브라우저 힌트
+  { key: 'X-XSS-Protection', value: '0' },
+]
+
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: SECURITY_HEADERS,
+      },
+    ]
+  },
   async redirects() {
     return [
       // 1) keyword 페이지 8개 (천안/피부과)

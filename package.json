@@ -31,6 +31,9 @@
     "seed:category-guides": "tsx scripts/seed-thin-category-guides.ts",
     "seed:category-guides:dry": "tsx scripts/seed-thin-category-guides.ts --dry-run",
     "seed:category-guides:force": "tsx scripts/seed-thin-category-guides.ts --force",
+    "audit:places": "tsx scripts/audit-places.ts",
+    "audit:places:fix-tags": "tsx scripts/audit-places.ts --fix-tags",
+    "audit:related-content": "tsx scripts/audit-related-content.ts",
     "prepare": "husky"
   },
   "dependencies": {
@@ -38,6 +41,7 @@
     "@base-ui/react": "^1.4.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.0",
+    "@vercel/speed-insights": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.8.0",

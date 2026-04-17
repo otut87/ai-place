@@ -151,10 +151,10 @@ export default async function ProfilePage({ params }: Props) {
             {/* Hero Image */}
             <div className="aspect-[16/9] rounded-[20px] overflow-hidden bg-[#f2f2f2] mb-8 relative">
               {place.imageUrl ? (
-                <Image src={place.imageUrl} alt={place.name} fill className="object-cover" sizes="800px" />
+                <Image src={place.imageUrl} alt={place.name} fill priority className="object-cover" sizes="(max-width: 820px) 100vw, 820px" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#c1c1c1" strokeWidth="1.5">
+                  <svg aria-hidden="true" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#c1c1c1" strokeWidth="1.5">
                     <path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0H5m14 0h2m-16 0H3" />
                     <path d="M9 7h1m-1 4h1m4-4h1m-1 4h1" />
                   </svg>

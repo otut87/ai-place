@@ -22,7 +22,7 @@ export function PlaceCard({ place }: { place: Place }) {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c1c1c1" strokeWidth="1.5">
+              <svg aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c1c1c1" strokeWidth="1.5">
                 <path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0H5m14 0h2m-16 0H3" />
                 <path d="M9 7h1m-1 4h1m4-4h1m-1 4h1" />
               </svg>

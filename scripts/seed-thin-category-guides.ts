@@ -41,6 +41,8 @@ interface Guide {
   city: string
   sector: string
   category: string
+  /** 해당 업종에 등록된 업체 slug — "관련 업체" 섹션 + 양방향 링크 (T-045) */
+  relatedPlaceSlugs?: string[]
   tags: string[]
   faqs: Array<{ question: string; answer: string }>
   statistics: Array<{ label: string; value: string; note?: string }>
@@ -96,6 +98,7 @@ const AUTO_REPAIR: Guide = {
   city: 'cheonan',
   sector: 'auto',
   category: 'auto-repair',
+  relatedPlaceSlugs: ['auto-repair-jyw4'],
   tags: ['천안', '자동차정비', '공임', '정비소', '가이드'],
   faqs: [
     { question: '천안 자동차정비 엔진오일 교환 비용은 얼마인가요?', answer: '소형차 기준 5만~9만원, 공식서비스센터는 10만원 이상이 일반적입니다. 차량 연식과 오일 등급에 따라 달라집니다.' },
@@ -168,6 +171,7 @@ const INTERIOR: Guide = {
   city: 'cheonan',
   sector: 'living',
   category: 'interior',
+  relatedPlaceSlugs: ['momeden'],
   tags: ['천안', '인테리어', '리모델링', '견적', '가이드'],
   faqs: [
     { question: '천안 인테리어 30평 아파트 전체 리모델링 비용은 얼마인가요?', answer: '2,000만~4,000만원이 평균이며 자재 등급과 현장 구조에 따라 ±30% 변동합니다. 최소 2~3곳 견적 비교를 권장합니다.' },
@@ -234,6 +238,7 @@ const WEBAGENCY: Guide = {
   city: 'cheonan',
   sector: 'professional',
   category: 'webagency',
+  relatedPlaceSlugs: ['didu'],
   tags: ['천안', '웹에이전시', '홈페이지', '쇼핑몰', '가이드'],
   faqs: [
     { question: '천안 웹에이전시 기본 홈페이지 제작 비용은 얼마인가요?', answer: '5~10페이지 반응형 홈페이지 기준 150만~400만원이 평균이며 제작 기간은 3~6주가 일반적입니다. 관리자 페이지·SEO 포함 여부에 따라 달라집니다.' },
@@ -310,6 +315,7 @@ const RESTAURANT: Guide = {
   city: 'cheonan',
   sector: 'food',
   category: 'restaurant',
+  relatedPlaceSlugs: ['restaurant-6kty'],
   tags: ['천안', '음식점', '맛집', '가이드', '상권'],
   faqs: [
     { question: '천안 불당동에서 가족 외식 음식점을 고르는 기준은?', answer: '좌식·룸 보유, 주차 4대 이상, 평일 저녁·주말 예약 가능 여부, 키즈메뉴·어린이 의자 구비를 확인하세요. 객단가 15,000원 이상 업장이 많습니다.' },
@@ -343,7 +349,7 @@ function toInsertPayload(g: Guide) {
     status: 'active' as const,
     published_at: new Date().toISOString(),
     post_type: 'guide' as const,
-    related_place_slugs: [],
+    related_place_slugs: g.relatedPlaceSlugs ?? [],
     target_query: null,
     faqs: g.faqs,
     statistics: g.statistics,
