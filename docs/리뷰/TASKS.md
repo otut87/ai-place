@@ -609,7 +609,24 @@ node --env-file=.env.local --import tsx scripts/migrate-to-blog.ts --force
 - [ ] 12개 레코드 정상 insert
 - [ ] 로컬 환경에서 검증 후 프로덕션 실행
 
-## T-010f. 301 Redirect 설정 [SEO] 🔜
+## T-010f. 301 Redirect 설정 [SEO] ✅
+
+**완료**: 2026-04-17
+**구현**:
+- [next.config.ts](next.config.ts) — 3개 redirect 규칙 (`statusCode: 301`)
+  1. `/cheonan/dermatology/k/:keyword` → `/blog/cheonan/medical/cheonan-dermatology-:keyword` (8개)
+  2. `/compare/cheonan/dermatology/:topic` → `/blog/cheonan/medical/cheonan-dermatology-:topic` (3개)
+  3. `/guide/cheonan/dermatology` → `/blog/cheonan/medical/cheonan-dermatology-guide` (1개)
+- [src/lib/__tests__/actions/blog-views.test.ts](src/lib/__tests__/actions/blog-views.test.ts) — 7개 테스트 (T-010d 소급 커버리지)
+
+**검증** (next build + start, curl -I):
+- 3종 URL 모두 `HTTP/1.1 301 Moved Permanently` 반환
+- Location 헤더에 정확한 새 URL 매핑
+- 타깃 페이지 `/blog/cheonan/medical/cheonan-dermatology-acne` → 200 OK
+
+**잔여 수동 작업** (프로덕션 배포 후):
+- [ ] Google Search Console "URL 변경" 요청
+- [ ] GSC duplicate 경고 해소 모니터링 (T-002 SUPERSEDED 잔여 책임 포함)
 
 **예상 공수**: 2h
 
