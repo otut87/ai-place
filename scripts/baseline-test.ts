@@ -1,10 +1,14 @@
 // AI 베이스라인 측정 스크립트
 // 각 AI 엔진에 프롬프트를 보내고, 응답에서 인용/언급을 추출하여 Supabase에 저장
 //
-// 실행: npx tsx scripts/baseline-test.ts
+// 실행: npm run baseline:test
 // 옵션: --engine chatgpt|claude|gemini|all (기본: all)
 //       --repeat 3 (프롬프트당 반복 횟수, 기본: 3)
 //       --dry-run (DB 저장 없이 결과만 출력)
+
+// @next/env 를 먼저 로드 — Next 와 동일한 .env 우선순위로 process.env 채움
+import { loadEnvConfig } from '@next/env'
+loadEnvConfig(process.cwd())
 
 import { createClient } from '@supabase/supabase-js'
 

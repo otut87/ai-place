@@ -19,6 +19,12 @@
     "harness:check": "tsx scripts/harness/check.ts",
     "harness:review": "tsx scripts/harness/record-review.ts",
     "harness:commit-msg": "tsx scripts/harness/hooks/commit-msg.ts",
+    "migrate:blog": "tsx scripts/migrate-to-blog.ts",
+    "migrate:blog:dry": "tsx scripts/migrate-to-blog.ts --dry-run",
+    "migrate:blog:force": "tsx scripts/migrate-to-blog.ts --force",
+    "seed:places": "tsx scripts/seed-places.ts",
+    "baseline:test": "tsx scripts/baseline-test.ts",
+    "indexnow": "tsx scripts/indexnow.ts",
     "prepare": "husky"
   },
   "dependencies": {

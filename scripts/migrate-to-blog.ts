@@ -4,14 +4,19 @@
  *
  * 기존 12개 페이지(8 keyword + 3 compare + 1 guide)를 blog_posts 테이블로 이관.
  *
- * Usage (Node 20.6+, --env-file 지원):
- *   node --env-file=.env.local --import tsx scripts/migrate-to-blog.ts --dry-run
- *   node --env-file=.env.local --import tsx scripts/migrate-to-blog.ts
- *   node --env-file=.env.local --import tsx scripts/migrate-to-blog.ts --force
+ * Usage:
+ *   npm run migrate:blog:dry       # dry-run
+ *   npm run migrate:blog           # 실제 insert (slug 중복은 skip)
+ *   npm run migrate:blog:force     # upsert (덮어쓰기)
  *
  * 사전조건: 011_blog_posts_extend.sql 마이그레이션이 Supabase 에 적용되어 있어야 함
  * 환경변수 (.env.local): NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ *   → @next/env loadEnvConfig 가 자동 로드 (Next 와 동일 우선순위)
  */
+// @next/env 를 가장 먼저 로드해야 process.env 가 채워짐 (다른 import 보다 먼저)
+import { loadEnvConfig } from '@next/env'
+loadEnvConfig(process.cwd())
+
 import {
   getAllKeywordPages,
   getAllComparisonTopics,

@@ -1,5 +1,9 @@
 // 시드 데이터를 Supabase DB에 삽입하는 스크립트
-// 실행: npx tsx scripts/seed-places.ts
+// 실행: npm run seed:places
+
+// @next/env 를 먼저 로드 — Next 와 동일한 .env 우선순위로 process.env 채움
+import { loadEnvConfig } from '@next/env'
+loadEnvConfig(process.cwd())
 
 import { createClient } from '@supabase/supabase-js'
 
@@ -7,8 +11,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !serviceRoleKey) {
-  console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  console.error('Run: source .env.local (or set them manually)')
+  console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local')
   process.exit(1)
 }
 
