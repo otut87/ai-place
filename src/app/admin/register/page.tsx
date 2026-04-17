@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { searchPlace, searchPlaceUnified, enrichPlace, registerPlace, generatePlaceContent, getAdminOptions } from '@/lib/actions/register-place'
+import { searchPlaceUnified, enrichPlace, registerPlace, generatePlaceContent, getAdminOptions } from '@/lib/actions/register-place'
 import type { PlaceSearchResult } from '@/lib/google-places'
 import { AddressPicker, type AddressResult } from '@/components/admin/address-picker'
 
@@ -52,7 +52,6 @@ export default function RegisterPage() {
 
   // 카테고리/도시 옵션
   const [cities, setCities] = useState<Array<{ slug: string; name: string }>>([{ slug: 'cheonan', name: '천안' }])
-  const [sectors, setSectors] = useState<Array<{ slug: string; name: string }>>([])
   const [allCategories, setAllCategories] = useState<Array<{ slug: string; name: string; sector: string }>>([])
   const [selectedSector, setSelectedSector] = useState('')
   const [catSearch, setCatSearch] = useState('')
@@ -60,7 +59,6 @@ export default function RegisterPage() {
   useEffect(() => {
     getAdminOptions().then(opts => {
       setCities(opts.cities)
-      setSectors(opts.sectors)
       setAllCategories(opts.categories)
     })
   }, [])
@@ -77,9 +75,7 @@ export default function RegisterPage() {
   const [city, setCity] = useState('cheonan')
   const [category, setCategory] = useState('')
   const [query, setQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<PlaceSearchResult[]>([])
-  // T-018: 3-Source 통합 검색
-  const [searchMode, setSearchMode] = useState<'google' | 'unified'>('unified')
+  // T-018: 3-Source 통합 검색 (기본이자 유일한 경로)
   const [unifiedResults, setUnifiedResults] = useState<UnifiedCandidate[]>([])
   const [manualAddress, setManualAddress] = useState<AddressResult | null>(null)
 
@@ -110,20 +106,11 @@ export default function RegisterPage() {
     if (!query.trim()) return
     setLoading(true)
     setError(null)
-    setSearchResults([])
     setUnifiedResults([])
 
-    if (searchMode === 'unified') {
-      const result = await searchPlaceUnified(query)
-      setLoading(false)
-      if (result.success) setUnifiedResults(result.data)
-      else setError(result.error)
-      return
-    }
-
-    const result = await searchPlace(query, city === 'cheonan' ? '천안' : city)
+    const result = await searchPlaceUnified(query)
     setLoading(false)
-    if (result.success) setSearchResults(result.data)
+    if (result.success) setUnifiedResults(result.data)
     else setError(result.error)
   }
 
@@ -169,14 +156,12 @@ export default function RegisterPage() {
       address: addr.roadAddress,
     })
     setUnifiedResults([])
-    setSearchResults([])
     // 도로명 주소 세팅 (추후 handleSubmit 에서 roadAddress/zonecode/sigunguCode 로 전달)
     setManualAddress(addr)
   }
 
   async function handleSelectPlace(place: PlaceSearchResult) {
     setSelectedPlace(place)
-    setSearchResults([])
     setLoading(true)
 
     // Google + 카카오 자동 보강
@@ -290,129 +275,31 @@ export default function RegisterPage() {
 
       {error && <p className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>}
 
-      {/* 검색 영역 */}
+      {/* 검색 영역 — T-018: 단일 입력 + 자동 분류 */}
       <div className="space-y-4 mb-8">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[#484848] mb-1">도시</label>
-            <select value={city} onChange={e => setCity(e.target.value)} className="w-full h-12 px-4 rounded-lg border border-[#dddddd]">
-              {cities.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[#484848] mb-1">대분류</label>
-            <select
-              value={selectedSector}
-              onChange={e => { setSelectedSector(e.target.value); setCategory(''); setCatSearch('') }}
-              className="w-full h-12 px-4 rounded-lg border border-[#dddddd]"
-            >
-              <option value="">전체 업종</option>
-              {sectors.map(s => <option key={s.slug} value={s.slug}>{s.name}</option>)}
-            </select>
-          </div>
-        </div>
-
         <div>
-          <label className="block text-sm font-medium text-[#484848] mb-1">소분류</label>
-          <input
-            type="text"
-            value={catSearch}
-            onChange={e => { setCatSearch(e.target.value); setCategory('') }}
-            placeholder="업종 검색 (예: 치과, 카페)"
-            className="w-full h-12 px-4 rounded-lg border border-[#dddddd] text-sm"
-          />
-          {filteredCategories.length > 0 && !category && (
-            <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-[#dddddd] bg-white">
-              {filteredCategories.map(c => (
-                <button
-                  key={c.slug}
-                  type="button"
-                  onClick={() => {
-                    setCategory(c.slug)
-                    setCatSearch(c.name)
-                    if (!selectedSector) setSelectedSector(c.sector)
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f2f2f2] transition-colors"
-                >
-                  {c.name} <span className="text-[#c1c1c1]">({c.slug})</span>
-                </button>
-              ))}
-            </div>
-          )}
-          {category && (
-            <p className="mt-1 text-xs text-[#008060]">선택됨: {allCategories.find(c => c.slug === category)?.name} ({category})</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-[#484848] mb-1">업체명 검색</label>
-
-          {/* T-018: 검색 모드 토글 */}
-          <div className="mb-2 flex gap-2">
-            <button
-              type="button"
-              onClick={() => setSearchMode('unified')}
-              className={`px-3 py-1.5 text-xs rounded border ${
-                searchMode === 'unified'
-                  ? 'bg-[#222222] text-white border-[#222222]'
-                  : 'bg-white text-[#666] border-[#c1c1c1]'
-              }`}
-            >
-              3-Source 통합 (Kakao+Google+Naver)
-            </button>
-            <button
-              type="button"
-              onClick={() => setSearchMode('google')}
-              className={`px-3 py-1.5 text-xs rounded border ${
-                searchMode === 'google'
-                  ? 'bg-[#222222] text-white border-[#222222]'
-                  : 'bg-white text-[#666] border-[#c1c1c1]'
-              }`}
-            >
-              Google 검색 (단일)
-            </button>
-          </div>
-
+          <label className="block text-sm font-medium text-[#484848] mb-1">업체명 + 지역 검색</label>
           <div className="flex gap-2">
             <input
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              placeholder={searchMode === 'unified' ? '예: 천안 차앤박피부과' : '예: 수피부과의원'}
+              placeholder="예: 천안 차앤박피부과, 서울 강남 홍길동치과"
               className="flex-1 h-12 px-4 rounded-lg border border-[#dddddd]"
+              autoFocus
             />
             <button onClick={handleSearch} disabled={loading} className="h-12 px-6 rounded-lg bg-[#222222] text-white font-medium disabled:opacity-50">
               {loading ? '검색 중...' : '검색'}
             </button>
           </div>
           <p className="mt-2 text-xs text-[#8a8a8a]">
-            {searchMode === 'unified'
-              ? '3곳 검색 → 자동 병합 + 카테고리/도시 자동 추정. 결과 없으면 수동 등록.'
-              : 'Google Places 단일 검색 (레거시).'}
+            Kakao + Google + Naver 3곳 통합 검색 → 자동 중복 제거 + 카테고리/도시 자동 분류 (LLM 폴백). 결과 없으면 아래 &ldquo;주소로 수동 등록&rdquo;.
           </p>
         </div>
 
-        {/* Google 단일 검색 결과 */}
-        {searchMode === 'google' && searchResults.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm text-[#6a6a6a]">{searchResults.length}개 결과</p>
-            {searchResults.map(place => (
-              <button
-                key={place.placeId}
-                onClick={() => handleSelectPlace(place)}
-                className="w-full text-left p-4 rounded-lg border border-[#dddddd] hover:border-[#222222] transition-colors"
-              >
-                <p className="font-medium text-[#222222]">{place.name}</p>
-                <p className="text-sm text-[#6a6a6a]">{place.address}</p>
-                {place.rating != null && <p className="text-sm text-[#6a6a6a]">★ {place.rating} · 후기 {place.reviewCount}건</p>}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* 3-Source 통합 결과 */}
-        {searchMode === 'unified' && unifiedResults.length > 0 && (
+        {unifiedResults.length > 0 && (
           <div className="space-y-2">
             <p className="text-sm text-[#6a6a6a]">{unifiedResults.length}개 후보 (중복 제거 + 자동 병합)</p>
             {unifiedResults.map((c, idx) => (
@@ -421,35 +308,41 @@ export default function RegisterPage() {
                 onClick={() => handleSelectUnified(c)}
                 className="w-full text-left p-4 rounded-lg border border-[#dddddd] hover:border-[#222222] transition-colors"
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-medium text-[#222222]">{c.displayName}</p>
                   {c.sources.map(s => (
-                    <span key={s} className="px-1.5 py-0.5 text-[10px] rounded bg-[#f2f2f2] text-[#666]">
+                    <span key={s} className="px-1.5 py-0.5 text-[10px] rounded bg-[#eff6ff] text-[#1e40af] font-medium">
                       {s}
                     </span>
                   ))}
                 </div>
                 <p className="text-sm text-[#6a6a6a] mt-1">{c.roadAddress ?? c.jibunAddress}</p>
-                <div className="mt-1 flex flex-wrap gap-3 text-xs text-[#8a8a8a]">
-                  {c.rating != null && <span>★ {c.rating} · {c.reviewCount}건</span>}
-                  {c.detectedCategorySlug && (
+                <div className="mt-1.5 flex flex-wrap gap-3 text-xs text-[#8a8a8a]">
+                  {c.rating != null && <span>★ {c.rating} · 후기 {c.reviewCount}건</span>}
+                  {c.detectedCategorySlug ? (
                     <span>
-                      카테고리: <strong>{c.detectedCategorySlug}</strong>
-                      <span className="opacity-60"> (Tier {c.detectedCategoryTier}, {(c.detectedCategoryConfidence * 100).toFixed(0)}%)</span>
+                      🏷️ <strong className="text-[#1a1a1a]">{allCategories.find(x => x.slug === c.detectedCategorySlug)?.name ?? c.detectedCategorySlug}</strong>
+                      <span className="opacity-60"> Tier {c.detectedCategoryTier} · {(c.detectedCategoryConfidence * 100).toFixed(0)}%</span>
                     </span>
+                  ) : (
+                    <span className="text-[#c2410c]">⚠️ 카테고리 수동 확인 필요</span>
                   )}
-                  {c.detectedCitySlug && <span>도시: <strong>{c.detectedCitySlug}</strong></span>}
+                  {c.detectedCitySlug ? (
+                    <span>📍 <strong className="text-[#1a1a1a]">{cities.find(x => x.slug === c.detectedCitySlug)?.name ?? c.detectedCitySlug}</strong></span>
+                  ) : (
+                    <span className="text-[#c2410c]">⚠️ 도시 수동 확인 필요</span>
+                  )}
                 </div>
               </button>
             ))}
           </div>
         )}
 
-        {/* 수동 등록 fallback */}
-        {searchMode === 'unified' && unifiedResults.length === 0 && query.length > 0 && !loading && (
+        {/* 수동 등록 fallback — 검색 했는데 결과 0 */}
+        {unifiedResults.length === 0 && query.length > 0 && !loading && !selectedPlace && (
           <div className="p-4 rounded-lg border border-dashed border-[#c1c1c1] bg-[#fafafa] flex items-center justify-between">
             <p className="text-sm text-[#666]">
-              검색 결과 없음 — 한국 주소로 수동 등록하시겠어요?
+              검색 결과 없음 — 주소로 직접 등록하시겠어요?
             </p>
             <AddressPicker onSelect={handleManualEntry} triggerLabel="주소로 수동 등록" />
           </div>
@@ -462,6 +355,48 @@ export default function RegisterPage() {
           </div>
         )}
       </div>
+
+      {/* 선택 후 도시·카테고리 확인/수정 (자동 채움 + override 가능) */}
+      {selectedPlace && (
+        <div className="mb-6 p-4 rounded-lg bg-[#f9fafb] border border-[#e5e7eb]">
+          <p className="text-xs font-medium text-[#6b7280] mb-2">📋 자동 분류 결과 (필요시 수정)</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-[#6a6a6a] mb-1">도시</label>
+              <select value={city} onChange={e => setCity(e.target.value)} className="w-full h-10 px-3 rounded border border-[#dddddd] text-sm">
+                {cities.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-[#6a6a6a] mb-1">카테고리</label>
+              <input
+                type="text"
+                value={catSearch}
+                onChange={e => { setCatSearch(e.target.value); setCategory('') }}
+                placeholder={category ? (allCategories.find(c => c.slug === category)?.name ?? '') : '검색하여 변경'}
+                className="w-full h-10 px-3 rounded border border-[#dddddd] text-sm"
+              />
+              {filteredCategories.length > 0 && catSearch && !category && (
+                <div className="mt-1 max-h-32 overflow-y-auto rounded border border-[#dddddd] bg-white">
+                  {filteredCategories.slice(0, 10).map(c => (
+                    <button
+                      key={c.slug}
+                      type="button"
+                      onClick={() => { setCategory(c.slug); setCatSearch(c.name); setSelectedSector(c.sector) }}
+                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-[#f2f2f2]"
+                    >
+                      {c.name} <span className="text-[#c1c1c1]">({c.slug})</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {category && (
+                <p className="mt-1 text-xs text-[#008060]">{allCategories.find(c => c.slug === category)?.name} ({category})</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 선택된 업체 — 전체 폼 */}
       {selectedPlace && (
