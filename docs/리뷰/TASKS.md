@@ -534,7 +534,33 @@ scripts/harness/
 - [ ] Markdown XSS sanitization 유닛 테스트
 - [ ] 관련 업체 카드 렌더 확인
 
-## T-010e. 마이그레이션 스크립트 [SEO][GEO] 🔜
+## T-010e. 마이그레이션 스크립트 [SEO][GEO] ✅
+
+**완료**: 2026-04-17 (변환 + dry-run 검증). 프로덕션 insert 는 사용자가 환경변수 셋업 후 실행.
+
+**구현**:
+- [src/lib/blog/migrate.ts](src/lib/blog/migrate.ts) — 3개 변환 함수 (keyword/compare/guide → BlogInsertPayload) + markdown content 렌더러
+- [src/lib/__tests__/blog/migrate.test.ts](src/lib/__tests__/blog/migrate.test.ts) — 23개 테스트 (단위 + 통합 12개 슬러그 unique)
+- [scripts/migrate-to-blog.ts](scripts/migrate-to-blog.ts) — CLI: `--dry-run` / `--force(upsert)`
+- 슬러그 규칙: `cheonan-dermatology-{topic}`, 가이드는 `cheonan-dermatology-guide`
+
+**dry-run 결과** (2026-04-17):
+- keyword: 8 / compare: 3 / guide: 1 = 12개 모두 변환 성공, 슬러그 중복 없음
+
+**프로덕션 실행 가이드**:
+```bash
+# 환경변수 확인
+echo $NEXT_PUBLIC_SUPABASE_URL && echo ${SUPABASE_SERVICE_ROLE_KEY:0:10}
+
+# 1차: dry-run
+npx tsx scripts/migrate-to-blog.ts --dry-run
+
+# 2차: 실제 insert (동일 slug 는 skip)
+npx tsx scripts/migrate-to-blog.ts
+
+# 재실행으로 덮어쓰려면
+npx tsx scripts/migrate-to-blog.ts --force
+```
 
 **예상 공수**: 4h
 
