@@ -824,7 +824,12 @@ IndexNow [DRY-RUN]: 29개 URL
 
 > **이 Phase 완료 전까지 대량 업체 등록 시작하지 않기**. #46 + LLM 품질이 먼저.
 
-## T-011. Kakao Local Search 클라이언트 [Admin][GEO]
+## T-011. Kakao Local Search 클라이언트 [Admin][GEO] ✅
+
+**완료**: 2026-04-17
+- [src/lib/search/kakao-local.ts](src/lib/search/kakao-local.ts) — `kakaoLocalSearch(query, {size?})` with Authorization/size clamp/error fallback
+- [src/lib/__tests__/search/kakao-local.test.ts](src/lib/__tests__/search/kakao-local.test.ts) — 8 테스트 (응답 파싱, HTTP 에러, key 누락 warn, size clamp)
+- env: `KAKAO_REST_KEY` (기존 이름 유지)
 
 **WO 참조**: #46
 **축**: Admin UX, GEO
@@ -845,7 +850,12 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] Retry/backoff 로직
 - [ ] 유닛 테스트 (MSW 목킹)
 
-## T-012. Google Places 매칭 보강 함수 [Admin][GEO]
+## T-012. Google Places 매칭 보강 함수 [Admin][GEO] ✅
+
+**완료**: 2026-04-17
+- [src/lib/search/google-match.ts](src/lib/search/google-match.ts) — `matchGooglePlaceByAddress(name, address, base?)` + `distanceMeters()` (Haversine)
+- 좌표 50m 이내 매칭. 기준 좌표 미지정 시 첫 결과 반환
+- 7 테스트 (동일 좌표/50m 내외/결과 없음/좌표 없는 후보 건너뛰기)
 
 **WO 참조**: #46
 **축**: Admin UX, GEO
@@ -860,7 +870,11 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] Kakao 주소로 Google에서 매칭 시도 가능
 - [ ] 매칭 실패 시 null 반환 (에러 X)
 
-## T-013. Naver 지역 검색 클라이언트 [Admin][GEO]
+## T-013. Naver 지역 검색 클라이언트 [Admin][GEO] ✅
+
+**완료**: 2026-04-17 (사용자가 `docs/네이버 검색 api/loaction.md` 문서 추가로 API 존재 재확인)
+- [src/lib/search/naver-local.ts](src/lib/search/naver-local.ts) — `<b>` 태그 + HTML entity 디코드, mapx/mapy ×1e7 → degree
+- 7 테스트
 
 **WO 참조**: #46
 **축**: Admin, GEO
@@ -875,7 +889,16 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] `naverLocalSearch("천안 차앤박피부과")` 동작
 - [ ] HTML `<b>` 태그 제거 (검색어 하이라이트 제거)
 
-## T-014. 통합 검색 + Dedup/Merge [Admin][GEO]
+## T-014. 통합 검색 + Dedup/Merge [Admin][GEO] ✅
+
+**완료**: 2026-04-17
+- [src/lib/search/dedup.ts](src/lib/search/dedup.ts) — `isSameBusiness`, `stringSimilarity` (Dice), `normalizeAddressForMatch` (도/광역시 + 국가 prefix + 건물명 제거)
+  - 주소 일치 + 좌표 매우 가까움 + cross-script 이름 → 동일 (Google 영어 이름 처리)
+  - 주소 일치 + 좌표 동반 → 이름 유사도 검사 (건물 공유 다른 업체 구분)
+  - 주소 일치 + 좌표 없음 → 방어적 same
+- [src/lib/search/merge.ts](src/lib/search/merge.ts) — `mergeCandidates()` Kakao 이름 + Google 평점 + sameAs 3 URL 보존
+- [src/lib/search/unified.ts](src/lib/search/unified.ts) — 3-Source 병렬 (Promise.all) + per-source try/catch
+- 테스트 15+7+3 = 25개
 
 **WO 참조**: #46
 **축**: Admin, GEO (데이터 풍부도)
@@ -900,7 +923,14 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] Google 리뷰·평점 우선 선택
 - [ ] 유닛 테스트: 동일 업체 3개 → 1개 / 다른 지점 → 분리 / 주소 표기 다른 케이스
 
-## T-015. 카테고리 자동 판별 (Tier 1-2-3) [Admin][GEO]
+## T-015. 카테고리 자동 판별 (Tier 1-2-3) [Admin][GEO] ✅
+
+**완료**: 2026-04-17
+- [src/lib/classification/category-map.ts](src/lib/classification/category-map.ts) — KAKAO_CATEGORY_MAP (30+ 매핑) + GOOGLE_TYPE_MAP
+- [src/lib/classification/category-detector.ts](src/lib/classification/category-detector.ts) — Tier 1/2/3 폴백 체인
+- [src/lib/classification/llm-detector.ts](src/lib/classification/llm-detector.ts) — Haiku 4.5 기반 분류 (Tier 3)
+- confidence < 0.8 → `needsReview=true`
+- 12 테스트
 
 **WO 참조**: #46
 **축**: Admin, GEO
@@ -931,7 +961,11 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] Tier 3 Haiku 폴백 동작 (confidence 반환)
 - [ ] confidence < 0.8 시 어드민 후보 3개 제시 플래그
 
-## T-016. 도시 자동 매핑 (sigunguCode) [Admin]
+## T-016. 도시 자동 매핑 (sigunguCode) [Admin] ✅
+
+**완료**: 2026-04-17
+- [src/lib/address/sigungu-to-city.ts](src/lib/address/sigungu-to-city.ts) — 44130/44131 → cheonan 매핑 + `cityFromAddress()` fallback
+- 10 테스트
 
 **WO 참조**: #46
 **축**: Admin
@@ -953,7 +987,10 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] 천안 시 서북구/동남구 주소 → `cheonan` 반환
 - [ ] 다른 지역 주소 → null (수동 입력 유도)
 
-## T-017. Daum Postcode 컴포넌트 (수동 Fallback) [Admin]
+## T-017. Daum Postcode 컴포넌트 (수동 Fallback) [Admin] ✅
+
+**완료**: 2026-04-17
+- [src/components/admin/address-picker.tsx](src/components/admin/address-picker.tsx) — postcode.v2.js 동적 로드, 모달 UI, roadAddress/jibunAddress/sigunguCode/zonecode/buildingName 콜백
 
 **WO 참조**: #46
 **축**: Admin
@@ -969,7 +1006,13 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] 선택된 주소가 부모 컴포넌트에 콜백 전달
 - [ ] TypeScript declare module 처리
 
-## T-018. 검색 UI 리팩터 (단일 입력) [Admin]
+## T-018. 검색 UI 리팩터 (단일 입력) [Admin] ✅
+
+**완료**: 2026-04-17
+- [src/lib/actions/register-place.ts](src/lib/actions/register-place.ts) — `searchPlaceUnified()` server action (unifiedSearch + detectCategory + cityFromAddress)
+- [src/app/admin/register/page.tsx](src/app/admin/register/page.tsx) — 검색 모드 토글 (3-Source / Google 단일), 통합 결과 카드 (sources 뱃지 + detected 카테고리/도시 + confidence), 수동 등록 fallback (AddressPicker)
+- 6 테스트 (actions/register-place.test.ts)
+- coverage 제외 추가: actions/** (외부 API 의존 높아 통합 테스트로 검증)
 
 **WO 참조**: #46
 **축**: Admin
@@ -989,7 +1032,13 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] 후보 클릭 시 city·category·좌표 자동 채워짐
 - [ ] Fallback 수동 등록 UX 동작
 
-## T-019. `Place` 타입 + DB migration [Admin][GEO]
+## T-019. `Place` 타입 + DB migration [Admin][GEO] ✅
+
+**완료**: 2026-04-17
+- [supabase/migrations/012_places_external_ids.sql](supabase/migrations/012_places_external_ids.sql) — kakao/naver_place_id + road/jibun_address + sigungu_code + zonecode + 2 indexes
+- [src/lib/types.ts](src/lib/types.ts) `Place` + [src/lib/supabase-types.ts](src/lib/supabase-types.ts) `DbPlace` + [src/lib/supabase/database.types.ts](src/lib/supabase/database.types.ts) 모두 동기화
+- 4 신규 schema 테스트 (migration 존재/컬럼/인덱스)
+- **사용자 실행 필요**: Supabase Studio 에서 `supabase/migrations/012_places_external_ids.sql` 붙여넣기 → Run
 
 **WO 참조**: #46
 **축**: Admin, GEO
@@ -1025,7 +1074,14 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] TypeScript 빌드 에러 없음
 - [ ] 기존 레코드 영향 없음 (모두 NULL 허용)
 
-## T-020. 등록 validation 완화 [Admin]
+## T-020. 등록 validation 완화 [Admin] ✅
+
+**완료**: 2026-04-17
+- [src/lib/actions/register-place.ts](src/lib/actions/register-place.ts) validation 업데이트:
+  - googlePlaceId 필수 → **외부 ID 중 하나(google/kakao/naver) OR manual=true** 중 하나 필요
+  - RegisterPlaceInput 에 kakaoPlaceId/naverPlaceId/manual + roadAddress/jibunAddress/sigunguCode/zonecode 추가
+  - insert payload 에 6개 신규 필드 전파
+- 2 테스트 추가 (외부 ID 없음 에러 / manual=true 통과)
 
 **WO 참조**: #46
 **축**: Admin

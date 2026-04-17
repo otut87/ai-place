@@ -2,8 +2,31 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { searchPlace, enrichPlace, registerPlace, generatePlaceContent, getAdminOptions } from '@/lib/actions/register-place'
+import { searchPlace, searchPlaceUnified, enrichPlace, registerPlace, generatePlaceContent, getAdminOptions } from '@/lib/actions/register-place'
 import type { PlaceSearchResult } from '@/lib/google-places'
+import { AddressPicker, type AddressResult } from '@/components/admin/address-picker'
+
+type UnifiedCandidate = {
+  kakaoPlaceId?: string
+  googlePlaceId?: string
+  naverLink?: string
+  displayName: string
+  roadAddress?: string | null
+  jibunAddress?: string | null
+  latitude: number
+  longitude: number
+  phone?: string | null
+  rating?: number
+  reviewCount?: number
+  sources: string[]
+  sameAs: string[]
+  kakaoCategory?: string
+  naverCategory?: string
+  detectedCategorySlug: string | null
+  detectedCategoryTier: number | null
+  detectedCategoryConfidence: number
+  detectedCitySlug: string | null
+}
 
 // 30분 단위 시간 드롭다운
 const TIME_OPTIONS = Array.from({ length: 33 }, (_, i) => {
@@ -55,6 +78,10 @@ export default function RegisterPage() {
   const [category, setCategory] = useState('')
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState<PlaceSearchResult[]>([])
+  // T-018: 3-Source 통합 검색
+  const [searchMode, setSearchMode] = useState<'google' | 'unified'>('unified')
+  const [unifiedResults, setUnifiedResults] = useState<UnifiedCandidate[]>([])
+  const [manualAddress, setManualAddress] = useState<AddressResult | null>(null)
 
   // 업체 정보 (검색 선택 후 자동 채우기)
   const [selectedPlace, setSelectedPlace] = useState<PlaceSearchResult | null>(null)
@@ -83,13 +110,68 @@ export default function RegisterPage() {
     if (!query.trim()) return
     setLoading(true)
     setError(null)
+    setSearchResults([])
+    setUnifiedResults([])
+
+    if (searchMode === 'unified') {
+      const result = await searchPlaceUnified(query)
+      setLoading(false)
+      if (result.success) setUnifiedResults(result.data)
+      else setError(result.error)
+      return
+    }
+
     const result = await searchPlace(query, city === 'cheonan' ? '천안' : city)
     setLoading(false)
-    if (result.success) {
-      setSearchResults(result.data)
-    } else {
-      setError(result.error)
+    if (result.success) setSearchResults(result.data)
+    else setError(result.error)
+  }
+
+  /** 3-Source 통합 결과에서 선택 → 폼 자동 채우기 */
+  function handleSelectUnified(c: UnifiedCandidate) {
+    // city / category 자동 채우기 (detectCitySlug 가 지원 목록에 있으면)
+    if (c.detectedCitySlug && cities.some(x => x.slug === c.detectedCitySlug)) {
+      setCity(c.detectedCitySlug)
     }
+    if (c.detectedCategorySlug && allCategories.some(x => x.slug === c.detectedCategorySlug)) {
+      setCategory(c.detectedCategorySlug)
+      const cat = allCategories.find(x => x.slug === c.detectedCategorySlug)
+      if (cat) setSelectedSector(cat.sector)
+    }
+    // PlaceSearchResult 호환 객체 로 selectedPlace 세팅 (기존 플로우 재사용)
+    const asGoogle: PlaceSearchResult = {
+      placeId: c.googlePlaceId ?? c.kakaoPlaceId ?? 'unified',
+      name: c.displayName,
+      address: c.roadAddress ?? c.jibunAddress ?? '',
+      rating: c.rating,
+      reviewCount: c.reviewCount,
+      latitude: c.latitude,
+      longitude: c.longitude,
+    }
+    setSelectedPlace(asGoogle)
+    setUnifiedResults([])
+    // Google 보강은 place_id 있을 때만
+    if (c.googlePlaceId) {
+      handleSelectPlace(asGoogle)
+    } else {
+      // Kakao/Naver-only: 기본 정보만 채움
+      if (c.phone) setPhone(c.phone)
+      const slugCandidate = c.displayName.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-가-힣]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '')
+      setSlug(slugCandidate.slice(0, 100) || `${c.detectedCategorySlug ?? 'place'}-${Date.now().toString(36).slice(-4)}`)
+    }
+  }
+
+  /** 수동 등록: Daum Postcode 로 주소만 받고 폼 열기 */
+  function handleManualEntry(addr: AddressResult) {
+    setSelectedPlace({
+      placeId: 'manual',
+      name: query || '',
+      address: addr.roadAddress,
+    })
+    setUnifiedResults([])
+    setSearchResults([])
+    // 도로명 주소 세팅 (추후 handleSubmit 에서 roadAddress/zonecode/sigunguCode 로 전달)
+    setManualAddress(addr)
   }
 
   async function handleSelectPlace(place: PlaceSearchResult) {
@@ -166,13 +248,17 @@ export default function RegisterPage() {
     if (!selectedPlace) return
     setLoading(true)
     setError(null)
+    // placeId 가 'manual' 이거나 'unified' 이면 Google ID 없음
+    const isManual = selectedPlace.placeId === 'manual'
+    const isUnified = selectedPlace.placeId === 'unified'
     const result = await registerPlace({
       city, category,
-      googlePlaceId: selectedPlace.placeId,
+      googlePlaceId: (isManual || isUnified) ? undefined : selectedPlace.placeId,
+      manual: isManual || undefined,
       name: selectedPlace.name,
       nameEn: nameEn || undefined,
       slug, description,
-      address: selectedPlace.address,
+      address: selectedPlace.address || manualAddress?.roadAddress || '',
       phone: phone || undefined,
       openingHours: hours.filter(h => !h.closed && h.open && h.close).map(h => `${h.day} ${h.open}-${h.close}`) || undefined,
       rating: selectedPlace.rating,
@@ -182,6 +268,10 @@ export default function RegisterPage() {
       kakaoMapUrl: kakaoMapUrl || undefined,
       latitude: selectedPlace.latitude,
       longitude: selectedPlace.longitude,
+      roadAddress: manualAddress?.roadAddress,
+      jibunAddress: manualAddress?.jibunAddress,
+      sigunguCode: manualAddress?.sigunguCode,
+      zonecode: manualAddress?.zonecode,
       services: services.filter(s => s.name.trim()),
       faqs: faqs.filter(f => f.question.trim() && f.answer.trim()),
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
@@ -256,22 +346,55 @@ export default function RegisterPage() {
 
         <div>
           <label className="block text-sm font-medium text-[#484848] mb-1">업체명 검색</label>
+
+          {/* T-018: 검색 모드 토글 */}
+          <div className="mb-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setSearchMode('unified')}
+              className={`px-3 py-1.5 text-xs rounded border ${
+                searchMode === 'unified'
+                  ? 'bg-[#222222] text-white border-[#222222]'
+                  : 'bg-white text-[#666] border-[#c1c1c1]'
+              }`}
+            >
+              3-Source 통합 (Kakao+Google+Naver)
+            </button>
+            <button
+              type="button"
+              onClick={() => setSearchMode('google')}
+              className={`px-3 py-1.5 text-xs rounded border ${
+                searchMode === 'google'
+                  ? 'bg-[#222222] text-white border-[#222222]'
+                  : 'bg-white text-[#666] border-[#c1c1c1]'
+              }`}
+            >
+              Google 검색 (단일)
+            </button>
+          </div>
+
           <div className="flex gap-2">
             <input
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              placeholder="예: 수피부과의원"
+              placeholder={searchMode === 'unified' ? '예: 천안 차앤박피부과' : '예: 수피부과의원'}
               className="flex-1 h-12 px-4 rounded-lg border border-[#dddddd]"
             />
             <button onClick={handleSearch} disabled={loading} className="h-12 px-6 rounded-lg bg-[#222222] text-white font-medium disabled:opacity-50">
               {loading ? '검색 중...' : '검색'}
             </button>
           </div>
+          <p className="mt-2 text-xs text-[#8a8a8a]">
+            {searchMode === 'unified'
+              ? '3곳 검색 → 자동 병합 + 카테고리/도시 자동 추정. 결과 없으면 수동 등록.'
+              : 'Google Places 단일 검색 (레거시).'}
+          </p>
         </div>
 
-        {searchResults.length > 0 && (
+        {/* Google 단일 검색 결과 */}
+        {searchMode === 'google' && searchResults.length > 0 && (
           <div className="space-y-2">
             <p className="text-sm text-[#6a6a6a]">{searchResults.length}개 결과</p>
             {searchResults.map(place => (
@@ -285,6 +408,57 @@ export default function RegisterPage() {
                 {place.rating != null && <p className="text-sm text-[#6a6a6a]">★ {place.rating} · 후기 {place.reviewCount}건</p>}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* 3-Source 통합 결과 */}
+        {searchMode === 'unified' && unifiedResults.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm text-[#6a6a6a]">{unifiedResults.length}개 후보 (중복 제거 + 자동 병합)</p>
+            {unifiedResults.map((c, idx) => (
+              <button
+                key={`${c.kakaoPlaceId ?? c.googlePlaceId ?? c.naverLink ?? idx}`}
+                onClick={() => handleSelectUnified(c)}
+                className="w-full text-left p-4 rounded-lg border border-[#dddddd] hover:border-[#222222] transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-[#222222]">{c.displayName}</p>
+                  {c.sources.map(s => (
+                    <span key={s} className="px-1.5 py-0.5 text-[10px] rounded bg-[#f2f2f2] text-[#666]">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-sm text-[#6a6a6a] mt-1">{c.roadAddress ?? c.jibunAddress}</p>
+                <div className="mt-1 flex flex-wrap gap-3 text-xs text-[#8a8a8a]">
+                  {c.rating != null && <span>★ {c.rating} · {c.reviewCount}건</span>}
+                  {c.detectedCategorySlug && (
+                    <span>
+                      카테고리: <strong>{c.detectedCategorySlug}</strong>
+                      <span className="opacity-60"> (Tier {c.detectedCategoryTier}, {(c.detectedCategoryConfidence * 100).toFixed(0)}%)</span>
+                    </span>
+                  )}
+                  {c.detectedCitySlug && <span>도시: <strong>{c.detectedCitySlug}</strong></span>}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 수동 등록 fallback */}
+        {searchMode === 'unified' && unifiedResults.length === 0 && query.length > 0 && !loading && (
+          <div className="p-4 rounded-lg border border-dashed border-[#c1c1c1] bg-[#fafafa] flex items-center justify-between">
+            <p className="text-sm text-[#666]">
+              검색 결과 없음 — 한국 주소로 수동 등록하시겠어요?
+            </p>
+            <AddressPicker onSelect={handleManualEntry} triggerLabel="주소로 수동 등록" />
+          </div>
+        )}
+
+        {manualAddress && (
+          <div className="p-3 rounded-lg bg-[#f0f9ff] text-sm text-[#1a4b7c]">
+            수동 등록: {manualAddress.roadAddress}{manualAddress.buildingName ? ` (${manualAddress.buildingName})` : ''}
+            <span className="ml-2 text-xs opacity-70">우편번호 {manualAddress.zonecode} · 시군구 {manualAddress.sigunguCode}</span>
           </div>
         )}
       </div>

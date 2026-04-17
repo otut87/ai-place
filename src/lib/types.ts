@@ -113,6 +113,13 @@ export interface Place {
   latitude?: number
   longitude?: number
   googlePlaceId?: string    // Google Places API place_id
+  // 012_places_external_ids.sql (T-019) — 3-Source 병합 후 외부 ID 유지
+  kakaoPlaceId?: string
+  naverPlaceId?: string
+  roadAddress?: string      // 도로명 (Daum Postcode)
+  jibunAddress?: string     // 지번 (Daum Postcode)
+  sigunguCode?: string      // 시군구 5자리 (Daum Postcode)
+  zonecode?: string         // 우편번호
   reviewSummaries?: ReviewSummary[]
   images?: PlaceImage[]
   // GEO 추천 로직 (GPT/Gemini 리뷰 반영)

@@ -41,6 +41,13 @@ export interface DbPlace {
   recommendation_note: string | null
   owner_id: string | null
   status: 'active' | 'pending' | 'rejected'
+  // 012_places_external_ids.sql (T-019)
+  kakao_place_id: string | null
+  naver_place_id: string | null
+  road_address: string | null
+  jibun_address: string | null
+  sigungu_code: string | null
+  zonecode: string | null
   created_at: string
   updated_at: string
 }
@@ -115,6 +122,12 @@ export function dbPlaceToPlace(row: DbPlace): Place {
     kakaoMapUrl: row.kakao_map_url ?? undefined,
     googleBusinessUrl: row.google_business_url ?? undefined,
     googlePlaceId: row.google_place_id ?? undefined,
+    kakaoPlaceId: row.kakao_place_id ?? undefined,
+    naverPlaceId: row.naver_place_id ?? undefined,
+    roadAddress: row.road_address ?? undefined,
+    jibunAddress: row.jibun_address ?? undefined,
+    sigunguCode: row.sigungu_code ?? undefined,
+    zonecode: row.zonecode ?? undefined,
     reviewSummaries: row.review_summaries ?? undefined,
     images: row.images ?? undefined,
     latitude: row.latitude ?? undefined,
@@ -217,6 +230,12 @@ export function placeToDbInsert(place: Place): Omit<DbPlace, 'id' | 'created_at'
     kakao_map_url: place.kakaoMapUrl ?? null,
     google_business_url: place.googleBusinessUrl ?? null,
     google_place_id: place.googlePlaceId ?? null,
+    kakao_place_id: place.kakaoPlaceId ?? null,
+    naver_place_id: place.naverPlaceId ?? null,
+    road_address: place.roadAddress ?? null,
+    jibun_address: place.jibunAddress ?? null,
+    sigungu_code: place.sigunguCode ?? null,
+    zonecode: place.zonecode ?? null,
     review_summaries: place.reviewSummaries ?? null,
     images: place.images ?? null,
     latitude: place.latitude ?? null,

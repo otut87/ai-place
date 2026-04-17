@@ -405,6 +405,33 @@ describe('DbBlogPost type', () => {
   })
 })
 
+// ===== 8.6. 012 마이그레이션: places 외부 ID 확장 (T-019) =====
+describe('012_places_external_ids.sql', () => {
+  it('exists', () => {
+    expect(existsSync(join(MIGRATIONS_DIR, '012_places_external_ids.sql'))).toBe(true)
+  })
+
+  it('adds kakao_place_id / naver_place_id columns', () => {
+    const sql = readMigration('012_places_external_ids.sql')
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+kakao_place_id\s+text/i)
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+naver_place_id\s+text/i)
+  })
+
+  it('adds road_address / jibun_address / sigungu_code / zonecode', () => {
+    const sql = readMigration('012_places_external_ids.sql')
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+road_address\s+text/i)
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+jibun_address\s+text/i)
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+sigungu_code\s+text/i)
+    expect(sql).toMatch(/add\s+column\s+if\s+not\s+exists\s+zonecode\s+text/i)
+  })
+
+  it('creates indexes on kakao_place_id + naver_place_id', () => {
+    const sql = readMigration('012_places_external_ids.sql')
+    expect(sql).toMatch(/create\s+index[\s\S]+kakao_place_id/i)
+    expect(sql).toMatch(/create\s+index[\s\S]+naver_place_id/i)
+  })
+})
+
 // ===== 8.5. 011 마이그레이션: blog_posts 확장 (T-010a) =====
 describe('011_blog_posts_extend.sql', () => {
   it('exists', () => {

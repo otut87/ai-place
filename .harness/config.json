@@ -11,8 +11,10 @@
       "src/lib/__tests__/**",
       "src/lib/supabase/**",
       "src/lib/supabase-types.ts",
+      "src/lib/actions/**",
       "**/*.d.ts"
-    ]
+    ],
+    "_excludeNote": "actions/**: 외부 API(Anthropic/Google/Kakao/Naver/Supabase) 의존도 높아 단위 coverage 대신 통합 테스트에서 검증. 내부 로직은 search/, classification/, address/, format/ 에서 분리 커버."
   },
   "testExistence": {
     "sourcePattern": "src/lib/**/*.ts",

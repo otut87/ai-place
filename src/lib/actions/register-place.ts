@@ -15,8 +15,12 @@ export interface RegisterPlaceInput {
   // Step 1: 기본 정보
   city: string
   category: string
-  // Step 2: Google Places 선택 결과
-  googlePlaceId: string
+  // Step 2: 3-Source 매칭 결과 — Google/Kakao/Naver 중 하나 이상 필수
+  // (또는 manual 플래그로 수동 등록 허용)
+  googlePlaceId?: string
+  kakaoPlaceId?: string
+  naverPlaceId?: string
+  manual?: boolean          // Daum Postcode 수동 등록 시 true
   name: string
   nameEn?: string
   slug: string
@@ -32,6 +36,11 @@ export interface RegisterPlaceInput {
   kakaoMapUrl?: string
   latitude?: number
   longitude?: number
+  // 3-Source / Daum Postcode (T-019/T-020)
+  roadAddress?: string
+  jibunAddress?: string
+  sigunguCode?: string
+  zonecode?: string
   services: Array<{ name: string; description?: string; priceRange?: string }>
   faqs: Array<{ question: string; answer: string }>
   tags: string[]
@@ -51,6 +60,71 @@ export async function searchPlace(query: string, city: string): Promise<ActionRe
   }
 
   return { success: true, data: results }
+}
+
+/**
+ * 3-Source 통합 검색 — Kakao + Google + Naver 병렬 + Dedup/Merge + 카테고리/도시 자동 추정.
+ * 각 후보에 detectedCategory/detectedCity 가 동봉되어 UI 가 바로 채울 수 있음.
+ * (T-018)
+ */
+export async function searchPlaceUnified(
+  query: string,
+): Promise<ActionResult<Array<{
+  kakaoPlaceId?: string
+  googlePlaceId?: string
+  naverLink?: string
+  displayName: string
+  roadAddress?: string | null
+  jibunAddress?: string | null
+  latitude: number
+  longitude: number
+  phone?: string | null
+  rating?: number
+  reviewCount?: number
+  sources: string[]
+  sameAs: string[]
+  kakaoCategory?: string
+  naverCategory?: string
+  detectedCategorySlug: string | null
+  detectedCategoryTier: number | null
+  detectedCategoryConfidence: number
+  detectedCitySlug: string | null
+}>>> {
+  await requireAuth()
+
+  const { unifiedSearch } = await import('@/lib/search/unified')
+  const { detectCategory } = await import('@/lib/classification/category-detector')
+  const { cityFromAddress } = await import('@/lib/address/sigungu-to-city')
+  const { getCategories } = await import('@/lib/data')
+
+  const candidates = await unifiedSearch(query)
+  if (candidates.length === 0) return { success: true, data: [] }
+
+  const allCategories = await getCategories()
+  const availableSlugs = allCategories.map(c => c.slug)
+
+  // 카테고리 자동 판별 (병렬) — Tier 1/2 는 즉시 반환, Tier 3 만 LLM 호출
+  const enriched = await Promise.all(
+    candidates.map(async c => {
+      const detection = await detectCategory({
+        kakaoCategory: c.kakaoCategory,
+        googleTypes: [],
+        name: c.displayName,
+        naverCategory: c.naverCategory,
+        availableSlugs,
+      })
+      const addressForCity = c.roadAddress ?? c.jibunAddress
+      return {
+        ...c,
+        detectedCategorySlug: detection.category,
+        detectedCategoryTier: detection.tier,
+        detectedCategoryConfidence: detection.confidence,
+        detectedCitySlug: cityFromAddress(addressForCity),
+      }
+    }),
+  )
+
+  return { success: true, data: enriched }
 }
 
 /** Step 2: Place ID로 상세 정보 가져오기 (자동 보강) — Google + 네이버 + 카카오 병렬 조회 */
@@ -284,8 +358,16 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
   if (input.services.length < 1) {
     return { success: false, error: '서비스는 최소 1개 필요합니다.' }
   }
-  if (!input.googlePlaceId) {
-    return { success: false, error: 'Google Place ID가 필요합니다.' }
+  // T-020: 외부 ID(Google/Kakao/Naver) 중 하나 또는 수동 등록 플래그 필수
+  const hasExternalId =
+    Boolean(input.googlePlaceId) ||
+    Boolean(input.kakaoPlaceId) ||
+    Boolean(input.naverPlaceId)
+  if (!hasExternalId && !input.manual) {
+    return {
+      success: false,
+      error: '외부 ID(Google/Kakao/Naver) 중 하나 또는 수동 등록 플래그가 필요합니다.',
+    }
   }
   if (!/^[a-z0-9-]+$/.test(input.slug) || input.slug.length > 100) {
     return { success: false, error: 'URL 슬러그는 영문 소문자, 숫자, 하이픈만 허용됩니다. (최대 100자)' }
@@ -334,7 +416,13 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
     naver_place_url: input.naverPlaceUrl ?? null,
     kakao_map_url: input.kakaoMapUrl ?? null,
     google_business_url: input.googleBusinessUrl ?? null,
-    google_place_id: input.googlePlaceId,
+    google_place_id: input.googlePlaceId ?? null,
+    kakao_place_id: input.kakaoPlaceId ?? null,
+    naver_place_id: input.naverPlaceId ?? null,
+    road_address: input.roadAddress ?? null,
+    jibun_address: input.jibunAddress ?? null,
+    sigungu_code: input.sigunguCode ?? null,
+    zonecode: input.zonecode ?? null,
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,
     owner_id: user.id,

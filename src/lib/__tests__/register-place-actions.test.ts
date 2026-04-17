@@ -167,11 +167,32 @@ describe('registerPlace validation', () => {
     if (!result.success) expect(result.error).toContain('서비스')
   })
 
-  it('googlePlaceId 없음 → 에러', async () => {
+  it('외부 ID 모두 없음(googlePlace/kakao/naver) + manual=false → 에러 (T-020)', async () => {
     const { registerPlace } = await import('@/lib/actions/register-place')
-    const result = await registerPlace({ ...validInput, googlePlaceId: '' })
+    const result = await registerPlace({
+      ...validInput,
+      googlePlaceId: undefined,
+      kakaoPlaceId: undefined,
+      naverPlaceId: undefined,
+      manual: false,
+    })
     expect(result.success).toBe(false)
-    if (!result.success) expect(result.error).toContain('Google Place ID')
+    if (!result.success) expect(result.error).toContain('외부 ID')
+  })
+
+  it('manual=true 면 외부 ID 없어도 validation 통과 (T-020)', async () => {
+    const { registerPlace } = await import('@/lib/actions/register-place')
+    try {
+      const result = await registerPlace({
+        ...validInput,
+        googlePlaceId: undefined,
+        manual: true,
+      })
+      if (!result.success) expect(result.error).not.toContain('외부 ID')
+    } catch (err) {
+      // DB layer 에서 예외 발생하면 validation 단계는 통과한 것
+      expect(String(err)).not.toContain('외부 ID')
+    }
   })
 })
 

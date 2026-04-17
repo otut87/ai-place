@@ -32,6 +32,13 @@ export interface Database {
           longitude: number | null
           owner_id: string | null                  // 003
           status: 'active' | 'pending' | 'rejected'  // 003
+          // 012_places_external_ids.sql (T-019)
+          kakao_place_id: string | null
+          naver_place_id: string | null
+          road_address: string | null
+          jibun_address: string | null
+          sigungu_code: string | null
+          zonecode: string | null
           created_at: string
           updated_at: string
         }
@@ -174,4 +181,11 @@ interface PlacesInsert {
   longitude?: number | null
   owner_id?: string | null
   status?: 'active' | 'pending' | 'rejected'
+  // 012_places_external_ids.sql (T-019)
+  kakao_place_id?: string | null
+  naver_place_id?: string | null
+  road_address?: string | null
+  jibun_address?: string | null
+  sigungu_code?: string | null
+  zonecode?: string | null
 }
