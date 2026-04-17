@@ -1,0 +1,1 @@
+npx tsx scripts/harness/hooks/commit-msg.ts "$1"

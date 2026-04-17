@@ -1,0 +1,49 @@
+{
+  "$schema": "./config.schema.json",
+  "version": "1.0.0",
+  "baseBranch": "master",
+  "taskRefPattern": "(T-\\d{3}|WO-#\\d+)",
+  "taskDocPath": "docs/리뷰/TASKS.md",
+  "coverage": {
+    "threshold": 80,
+    "includePattern": "src/lib/**/*.ts",
+    "excludePatterns": [
+      "src/lib/__tests__/**",
+      "src/lib/supabase/**",
+      "src/lib/supabase-types.ts",
+      "**/*.d.ts"
+    ]
+  },
+  "testExistence": {
+    "sourcePattern": "src/lib/**/*.ts",
+    "testDir": "src/lib/__tests__",
+    "testSuffix": ".test.ts",
+    "excludePatterns": [
+      "src/lib/types.ts",
+      "src/lib/constants.ts",
+      "src/lib/supabase/**",
+      "src/lib/supabase-types.ts",
+      "src/lib/__tests__/**",
+      "**/*.d.ts"
+    ]
+  },
+  "reviewLog": {
+    "path": ".harness/review-log.jsonl",
+    "requireForFiles": "src/lib/**/*.ts"
+  },
+  "buildExcludeFromAll": [
+    "src/app/**/page.tsx",
+    "src/app/**/layout.tsx",
+    "src/app/**/opengraph-image.tsx",
+    "src/app/**/route.ts",
+    "src/app/sitemap.ts",
+    "src/app/robots.ts",
+    "src/app/manifest.ts",
+    "src/app/feed.xml/**",
+    "src/app/llms.txt/**",
+    "src/components/**",
+    "scripts/**",
+    "*.config.*",
+    "middleware.ts"
+  ]
+}

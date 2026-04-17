@@ -1,0 +1,1 @@
+npx vitest run scripts/harness/__tests__ --silent

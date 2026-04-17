@@ -10,12 +10,16 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "build": "next build && npx tsx scripts/validate-pages.ts",
+    "build": "npm run harness:check && next build && npx tsx scripts/validate-pages.ts",
     "build:only": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "harness:check": "tsx scripts/harness/check.ts",
+    "harness:review": "tsx scripts/harness/record-review.ts",
+    "harness:commit-msg": "tsx scripts/harness/hooks/commit-msg.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.89.0",
@@ -42,6 +46,7 @@
     "@vitest/coverage-v8": "^4.1.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
+    "husky": "^9.1.7",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
