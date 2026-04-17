@@ -1109,7 +1109,7 @@ IndexNow [DRY-RUN]: 29개 URL
 
 # Phase 3 — LLM 품질 파이프라인 (3-4일)
 
-## T-021. 네이버 블로그 검색 클라이언트 [GEO]
+## T-021. 네이버 블로그 검색 클라이언트 [GEO] ✅
 
 **WO 참조**: #45 B-1 블로그
 **축**: GEO (데이터 풍부도)
@@ -1130,7 +1130,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] Rate limit 핸들링
 - [ ] 유닛 테스트
 
-## T-022. 네이버 카페 검색 클라이언트 [GEO]
+## T-022. 네이버 카페 검색 클라이언트 [GEO] ✅
 
 **WO 참조**: #45 B-1 카페
 **축**: GEO
@@ -1145,7 +1145,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] `searchCafe("천안 피부과 추천")` 20개
 - [ ] 스팸 필터 유닛 테스트
 
-## T-023. Haiku 전처리: 블로그·카페 요약 [GEO]
+## T-023. Haiku 전처리: 블로그·카페 요약 [GEO] ✅
 
 **WO 참조**: #34, #45
 **축**: GEO
@@ -1175,7 +1175,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] 광고성·반복 콘텐츠 걸러냄
 - [ ] 토큰 사용량 로깅
 
-## T-024. Sonnet 메인 모델 교체 [GEO]
+## T-024. Sonnet 메인 모델 교체 [GEO] ✅
 
 **WO 참조**: #34
 **축**: GEO
@@ -1205,7 +1205,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] FAQ 실제 블로그/카페 Q&A 반영
 - [ ] A/B 비교: Haiku vs Sonnet 3건 샘플 검토
 
-## T-025. Tool Use 구조화 출력 [GEO]
+## T-025. Tool Use 구조화 출력 [GEO] ✅
 
 **WO 참조**: #36
 **축**: GEO (신뢰성)
@@ -1229,7 +1229,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] zod 스키마 불일치 시 재시도 (max 3회)
 - [ ] 기존 케이스 regression 없음
 
-## T-026. Few-Shot Exemplar 라이브러리 [GEO]
+## T-026. Few-Shot Exemplar 라이브러리 [GEO] ✅
 
 **WO 참조**: #35
 **축**: GEO
@@ -1247,7 +1247,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] 프롬프트 구조: `<exemplars>...</exemplars><target>...</target>`
 - [ ] 시스템 프롬프트에 AEO Direct Answer Block 패턴 명시
 
-## T-027. 품질 스코어링 게이트 [GEO]
+## T-027. 품질 스코어링 게이트 [GEO] ✅
 
 **WO 참조**: #39
 **축**: GEO
@@ -1274,7 +1274,7 @@ IndexNow [DRY-RUN]: 29개 URL
 - [ ] 어드민 목록에 스코어 컬럼
 - [ ] 70 미만 재생성 로직
 
-## T-028. 생성 시간·토큰 로깅 [Admin][GEO]
+## T-028. 생성 시간·토큰 로깅 [Admin][GEO] ✅
 
 **WO 참조**: #34
 **축**: Admin 측정, GEO

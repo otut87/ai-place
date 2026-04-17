@@ -5,6 +5,7 @@
 // Step 2: 검색 결과에서 선택 → 자동 보강 (주소, 전화, 평점, 리뷰)
 // Step 3: 서비스/FAQ/설명 입력 → DB 저장 (status: pending)
 
+import type { z as zType } from 'zod'
 import { requireAuth } from '@/lib/auth'
 import { searchPlaceByText, getPlaceDetails } from '@/lib/google-places'
 import type { PlaceSearchResult } from '@/lib/google-places'
@@ -171,7 +172,66 @@ export async function enrichPlace(placeId: string, placeName?: string): Promise<
   }
 }
 
-/** Step 2.5: LLM으로 설명/서비스/FAQ/태그 자동 생성 (Google 리뷰 데이터 기반) */
+// === Tool-Use schemas (T-025) ===
+const CONTENT_TOOL_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    description: {
+      type: 'string',
+      minLength: 40,
+      maxLength: 60,
+      description: '40~60자 한국어. 형식 "{지역} 위치. {구체적 전문분야·장비·인력} 전문."',
+    },
+    services: {
+      type: 'array',
+      minItems: 3,
+      maxItems: 5,
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', maxLength: 40 },
+          description: { type: 'string', maxLength: 160 },
+          priceRange: { type: 'string', maxLength: 30, description: '예: "5~12만원", "상담 필요"' },
+        },
+        required: ['name', 'description', 'priceRange'],
+      },
+    },
+    faqs: {
+      type: 'array',
+      minItems: 5,
+      maxItems: 7,
+      items: {
+        type: 'object',
+        properties: {
+          question: {
+            type: 'string',
+            maxLength: 100,
+            description: '업체명을 포함하고 "?" 로 끝나는 한국어 질문.',
+          },
+          answer: { type: 'string', maxLength: 300 },
+        },
+        required: ['question', 'answer'],
+      },
+    },
+    tags: {
+      type: 'array',
+      minItems: 5,
+      maxItems: 8,
+      items: { type: 'string', maxLength: 30 },
+    },
+  },
+  required: ['description', 'services', 'faqs', 'tags'],
+}
+
+const CONTENT_TOOL_NAME = 'register_business_content'
+
+/** Step 2.5: LLM으로 설명/서비스/FAQ/태그 자동 생성 (T-024~T-027)
+ * - Sonnet 4.6 메인 모델 + Tool Use 구조화 출력
+ * - Few-Shot Exemplar 주입
+ * - 네이버 블로그·카페 Haiku 요약 컨텍스트 (선택)
+ * - 품질 스코어 < 70 → 최대 2회 재생성
+ * - 호출별 텔레메트리 기록
+ */
 export async function generatePlaceContent(input: {
   name: string
   category: string
@@ -181,83 +241,207 @@ export async function generatePlaceContent(input: {
   reviews?: Array<{ text: string; rating: number }>
   openingHours?: string[]
   editorialSummary?: string
+  placeId?: string          // 텔레메트리용 (DB insert 전이면 null)
+  naverSummary?: import('@/lib/ai/haiku-preprocess').NaverSummary
 }): Promise<ActionResult<{
   description: string
   services: Array<{ name: string; description: string; priceRange: string }>
   faqs: Array<{ question: string; answer: string }>
   tags: string[]
+  qualityScore: number
 }>> {
   await requireAuth()
 
+  const { z } = await import('zod')
   const Anthropic = (await import('@anthropic-ai/sdk')).default
-  const client = new Anthropic()
-
   const { getCategories: getCats } = await import('@/lib/data')
+  const { getExemplars, buildExemplarBlock } = await import('@/lib/ai/exemplars')
+  const { scoreQuality, QUALITY_SCORE_THRESHOLD } = await import('@/lib/ai/quality-score')
+  const { logAIGeneration } = await import('@/lib/ai/telemetry')
+
+  const ContentSchema = z.object({
+    description: z.string(),
+    services: z.array(z.object({
+      name: z.string(),
+      description: z.string(),
+      priceRange: z.string(),
+    })),
+    faqs: z.array(z.object({ question: z.string(), answer: z.string() })),
+    tags: z.array(z.string()),
+  })
+
+  const client = new Anthropic()
   const allCats = await getCats()
   const catName = allCats.find(c => c.slug === input.category)?.name ?? input.category
+  const cityLabel = input.address.split(' ').slice(0, 2).join(' ')
 
-  // Google 데이터를 프롬프트용 텍스트로 변환
   const parts: string[] = []
   if (input.rating) parts.push(`Rating: ${input.rating}점 (${input.reviewCount ?? 0}건)`)
   if (input.editorialSummary) parts.push(`Google 소개: ${input.editorialSummary}`)
   if (input.openingHours && input.openingHours.length > 0) parts.push(`영업시간:\n${input.openingHours.join('\n')}`)
-  if (input.reviews && input.reviews.length > 0) parts.push(`고객 리뷰:\n${input.reviews.map(r => `- [${r.rating}점] ${r.text}`).join('\n')}`)
-  const googleData = parts.length > 0 ? `\n\nGoogle Places Data:\n${parts.join('\n\n')}` : ''
+  if (input.reviews && input.reviews.length > 0) {
+    parts.push(`Google 리뷰 (출처로 활용 가능):\n${input.reviews.map(r => `- [${r.rating}점] ${r.text}`).join('\n')}`)
+  }
+  if (input.naverSummary) {
+    const s = input.naverSummary
+    const lines: string[] = []
+    if (s.commonTreatments.length > 0) lines.push(`반복 시술: ${s.commonTreatments.join(', ')}`)
+    if (s.priceSignals) lines.push(`가격 신호: ${s.priceSignals}`)
+    if (s.positiveThemes.length > 0) lines.push(`긍정 테마: ${s.positiveThemes.join(', ')}`)
+    if (s.negativeThemes.length > 0) lines.push(`부정 테마: ${s.negativeThemes.join(', ')}`)
+    if (s.uniqueFeatures.length > 0) lines.push(`고유 특징: ${s.uniqueFeatures.join(', ')}`)
+    if (s.commonQuestions.length > 0) lines.push(`자주 묻는 질문: ${s.commonQuestions.join(' | ')}`)
+    if (lines.length > 0) parts.push(`네이버 블로그·카페 요약 (출처로 활용):\n${lines.join('\n')}`)
+  }
+  const sourceData = parts.length > 0 ? `\n\n=== 데이터 ===\n${parts.join('\n\n')}` : ''
+  const exemplarBlock = buildExemplarBlock(getExemplars(input.category, 2))
 
-  try {
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
-      system: 'You are a JSON generator. Output ONLY valid JSON. No markdown, no explanation, no code blocks. Just raw JSON.',
-      messages: [{
-        role: 'user',
-        content: `Generate info for Korean business "${input.name}" (${catName}, ${input.address}).${googleData}
+  const systemPrompt = [
+    '당신은 한국 로컬 비즈니스 메타데이터 생성기입니다.',
+    `반드시 ${CONTENT_TOOL_NAME} 도구를 호출하여 결과를 반환하세요.`,
+    '원칙 (Princeton GEO 7 levers):',
+    '1. Statistics Addition: 가격·횟수·시간 등 구체 수치 필수.',
+    '2. Cite Sources: 리뷰·블로그·카페 요약 기반 사실만 포함.',
+    '3. Quotation: 실제 리뷰 표현을 자연스럽게 차용.',
+    '4. Authoritative: 전문 용어(장비·시술명) 사용.',
+    '5. Unique Words: "다양한", "친절하고", "최고의" 등 일반론 금지.',
+  ].join('\n')
 
-Return this exact JSON structure:
-{"description":"50자 내외 한국어 설명","services":[{"name":"서비스명","description":"설명","priceRange":"5-10만원"}],"faqs":[{"question":"질문?","answer":"답변"}],"tags":["태그"]}
+  const userPrompt = [
+    exemplarBlock,
+    '',
+    '<target>',
+    `업체: ${input.name}`,
+    `카테고리: ${catName} (slug: ${input.category})`,
+    `주소: ${input.address}`,
+    `도시 표시: ${cityLabel}`,
+    sourceData,
+    '</target>',
+    '',
+    '규칙:',
+    '- description 은 40~60자, 형식 "{지역} 위치. {구체적 전문분야} 전문."',
+    `- FAQ 질문은 반드시 업체명 "${input.name}" 을 포함하고 물음표로 끝난다.`,
+    '- priceRange 는 실제 지역 시세. 모르면 "상담 필요" 로 표기.',
+    '- 서비스·FAQ·태그는 위 데이터에 실제로 뒷받침되는 것만 생성.',
+    '- 네이버 블로그·카페 요약이 있으면 실제 언급 시술·질문을 우선 반영.',
+    '- 모든 결과는 한국어.',
+  ].filter(Boolean).join('\n')
 
-Rules:
-- description: Korean, TARGET 50 characters (must be 45-55), format "{지역} 위치. {구체적 전문분야/특징} 전문." Include specifics from reviews if available.
-- services: 3-5 items based on what this business actually offers (infer from reviews and category)
-- faqs: 5 items, realistic customer questions with "${input.name}" in the question, answers reference actual business details from reviews
-- tags: 5-8 Korean search keywords
-- prices: realistic for ${input.address.split(' ').slice(0, 2).join(' ')} region
-- ALL content in Korean
-- Base content on the actual Google reviews data above, not generic templates`,
-      }],
-    })
+  const categoryKeyword = (() => {
+    // "피부과", "치과" 등 카테고리 키워드 추출 — catName 이 대표값.
+    const m = catName.match(/[가-힣]+/)
+    return m ? m[0] : catName
+  })()
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
-
-    // JSON 추출: 코드블록 제거 → trailing comma 제거 → 파싱
-    const stripped = text.replace(/```json?\s*/g, '').replace(/```/g, '').trim()
-    const jsonMatch = stripped.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      return { success: false, error: 'LLM 응답을 파싱할 수 없습니다.' }
+  let lastData: zType.infer<typeof ContentSchema> | null = null
+  let lastQualityScore = 0
+  let lastError: string | null = null
+  const MAX_ATTEMPTS = 3
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+    const start = Date.now()
+    try {
+      const response = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
+        system: systemPrompt,
+        tools: [{
+          name: CONTENT_TOOL_NAME,
+          description: '업체 description / services / faqs / tags 를 일괄 등록한다.',
+          input_schema: CONTENT_TOOL_SCHEMA,
+        }],
+        tool_choice: { type: 'tool', name: CONTENT_TOOL_NAME },
+        messages: [{ role: 'user', content: userPrompt }],
+      })
+      const latencyMs = Date.now() - start
+      const toolUse = response.content.find(b => b.type === 'tool_use')
+      if (!toolUse || toolUse.type !== 'tool_use') {
+        lastError = 'tool_use 블록이 응답에 없습니다.'
+        await logAIGeneration({
+          placeId: input.placeId ?? null, stage: 'content', model: 'claude-sonnet-4-6',
+          inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens,
+          latencyMs, retried: attempt,
+        })
+        continue
+      }
+      const parsed = ContentSchema.safeParse(toolUse.input)
+      if (!parsed.success) {
+        lastError = `zod 검증 실패: ${parsed.error.message}`
+        await logAIGeneration({
+          placeId: input.placeId ?? null, stage: 'content', model: 'claude-sonnet-4-6',
+          inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens,
+          latencyMs, retried: attempt,
+        })
+        continue
+      }
+      lastData = parsed.data
+      const scoreResult = scoreQuality({
+        businessName: input.name,
+        city: cityLabel,
+        categoryKeyword,
+        ...parsed.data,
+      })
+      lastQualityScore = scoreResult.score
+      await logAIGeneration({
+        placeId: input.placeId ?? null, stage: 'content', model: 'claude-sonnet-4-6',
+        inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens,
+        latencyMs, qualityScore: scoreResult.score, retried: attempt,
+      })
+      if (scoreResult.score >= QUALITY_SCORE_THRESHOLD) break
+      lastError = `품질 스코어 미달(${scoreResult.score}/100): ${scoreResult.suggestions.join(' · ')}`
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      console.error('[generatePlaceContent] 호출 실패:', msg)
+      lastError = msg
     }
+  }
 
-    const cleaned = jsonMatch[0]
-      .replace(/,\s*]/g, ']')
-      .replace(/,\s*}/g, '}')
-      .replace(/[\x00-\x1F\x7F]/g, ' ') // control characters 제거
-
-    const data = JSON.parse(cleaned)
-    return {
-      success: true,
-      data: {
-        description: data.description ?? '',
-        services: data.services ?? [],
-        faqs: data.faqs ?? [],
-        tags: data.tags ?? [],
-      },
-    }
-  } catch (err) {
-    console.error('[generatePlaceContent] LLM call failed:', err instanceof Error ? err.message : 'Unknown error')
-    return { success: false, error: 'AI 콘텐츠 생성에 실패했습니다.' }
+  if (!lastData) {
+    return { success: false, error: `AI 콘텐츠 생성에 실패했습니다. (${lastError ?? '원인 불명'})` }
+  }
+  return {
+    success: true,
+    data: {
+      description: lastData.description,
+      services: lastData.services,
+      faqs: lastData.faqs,
+      tags: lastData.tags,
+      qualityScore: lastQualityScore,
+    },
   }
 }
 
-/** Step 2.6: LLM으로 추천 데이터 생성 (GEO 추천 로직) */
+// === Recommendation Tool-Use schema (T-025) ===
+const RECOMMENDATION_TOOL_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    recommendedFor: {
+      type: 'array',
+      minItems: 2, maxItems: 4,
+      items: { type: 'string', maxLength: 100 },
+      description: '이 업체를 가야 하는 구체 상황·니즈.',
+    },
+    strengths: {
+      type: 'array',
+      minItems: 2, maxItems: 4,
+      items: { type: 'string', maxLength: 100 },
+      description: '경쟁업체 대비 차별점. 데이터에 근거해야 한다.',
+    },
+    placeType: {
+      type: 'string',
+      enum: ['질환치료형', '미용시술형', '프리미엄', '종합형', '전문기술형', '디자인특화형', '가성비형'],
+    },
+    recommendationNote: {
+      type: 'string',
+      minLength: 30, maxLength: 100,
+      description: '45~55자. "{도시}에서 {상황}이라면 추천되는 {업종}. {강점}." 형식.',
+    },
+  },
+  required: ['recommendedFor', 'strengths', 'placeType', 'recommendationNote'],
+}
+
+const RECOMMENDATION_TOOL_NAME = 'register_recommendation'
+
+/** Step 2.6: LLM으로 추천 데이터 생성 (T-024/T-025/T-028) — Sonnet + Tool Use + 텔레메트리. */
 export async function generateRecommendation(input: {
   name: string
   category: string
@@ -266,6 +450,8 @@ export async function generateRecommendation(input: {
   rating?: number
   reviewCount?: number
   reviews?: Array<{ text: string; rating: number }>
+  placeId?: string
+  naverSummary?: import('@/lib/ai/haiku-preprocess').NaverSummary
 }): Promise<ActionResult<{
   recommendedFor: string[]
   strengths: string[]
@@ -274,10 +460,12 @@ export async function generateRecommendation(input: {
 }>> {
   await requireAuth()
 
+  const { z } = await import('zod')
   const Anthropic = (await import('@anthropic-ai/sdk')).default
   const client = new Anthropic()
 
   const { getCategories: getCats2 } = await import('@/lib/data')
+  const { logAIGeneration } = await import('@/lib/ai/telemetry')
   const allCats2 = await getCats2()
   const catName = allCats2.find(c => c.slug === input.category)?.name ?? input.category
   const city = input.address.split(' ').slice(0, 2).join(' ')
@@ -285,54 +473,66 @@ export async function generateRecommendation(input: {
   const parts: string[] = []
   if (input.rating) parts.push(`평점: ${input.rating}점 (${input.reviewCount ?? 0}건)`)
   if (input.services.length > 0) parts.push(`서비스: ${input.services.map(s => s.name).join(', ')}`)
-  if (input.reviews && input.reviews.length > 0) parts.push(`리뷰:\n${input.reviews.slice(0, 5).map(r => `- [${r.rating}점] ${r.text}`).join('\n')}`)
+  if (input.reviews && input.reviews.length > 0) {
+    parts.push(`Google 리뷰:\n${input.reviews.slice(0, 5).map(r => `- [${r.rating}점] ${r.text}`).join('\n')}`)
+  }
+  if (input.naverSummary) {
+    const s = input.naverSummary
+    const lines: string[] = []
+    if (s.positiveThemes.length > 0) lines.push(`긍정 테마: ${s.positiveThemes.join(', ')}`)
+    if (s.uniqueFeatures.length > 0) lines.push(`고유 특징: ${s.uniqueFeatures.join(', ')}`)
+    if (lines.length > 0) parts.push(`네이버 요약:\n${lines.join('\n')}`)
+  }
   const context = parts.length > 0 ? `\n\n${parts.join('\n\n')}` : ''
 
+  const RecommendationSchema = z.object({
+    recommendedFor: z.array(z.string().max(100)).min(1).max(5),
+    strengths: z.array(z.string().max(100)).min(1).max(5),
+    placeType: z.string().max(30),
+    recommendationNote: z.string().max(100),
+  })
+
+  const systemPrompt = [
+    '당신은 한국 로컬 비즈니스 GEO 추천 데이터 생성기입니다.',
+    `반드시 ${RECOMMENDATION_TOOL_NAME} 도구를 호출해 결과를 반환하세요.`,
+    '일반론("다양한", "친절하고") 금지. 실제 데이터에 근거한 구체 상황을 쓰세요.',
+  ].join('\n')
+
+  const userPrompt =
+    `업체: "${input.name}" (${catName}, ${input.address})${context}\n\n` +
+    `recommendationNote 는 "${city}에서 {상황}이라면 추천되는 {업종}. {강점}." 형식.`
+
+  const start = Date.now()
   try {
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
-      system: 'You are a JSON generator. Output ONLY valid JSON. No markdown, no explanation, no code blocks.',
-      messages: [{
-        role: 'user',
-        content: `Generate GEO recommendation data for "${input.name}" (${catName}, ${input.address}).${context}
-
-Return this exact JSON:
-{"recommendedFor":["추천 대상 1","추천 대상 2"],"strengths":["강점 1","강점 2","강점 3"],"placeType":"유형","recommendationNote":"추천 문장"}
-
-Rules:
-- recommendedFor: 2-3 items, Korean, who should visit this place (specific situations/needs)
-- strengths: 2-4 items, Korean, what makes this place different from competitors
-- placeType: one of "질환치료형","미용시술형","프리미엄","종합형","전문기술형","디자인특화형","가성비형" (pick the best fit for ${catName})
-- recommendationNote: Korean, 45-55 characters, format "${city}에서 {구체적 상황}이라면 추천되는 {업종}. {핵심 강점}."
-- Base on actual review data if available, not generic templates
-- ALL content in Korean`,
+      system: systemPrompt,
+      tools: [{
+        name: RECOMMENDATION_TOOL_NAME,
+        description: '추천 대상·강점·유형을 등록한다.',
+        input_schema: RECOMMENDATION_TOOL_SCHEMA,
       }],
+      tool_choice: { type: 'tool', name: RECOMMENDATION_TOOL_NAME },
+      messages: [{ role: 'user', content: userPrompt }],
     })
-
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
-    const stripped = text.replace(/```json?\s*/g, '').replace(/```/g, '').trim()
-    const jsonMatch = stripped.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      return { success: false, error: 'LLM 추천 데이터 파싱 실패' }
+    const latencyMs = Date.now() - start
+    const toolUse = response.content.find(b => b.type === 'tool_use')
+    if (!toolUse || toolUse.type !== 'tool_use') {
+      await logAIGeneration({
+        placeId: input.placeId ?? null, stage: 'recommendation', model: 'claude-sonnet-4-6',
+        inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens,
+        latencyMs,
+      })
+      return { success: false, error: 'LLM 추천 데이터 파싱 실패 (tool_use 없음)' }
     }
-
-    const cleaned = jsonMatch[0]
-      .replace(/,\s*]/g, ']')
-      .replace(/,\s*}/g, '}')
-      .replace(/[\x00-\x1F\x7F]/g, ' ')
-
-    const { z } = await import('zod')
-    const RecommendationSchema = z.object({
-      recommendedFor: z.array(z.string().max(100)).max(5).default([]),
-      strengths: z.array(z.string().max(100)).max(5).default([]),
-      placeType: z.string().max(30).default(''),
-      recommendationNote: z.string().max(100).default(''),
+    const parsed = RecommendationSchema.parse(toolUse.input)
+    await logAIGeneration({
+      placeId: input.placeId ?? null, stage: 'recommendation', model: 'claude-sonnet-4-6',
+      inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens,
+      latencyMs,
     })
-
-    const raw = JSON.parse(cleaned)
-    const data = RecommendationSchema.parse(raw)
-    return { success: true, data }
+    return { success: true, data: parsed }
   } catch (err) {
     console.error('[generateRecommendation] LLM call failed:', err instanceof Error ? err.message : 'Unknown error')
     return { success: false, error: 'AI 추천 데이터 생성에 실패했습니다.' }
