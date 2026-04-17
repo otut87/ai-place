@@ -1,0 +1,1 @@
+{"commit":"2bc4dbff3ce410f2cf3d9a0c82ce03001af4dbc0","timestamp":"2026-04-17T04:36:19.797Z","reviewer":"self","taskId":"T-001","files":["src/lib/__tests__/data-integrity.test.ts","src/lib/data.ts"],"notes":"수피부과 12곳 + 5곳→4곳 9곳 + 에버스피부과→닥터에버스의원 5곳 모두 정리. data-integrity 테스트로 회귀 방지."}
