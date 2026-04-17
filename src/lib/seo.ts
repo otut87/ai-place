@@ -185,5 +185,6 @@ export function generateCategoryDAB(places: Place[], cityName: string, catName: 
   const top = places.slice(0, 3)
   const names = top.map(p => p.name).join(', ')
 
-  return `2026년 기준 ${cityName} ${catName} ${places.length}곳이 등록되어 있습니다. ${names} 등의 ${descriptor}, 위치, 이용 후기를 정리했습니다.`
+  const year = new Date().getFullYear()
+  return `${year}년 기준 ${cityName} ${catName} ${places.length}곳이 등록되어 있습니다. ${names} 등의 ${descriptor}, 위치, 이용 후기를 정리했습니다.`
 }

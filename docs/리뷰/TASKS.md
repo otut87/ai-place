@@ -260,7 +260,14 @@ scripts/harness/
 - [ ] T-010e 실행 후 `/k/recommend` 에 접속해 301 정상 동작 확인
 - [ ] Google Search Console 에서 duplicate 경고 해소 모니터링
 
-## T-003. 숫자 단일 소스 인프라 (`lib/site-stats.ts`) [GEO]
+## T-003. 숫자 단일 소스 인프라 (`lib/site-stats.ts`) [GEO] ✅
+
+**완료**: 2026-04-17
+**구현**:
+- [src/lib/site-stats.ts](src/lib/site-stats.ts) — `getSiteStats()` (6개 필드: totalPlaces/activeCategories/totalCategories/cities/activeCities/currentYear) + `formatCountClause()` 헬퍼
+- [src/lib/__tests__/site-stats.test.ts](src/lib/__tests__/site-stats.test.ts) — 6개 테스트
+- **하드코딩 제거**: home/category page/OG image/seo.ts DAB 의 "2026년" → `new Date().getFullYear()`
+- 남은 "2026년" 은 data.ts 시드/DB 블로그 본문(이미 마이그레이션됨) — 의도적 역사 기록
 
 **WO 참조**: #1, #3
 **축**: GEO (fact consistency)

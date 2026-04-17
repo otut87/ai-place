@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!cityObj || !catObj) return {}
 
-  const title = `${cityObj.name} ${catObj.name} 추천 — 2026년 업데이트`
+  const title = `${cityObj.name} ${catObj.name} 추천 — ${new Date().getFullYear()}년 업데이트`
   const places = await getPlaces(city, category)
   const hasPlaces = places.length > 0
   const descriptor = await getMetaDescriptorForCategory(category)
@@ -89,7 +89,7 @@ export default async function ListingPage({ params }: Props) {
     ? places.reduce((sum, p) => sum + (p.rating ?? 0), 0) / places.length
     : 0
   const categoryStats: StatisticItem[] = [
-    { label: '등록 업체 수', value: `${places.length}곳`, note: '2026년 4월 기준' },
+    { label: '등록 업체 수', value: `${places.length}곳`, note: `${new Date().getFullYear()}년 기준` },
     { label: '평균 평점', value: `${avgRating.toFixed(1)}점`, note: 'Google/네이버 기준' },
   ]
   const categorySources: Source[] = [
@@ -126,7 +126,7 @@ export default async function ListingPage({ params }: Props) {
 
             {/* Title */}
             <h1 className="text-[28px] font-bold text-[#222222] leading-[1.43]">
-              {cityObj.name} {catObj.name} 추천 — 2026년 업데이트
+              {cityObj.name} {catObj.name} 추천 — {new Date().getFullYear()}년 업데이트
             </h1>
             <p className="mt-3 text-base text-[#6a6a6a]">
               {generateCategoryDAB(places, cityObj.name, catObj.name, descriptor)}

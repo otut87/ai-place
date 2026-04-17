@@ -73,7 +73,7 @@ export default async function OGImage({ params }: { params: Promise<{ city: stri
             marginTop: '16px',
           }}
         >
-          {places.length}곳의 업체 정보 · 2026년 업데이트
+          {places.length}곳의 업체 정보 · {new Date().getFullYear()}년 업데이트
         </div>
       </div>
     ),

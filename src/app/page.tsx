@@ -6,6 +6,7 @@ import { StatisticsBox } from "@/components/statistics-box"
 import { InquiryButton } from "@/components/inquiry-modal"
 import { getCities, getCategories, getPlaces, getAllPlaces } from "@/lib/data.supabase"
 import { getRecentBlogPosts } from "@/lib/blog/data.supabase"
+import { getSiteStats } from "@/lib/site-stats"
 import { generateFAQPage, generateWebSite, generateItemList } from "@/lib/jsonld"
 import { safeJsonLd } from "@/lib/utils"
 import type { Metadata } from "next"
@@ -21,10 +22,13 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const cities = await getCities()
-  const categories = await getCategories()
-  const allPlaces = await getAllPlaces()
-  const blogPosts = await getRecentBlogPosts(8)
+  const [cities, categories, allPlaces, blogPosts, stats] = await Promise.all([
+    getCities(),
+    getCategories(),
+    getAllPlaces(),
+    getRecentBlogPosts(8),
+    getSiteStats(),
+  ])
 
   // 업체가 있는 카테고리/도시만 필터링
   const activeCategorySlugs = new Set(allPlaces.map(p => p.category))
@@ -37,8 +41,8 @@ export default async function HomePage() {
     ? allPlaces.reduce((sum, p) => sum + (p.rating ?? 0), 0) / allPlaces.length
     : 0
   const homeStats: StatisticItem[] = [
-    { label: '등록 업체 수', value: `${allPlaces.length}곳`, note: '2026년 4월 기준' },
-    { label: '등록 도시', value: `${cities.length}개 도시` },
+    { label: '등록 업체 수', value: `${stats.totalPlaces}곳`, note: `${stats.currentYear}년 기준` },
+    { label: '등록 도시', value: `${stats.cities.length}개 도시` },
     { label: '평균 평점', value: `${avgRating.toFixed(1)}점`, note: 'Google Places 기준' },
     { label: '블로그 글', value: `${blogPosts.length}편`, note: '가이드·비교·키워드' },
   ]
