@@ -5,6 +5,7 @@ import Image from "next/image"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PhoneButton } from "@/components/phone-button"
+import { Disclaimer } from "@/components/business/disclaimer"
 import { getPlaceBySlug, getPlaces, getCities, getCategories, getSchemaTypeForCategory, getSectorForCategory, updatePlaceGoogleData } from "@/lib/data.supabase"
 import { getBlogPostsByPlace } from "@/lib/blog/data.supabase"
 import { generateLocalBusiness, generateFAQPage, generateWebPage } from "@/lib/jsonld"
@@ -369,10 +370,8 @@ export default async function ProfilePage({ params }: Props) {
               </section>
             )}
 
-            {/* 의료광고법 면책 */}
-            <p className="mt-8 text-xs text-[#6a6a6a]">
-              ※ 본 페이지는 정보 제공 목적이며, 실제 비용은 상담 후 확정됩니다. 의료 결정은 전문의와 상담하세요.
-            </p>
+            {/* 업종별 면책 분기 (T-004) */}
+            <Disclaimer sector={sector?.slug ?? ''} />
           </div>
         </article>
       </main>

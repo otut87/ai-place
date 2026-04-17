@@ -13,6 +13,7 @@ import { BlogViewTracker } from '@/components/blog-view-tracker'
 import { PlaceCard } from '@/components/place-card'
 import { SourceList } from '@/components/source-list'
 import { StatisticsBox } from '@/components/statistics-box'
+import { Disclaimer } from '@/components/business/disclaimer'
 import {
   getBlogPost,
   getAllActiveBlogPosts,
@@ -174,6 +175,9 @@ export default async function BlogPostPage({ params }: Props) {
             {post.sources.length > 0 && (
               <SourceList sources={post.sources} />
             )}
+
+            {/* 업종별 면책 (T-004) */}
+            <Disclaimer sector={sector} />
           </div>
         </article>
 

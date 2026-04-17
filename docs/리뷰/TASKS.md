@@ -295,7 +295,22 @@ scripts/harness/
 - [ ] `grep -r "2026년" src/` 동적 치환 가능한 부분은 전부 `getFullYear()` 사용
 - [ ] 유닛 테스트 `src/lib/__tests__/site-stats.test.ts`
 
-## T-004. 업종별 면책 분기 컴포넌트 [AEO][GEO]
+## T-004. 업종별 면책 분기 컴포넌트 [AEO][GEO] ✅
+
+**완료**: 2026-04-17
+**구현**:
+- [src/lib/constants/disclaimers.ts](src/lib/constants/disclaimers.ts) — 10 sector 맵 (medical/beauty/living/auto/education/professional/pet/wedding/leisure/food) + `getDisclaimer(sector)` 안전 lookup (미정의/null 안전 처리)
+- [src/components/business/disclaimer.tsx](src/components/business/disclaimer.tsx) — 조건부 렌더 컴포넌트 (null 이면 DOM 제거)
+- [src/app/[city]/[category]/[slug]/page.tsx](src/app/%5Bcity%5D/%5Bcategory%5D/%5Bslug%5D/page.tsx) — 하드코딩 의료 문구 → `<Disclaimer sector={sector?.slug} />`
+- [src/app/blog/[city]/[sector]/[slug]/page.tsx](src/app/blog/%5Bcity%5D/%5Bsector%5D/%5Bslug%5D/page.tsx) — 본문 하단에 sector 기반 면책
+- [src/lib/__tests__/constants/disclaimers.test.ts](src/lib/__tests__/constants/disclaimers.test.ts) — 7개 테스트
+
+**검증** (curl):
+- `/cheonan/dermatology/dr-evers` → "의료 결정은 전문의와 상담하세요" ✓
+- `/cheonan/webagency/didu` → "수수료는 상담 후 확정됩니다" (professional) ✓
+- `/cheonan/auto-repair/*` → "차량 상태에 따라" (auto) ✓
+- `/cheonan/restaurant/*` → 면책 미렌더 (food=null) ✓
+- `grep "의료 결정은 전문의와 상담" src/app/` → 0건 (constants 만 보유)
 
 **WO 참조**: #4
 **축**: AEO (답변 정확도), GEO (템플릿 누수 제거)
