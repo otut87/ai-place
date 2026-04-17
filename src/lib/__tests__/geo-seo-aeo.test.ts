@@ -59,11 +59,11 @@ describe('[기술 기초]', () => {
 
   // --- generateStaticParams ---
   describe('generateStaticParams 구현', () => {
+    // T-010g: compare/guide 라우트가 /blog/[city]/[sector]/[slug] 로 통합됨.
     const PAGES_WITH_PARAMS = [
       'src/app/[city]/[category]/page.tsx',
       'src/app/[city]/[category]/[slug]/page.tsx',
-      'src/app/compare/[city]/[category]/[topic]/page.tsx',
-      'src/app/guide/[city]/[category]/page.tsx',
+      'src/app/blog/[city]/[sector]/[slug]/page.tsx',
     ]
 
     for (const page of PAGES_WITH_PARAMS) {

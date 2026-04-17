@@ -4,7 +4,8 @@ import { Footer } from "@/components/footer"
 import { PlaceCard } from "@/components/place-card"
 import { StatisticsBox } from "@/components/statistics-box"
 import { InquiryButton } from "@/components/inquiry-modal"
-import { getCities, getCategories, getPlaces, getAllPlaces, getAllComparisonTopics, getAllGuidePages, getAllKeywordPages } from "@/lib/data.supabase"
+import { getCities, getCategories, getPlaces, getAllPlaces } from "@/lib/data.supabase"
+import { getRecentBlogPosts } from "@/lib/blog/data.supabase"
 import { generateFAQPage, generateWebSite, generateItemList } from "@/lib/jsonld"
 import { safeJsonLd } from "@/lib/utils"
 import type { Metadata } from "next"
@@ -23,9 +24,7 @@ export default async function HomePage() {
   const cities = await getCities()
   const categories = await getCategories()
   const allPlaces = await getAllPlaces()
-  const comparisonTopics = await getAllComparisonTopics()
-  const guidePages = await getAllGuidePages()
-  const keywordPages = await getAllKeywordPages()
+  const blogPosts = await getRecentBlogPosts(8)
 
   // 업체가 있는 카테고리/도시만 필터링
   const activeCategorySlugs = new Set(allPlaces.map(p => p.category))
@@ -41,7 +40,7 @@ export default async function HomePage() {
     { label: '등록 업체 수', value: `${allPlaces.length}곳`, note: '2026년 4월 기준' },
     { label: '등록 도시', value: `${cities.length}개 도시` },
     { label: '평균 평점', value: `${avgRating.toFixed(1)}점`, note: 'Google Places 기준' },
-    { label: '비교·가이드 콘텐츠', value: `${comparisonTopics.length + guidePages.length}편` },
+    { label: '블로그 글', value: `${blogPosts.length}편`, note: '가이드·비교·키워드' },
   ]
   const homeSources: Source[] = [
     { name: 'AI플레이스 자체 조사', year: 2026 },
@@ -147,48 +146,30 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Guides & Comparisons */}
-        <section className="py-20 px-6 bg-[#f2f2f2]">
-          <div className="mx-auto max-w-[1200px]">
-            <h2 className="text-[28px] font-bold text-[#222222] leading-[1.43]">가이드 & 비교</h2>
-            <p className="mt-2 text-base text-[#222222]">시술별 비교와 선택 가이드로 정보에 기반한 결정을 도와드립니다.</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              {guidePages.map(guide => (
+        {/* 블로그 — 가이드/비교/키워드 통합 */}
+        {blogPosts.length > 0 && (
+          <section className="py-20 px-6 bg-[#f2f2f2]">
+            <div className="mx-auto max-w-[1200px]">
+              <div className="flex items-end justify-between flex-wrap gap-4">
+                <div>
+                  <h2 className="text-[28px] font-bold text-[#222222] leading-[1.43]">블로그 — 가이드·비교·추천</h2>
+                  <p className="mt-2 text-base text-[#222222]">시술별 비교와 선택 가이드로 정보에 기반한 결정을 도와드립니다.</p>
+                </div>
                 <Link
-                  key={`${guide.city}-${guide.category}`}
-                  href={`/guide/${guide.city}/${guide.category}`}
+                  href="/blog"
                   className="px-5 py-2.5 text-sm font-medium text-white bg-[#008060] rounded-lg hover:bg-[#006b4f] transition-colors"
                 >
-                  {guide.title}
+                  블로그 전체 보기 →
                 </Link>
-              ))}
-              {comparisonTopics.map(topic => (
-                <Link
-                  key={topic.slug}
-                  href={`/compare/${topic.city}/${topic.category}/${topic.slug}`}
-                  className="px-5 py-2.5 text-sm font-medium text-[#222222] bg-white border border-[#c1c1c1] rounded-lg hover:bg-[#f2f2f2] transition-colors"
-                >
-                  {topic.name}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Keyword Landing Pages */}
-        {keywordPages.length > 0 && (
-          <section className="py-20 px-6">
-            <div className="mx-auto max-w-[1200px]">
-              <h2 className="text-[28px] font-bold text-[#222222] leading-[1.43]">AI 검색 인기 키워드</h2>
-              <p className="mt-2 text-base text-[#222222]">AI에게 자주 물어보는 질문별 추천 페이지입니다.</p>
+              </div>
               <div className="mt-8 flex flex-wrap gap-3">
-                {keywordPages.map(kw => (
+                {blogPosts.map(post => (
                   <Link
-                    key={kw.slug}
-                    href={`/${kw.city}/${kw.category}/k/${kw.slug}`}
-                    className="px-5 py-2.5 text-sm font-medium text-[#222222] border border-[#c1c1c1] rounded-lg hover:bg-[#f2f2f2] transition-colors"
+                    key={post.slug}
+                    href={`/blog/${post.city}/${post.sector}/${post.slug}`}
+                    className="px-5 py-2.5 text-sm font-medium text-[#222222] bg-white border border-[#c1c1c1] rounded-lg hover:bg-[#f2f2f2] transition-colors"
                   >
-                    {kw.targetQuery}
+                    {post.title}
                   </Link>
                 ))}
               </div>

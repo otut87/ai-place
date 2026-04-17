@@ -9,7 +9,8 @@ import { SourceList } from "@/components/source-list"
 import { safeJsonLd } from "@/lib/utils"
 import type { StatisticItem, Source } from "@/lib/types"
 import { InquiryButton } from "@/components/inquiry-modal"
-import { getPlaces, getCities, getCategories, getComparisonTopics, getGuidePage, getMetaDescriptorForCategory, getSectorForCategory, getSchemaTypeForCategory } from "@/lib/data.supabase"
+import { getPlaces, getCities, getCategories, getMetaDescriptorForCategory, getSectorForCategory, getSchemaTypeForCategory } from "@/lib/data.supabase"
+import { getBlogPostsBySector } from "@/lib/blog/data.supabase"
 import { generateItemList } from "@/lib/jsonld"
 import { generateBreadcrumbList, generateCategoryDAB } from "@/lib/seo"
 
@@ -97,9 +98,11 @@ export default async function ListingPage({ params }: Props) {
     { name: 'Google Places', year: 2026 },
   ]
 
-  // 관련 콘텐츠 (비교/가이드)
-  const comparisonTopics = await getComparisonTopics(city, category)
-  const guide = await getGuidePage(city, category)
+  // 관련 콘텐츠 (블로그 글, T-010g) — 같은 sector 의 최신 글 최대 5개
+  const sectorSlug = sector?.slug
+  const relatedBlogPosts = sectorSlug
+    ? (await getBlogPostsBySector(city, sectorSlug)).filter(p => p.category === category).slice(0, 5)
+    : []
 
   return (
     <>
@@ -154,28 +157,20 @@ export default async function ListingPage({ params }: Props) {
               </div>
             )}
 
-            {/* 관련 콘텐츠 (Phase 2 cross-links) */}
-            {(guide || comparisonTopics.length > 0) && (
+            {/* 관련 콘텐츠 — 블로그 글 (T-010g 마이그레이션) */}
+            {relatedBlogPosts.length > 0 && (
               <section className="mt-16">
                 <h2 className="text-[22px] font-semibold text-[#222222] leading-tight tracking-[-0.44px]">
                   관련 콘텐츠
                 </h2>
                 <div className="mt-4 flex flex-wrap gap-3">
-                  {guide && (
+                  {relatedBlogPosts.map(post => (
                     <Link
-                      href={`/guide/${city}/${category}`}
-                      className="px-5 py-2.5 text-sm font-medium text-white bg-[#008060] rounded-lg hover:bg-[#006b4f] transition-colors"
-                    >
-                      {cityObj.name} {catObj.name} 선택 가이드
-                    </Link>
-                  )}
-                  {comparisonTopics.map(topic => (
-                    <Link
-                      key={topic.slug}
-                      href={`/compare/${city}/${category}/${topic.slug}`}
+                      key={post.slug}
+                      href={`/blog/${post.city}/${post.sector}/${post.slug}`}
                       className="px-5 py-2.5 text-sm font-medium text-[#222222] border border-[#c1c1c1] rounded-lg hover:bg-[#f2f2f2] transition-colors"
                     >
-                      {topic.name}
+                      {post.title}
                     </Link>
                   ))}
                 </div>

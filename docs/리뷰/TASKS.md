@@ -650,7 +650,35 @@ node --env-file=.env.local --import tsx scripts/migrate-to-blog.ts --force
 - [ ] 새 URL 200 응답 확인
 - [ ] Google Search Console "URL 변경" 요청
 
-## T-010g. 기존 라우트 제거 [SEO] 🔜
+## T-010g. 기존 라우트 제거 [SEO] ✅
+
+**완료**: 2026-04-17
+**삭제 디렉토리**:
+- `src/app/[city]/[category]/k/` (키워드 페이지 루트)
+- `src/app/compare/` (비교 페이지 루트)
+- `src/app/guide/` (가이드 페이지 루트)
+
+**내부 링크 교체** (10+곳, 하드코딩 혹은 동적 생성):
+- `src/components/footer.tsx` — 2개 링크
+- `src/app/page.tsx` — 가이드/비교/키워드 3개 섹션 → 블로그 1개 섹션 (getRecentBlogPosts)
+- `src/app/[city]/[category]/page.tsx` — 관련 콘텐츠 → getBlogPostsBySector
+- `src/app/[city]/[category]/[slug]/page.tsx` — 양방향 링크 → getBlogPostsByPlace
+- `src/lib/seo.ts` (sitemap) — `/compare/` `/guide/` `/k/` 제거, `/blog` 홈 + `/blog/[city]/[sector]/[slug]` 추가
+- `src/app/llms.txt/route.ts` — AI 크롤러 endpoint 를 blog 중심으로 재구성
+
+**배열 정리 (data.ts)**:
+- `keywordPages` / `comparisonPages` / `guidePages` 는 **유지** (향후 다른 도시/카테고리 마이그레이션 시 재사용)
+- 관련 query 함수(`getAllKeywordPages`, `getKeywordPage`, `getAllComparisonTopics` 등)도 유지
+
+**테스트 재작성**:
+- [src/lib/__tests__/seo.test.ts](src/lib/__tests__/seo.test.ts) — 구 URL 3종 검증 → `/blog` 검증 + legacy 부재 가드
+- [src/lib/__tests__/geo-seo-aeo.test.ts](src/lib/__tests__/geo-seo-aeo.test.ts) — PAGES_WITH_PARAMS 를 `/blog/[city]/[sector]/[slug]` 로 대체
+
+**검증** (next build + start):
+- 모든 라우트 성공 (12개 블로그 SSG prerender)
+- `/guide/cheonan/dermatology` → 301 → `/blog/cheonan/medical/cheonan-dermatology-guide`
+- `/blog` 200 / `/blog/...` 200 / 홈 200 / 카테고리 페이지 200
+- sitemap.xml 에 `/blog/` URL 12개 포함
 
 **예상 공수**: 1.5h
 **선행**: T-010e (마이그레이션) + T-010f (redirect) 완료 후

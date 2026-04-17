@@ -5,7 +5,8 @@ import Image from "next/image"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PhoneButton } from "@/components/phone-button"
-import { getPlaceBySlug, getPlaces, getCities, getCategories, getGuidesForPlace, getComparisonsForPlace, getSchemaTypeForCategory, getSectorForCategory, updatePlaceGoogleData } from "@/lib/data.supabase"
+import { getPlaceBySlug, getPlaces, getCities, getCategories, getSchemaTypeForCategory, getSectorForCategory, updatePlaceGoogleData } from "@/lib/data.supabase"
+import { getBlogPostsByPlace } from "@/lib/blog/data.supabase"
 import { generateLocalBusiness, generateFAQPage, generateWebPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
 import { safeJsonLd } from "@/lib/utils"
@@ -102,8 +103,8 @@ export default async function ProfilePage({ params }: Props) {
   }
 
   // GEO: 역방향 링크 (이 업체를 참조하는 가이드/비교 페이지)
-  const relatedGuides = await getGuidesForPlace(place.slug)
-  const relatedComparisons = await getComparisonsForPlace(place.slug)
+  // 양방향 링크: 이 업체를 related_place_slugs 에 포함한 블로그 글
+  const relatedBlogPosts = await getBlogPostsByPlace(place.slug)
 
   // CRITICAL 5: @id + mainEntityOfPage
   const schemaType = await getSchemaTypeForCategory(category)
@@ -350,27 +351,18 @@ export default async function ProfilePage({ params }: Props) {
               </section>
             )}
 
-            {/* GEO: 관련 콘텐츠 역방향 링크 */}
-            {(relatedGuides.length > 0 || relatedComparisons.length > 0) && (
+            {/* GEO: 양방향 링크 — 이 업체가 언급된 블로그 글 (T-010g) */}
+            {relatedBlogPosts.length > 0 && (
               <section className="mt-12 pt-6 border-t border-[#c1c1c1]">
                 <h2 className="text-[16px] font-semibold text-[#222222] mb-3">관련 콘텐츠</h2>
                 <div className="flex flex-wrap gap-2">
-                  {relatedGuides.map(guide => (
+                  {relatedBlogPosts.map(post => (
                     <Link
-                      key={`${guide.city}-${guide.category}`}
-                      href={`/guide/${guide.city}/${guide.category}`}
+                      key={post.slug}
+                      href={`/blog/${post.city}/${post.sector}/${post.slug}`}
                       className="px-4 py-2 text-sm text-[#222222] bg-[#f2f2f2] border border-[#c1c1c1] rounded-lg hover:bg-[#e8e8e8] transition-colors"
                     >
-                      {guide.title}
-                    </Link>
-                  ))}
-                  {relatedComparisons.map(comp => (
-                    <Link
-                      key={comp.topic.slug}
-                      href={`/compare/${comp.topic.city}/${comp.topic.category}/${comp.topic.slug}`}
-                      className="px-4 py-2 text-sm text-[#222222] bg-[#f2f2f2] border border-[#c1c1c1] rounded-lg hover:bg-[#e8e8e8] transition-colors"
-                    >
-                      {comp.topic.name} 비교
+                      {post.title}
                     </Link>
                   ))}
                 </div>

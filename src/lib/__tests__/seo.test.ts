@@ -56,40 +56,22 @@ describe('sitemap generation', () => {
     })
   })
 
-  it('should include comparison page URLs', async () => {
+  // T-010g: keyword/compare/guide 라우트가 /blog 로 통합됨.
+  // 이전 sitemap 검증은 /blog/[city]/[sector]/[slug] 로 대체.
+  it('should include /blog home URL', async () => {
     const { generateSitemapEntries } = await import('@/lib/seo')
     const entries = await generateSitemapEntries('https://aiplace.kr')
-
-    const compEntries = entries.filter(e => e.url.includes('/compare/'))
-    expect(compEntries.length).toBe(3)
-    compEntries.forEach(e => {
-      expect(e.priority).toBe(0.85)
-      expect(e.changeFrequency).toBe('weekly')
-    })
+    const blogHome = entries.find(e => e.url === 'https://aiplace.kr/blog')
+    expect(blogHome).toBeDefined()
+    expect(blogHome?.priority).toBe(0.9)
   })
 
-  it('should include guide page URLs', async () => {
+  it('should NOT include legacy /k/, /compare/, /guide/ URLs (T-010g)', async () => {
     const { generateSitemapEntries } = await import('@/lib/seo')
     const entries = await generateSitemapEntries('https://aiplace.kr')
-
-    const guideEntries = entries.filter(e => e.url.includes('/guide/'))
-    expect(guideEntries.length).toBe(1)
-    guideEntries.forEach(e => {
-      expect(e.priority).toBe(0.9)
-      expect(e.changeFrequency).toBe('weekly')
-    })
-  })
-
-  it('should include keyword page URLs', async () => {
-    const { generateSitemapEntries } = await import('@/lib/seo')
-    const entries = await generateSitemapEntries('https://aiplace.kr')
-
-    const kwEntries = entries.filter(e => e.url.includes('/k/'))
-    expect(kwEntries.length).toBeGreaterThanOrEqual(5)
-    kwEntries.forEach(e => {
-      expect(e.priority).toBe(0.85)
-      expect(e.changeFrequency).toBe('weekly')
-    })
+    expect(entries.filter(e => e.url.includes('/compare/'))).toHaveLength(0)
+    expect(entries.filter(e => e.url.includes('/guide/'))).toHaveLength(0)
+    expect(entries.filter(e => e.url.includes('/k/'))).toHaveLength(0)
   })
 })
 

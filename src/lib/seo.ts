@@ -3,7 +3,8 @@
 // GEO 딥리서치 §5.1, §5.3, §5.4 기반
 
 import type { Place } from './types'
-import { getAllPlaces, getCities, getCategories, getAllComparisonTopics, getAllGuidePages, getAllKeywordPages } from './data.supabase'
+import { getAllPlaces, getCities, getCategories } from './data.supabase'
+import { getAllActiveBlogPosts } from './blog/data.supabase'
 
 // robots.txt는 app/robots.ts에서 Next.js MetadataRoute로 처리.
 
@@ -68,33 +69,19 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
     })
   }
 
-  // 비교 페이지
-  const comparisonTopics = await getAllComparisonTopics()
-  for (const topic of comparisonTopics) {
-    entries.push({
-      url: `${baseUrl}/compare/${topic.city}/${topic.category}/${topic.slug}`,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.85,
-    })
-  }
+  // 블로그 홈
+  entries.push({
+    url: `${baseUrl}/blog`,
+    lastModified: now,
+    changeFrequency: 'daily',
+    priority: 0.9,
+  })
 
-  // 가이드 페이지
-  const guidePagesList = await getAllGuidePages()
-  for (const guide of guidePagesList) {
+  // 블로그 글 (T-010g 마이그레이션 후 통합 — keyword/compare/guide 12개)
+  const blogPosts = await getAllActiveBlogPosts()
+  for (const p of blogPosts) {
     entries.push({
-      url: `${baseUrl}/guide/${guide.city}/${guide.category}`,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    })
-  }
-
-  // 키워드 랜딩 페이지
-  const keywordPagesList = await getAllKeywordPages()
-  for (const kw of keywordPagesList) {
-    entries.push({
-      url: `${baseUrl}/${kw.city}/${kw.category}/k/${kw.slug}`,
+      url: `${baseUrl}/blog/${p.city}/${p.sector}/${p.slug}`,
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.85,
