@@ -488,23 +488,16 @@ scripts/harness/
 - [ ] migration 적용 성공
 - [ ] `src/lib/supabase-types.ts` 에 `DbBlogPost` 타입 동기화
 
-## T-010b. BlogPost 타입 + 데이터 레이어 [SEO][GEO]
+## T-010b. BlogPost 타입 + 데이터 레이어 [SEO][GEO] ✅
 
 **예상 공수**: 2h
-
-**파일**
-- `src/lib/blog/types.ts` — `BlogPost`, `BlogPostSummary`
-- `src/lib/blog/data.supabase.ts` — CRUD 쿼리
-  - `getBlogPost(city, sector, slug)`
-  - `getBlogPostsByCity(city)`
-  - `getBlogPostsBySector(city, sector)`
-  - `getRecentBlogPosts(limit)`
-  - `getPopularBlogPosts(limit)` — view_count DESC
-  - `getBlogPostsByPlace(placeSlug)` — related_place_slugs 역방향
-
-**DoD**
-- [ ] 유닛 테스트 `src/lib/__tests__/blog/data.test.ts`
-- [ ] Supabase fallback 로직 (data.supabase.ts 패턴)
+**완료**: 2026-04-17
+**구현**:
+- [src/lib/types.ts](src/lib/types.ts) — `BlogPost` / `BlogPostSummary` / `BlogPostType` / `BlogPostStatus` 타입 추가 (전역 types.ts 통합)
+- [src/lib/supabase-types.ts](src/lib/supabase-types.ts) — `dbBlogPostToBlogPost()` + `dbBlogPostToSummary()` 변환 함수
+- [src/lib/blog/data.supabase.ts](src/lib/blog/data.supabase.ts) — 6개 export 함수 (getBlogPost / getBlogPostsByCity / BySector / Recent / Popular / ByPlace)
+- [src/lib/__tests__/blog/data.supabase.test.ts](src/lib/__tests__/blog/data.supabase.test.ts) — 12개 테스트 (mock 체인 + camelCase 변환 + 폴백 검증)
+- 폴백 정책: Supabase 실패 시 `getBlogPost` → null, 목록 → `[]` (T-010e 마이그레이션 완료 전 안전)
 
 ## T-010c. 블로그 홈 라우트 /blog [SEO][GEO]
 

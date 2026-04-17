@@ -2,7 +2,10 @@
 // Phase 1: DB 스키마와 1:1 매핑되는 snake_case 타입.
 // camelCase 앱 타입(types.ts)과 변환 함수도 포함.
 
-import type { Place, City, Category, Service, FAQ, ReviewSummary, PlaceImage } from './types'
+import type {
+  Place, City, Category, Service, FAQ, ReviewSummary, PlaceImage,
+  BlogPost, BlogPostSummary,
+} from './types'
 
 // --- Database Row Types (snake_case, matches SQL columns) ---
 
@@ -141,6 +144,50 @@ export function dbCategoryToCategory(row: DbCategory): Category {
     nameEn: row.name_en,
     icon: row.icon ?? undefined,
     sector: row.sector,
+  }
+}
+
+/** DbBlogPost → BlogPost (snake_case → camelCase, T-010b) */
+export function dbBlogPostToBlogPost(row: DbBlogPost): BlogPost {
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    summary: row.summary,
+    content: row.content,
+    city: row.city,
+    sector: row.sector,
+    category: row.category,
+    tags: row.tags,
+    postType: row.post_type,
+    relatedPlaceSlugs: row.related_place_slugs ?? [],
+    targetQuery: row.target_query,
+    faqs: row.faqs,
+    statistics: row.statistics,
+    sources: row.sources,
+    viewCount: row.view_count,
+    qualityScore: row.quality_score,
+    status: row.status,
+    publishedAt: row.published_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+/** DbBlogPost → BlogPostSummary (목록용 경량 변환) */
+export function dbBlogPostToSummary(row: DbBlogPost): BlogPostSummary {
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    summary: row.summary,
+    city: row.city,
+    sector: row.sector,
+    category: row.category,
+    postType: row.post_type,
+    tags: row.tags,
+    viewCount: row.view_count,
+    publishedAt: row.published_at,
   }
 }
 

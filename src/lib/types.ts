@@ -228,6 +228,52 @@ export interface KeywordPage {
   lastUpdated: string
 }
 
+// --- Blog (T-010 Phase 1.5) ---
+
+/** 블로그 포스트 타입 — keyword/compare/guide 통합 */
+export type BlogPostType = 'keyword' | 'compare' | 'guide' | 'general'
+export type BlogPostStatus = 'draft' | 'active' | 'archived'
+
+/** 블로그 글 전체 데이터 (상세 페이지용) */
+export interface BlogPost {
+  id: string
+  slug: string                                // "cheonan-dermatology-acne"
+  title: string
+  summary: string                             // Direct Answer Block (40-60자)
+  content: string                             // Markdown 본문
+  city: string                                // "cheonan"
+  sector: string                              // "medical" (대분류)
+  category: string | null                     // "dermatology" (소분류, 선택)
+  tags: string[]
+  postType: BlogPostType
+  relatedPlaceSlugs: string[]                 // 관련 업체 (양방향 링크)
+  targetQuery: string | null                  // SEO 타깃 쿼리 (keyword 타입)
+  faqs: FAQ[]
+  statistics: StatisticItem[]
+  sources: Source[]
+  viewCount: number
+  qualityScore: number | null
+  status: BlogPostStatus
+  publishedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** 블로그 글 요약 (목록/카드용) */
+export interface BlogPostSummary {
+  id: string
+  slug: string
+  title: string
+  summary: string
+  city: string
+  sector: string
+  category: string | null
+  postType: BlogPostType
+  tags: string[]
+  viewCount: number
+  publishedAt: string | null
+}
+
 // --- AI 인용 테스트 관련 타입 ---
 
 /** AI 엔진 종류 */
