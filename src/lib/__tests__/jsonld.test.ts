@@ -283,3 +283,63 @@ describe('JSON-LD Generation', () => {
     })
   })
 })
+
+// T-010c: 블로그 JSON-LD
+describe('generateBlogItemList (T-010c)', () => {
+  const samplePosts = [
+    {
+      id: '1', slug: 'cheonan-dermatology-acne',
+      title: '천안 여드름 피부과', summary: '요약1',
+      city: 'cheonan', sector: 'medical', category: 'dermatology',
+      postType: 'keyword' as const, tags: [], viewCount: 100,
+      publishedAt: '2026-04-15T00:00:00Z',
+    },
+    {
+      id: '2', slug: 'cheonan-dermatology-guide',
+      title: '천안 피부과 가이드', summary: '요약2',
+      city: 'cheonan', sector: 'medical', category: 'dermatology',
+      postType: 'guide' as const, tags: [], viewCount: 200,
+      publishedAt: '2026-04-15T00:00:00Z',
+    },
+  ]
+
+  it('ItemList 타입 + numberOfItems', async () => {
+    const { generateBlogItemList } = await import('@/lib/jsonld')
+    const jsonld = generateBlogItemList(samplePosts, '천안 인기글', 'https://aiplace.kr')
+    expect(jsonld['@type']).toBe('ItemList')
+    expect(jsonld.numberOfItems).toBe(2)
+    expect(jsonld.itemListElement).toHaveLength(2)
+  })
+
+  it('각 아이템 position + Article URL 포함', async () => {
+    const { generateBlogItemList } = await import('@/lib/jsonld')
+    const jsonld = generateBlogItemList(samplePosts, 'X', 'https://aiplace.kr')
+    expect(jsonld.itemListElement[0].position).toBe(1)
+    expect(jsonld.itemListElement[0].item.url).toBe('https://aiplace.kr/blog/cheonan/medical/cheonan-dermatology-acne')
+    expect(jsonld.itemListElement[0].item['@type']).toBe('Article')
+  })
+})
+
+describe('generateCollectionPage (T-010c)', () => {
+  it('CollectionPage 타입 + name/url 포함', async () => {
+    const { generateCollectionPage } = await import('@/lib/jsonld')
+    const jsonld = generateCollectionPage({
+      name: 'AI Place 블로그',
+      url: 'https://aiplace.kr/blog',
+      description: '블로그 글 모음',
+    })
+    expect(jsonld['@type']).toBe('CollectionPage')
+    expect(jsonld.name).toBe('AI Place 블로그')
+    expect(jsonld.url).toBe('https://aiplace.kr/blog')
+  })
+
+  it('mainEntity 가 ItemList 인 경우 포함', async () => {
+    const { generateCollectionPage, generateBlogItemList } = await import('@/lib/jsonld')
+    const itemList = generateBlogItemList([], 'Empty', 'https://aiplace.kr')
+    const jsonld = generateCollectionPage({
+      name: 'X', url: 'https://x', description: 'd', mainEntity: itemList,
+    })
+    expect(jsonld.mainEntity).toBeDefined()
+    expect((jsonld.mainEntity as { '@type': string })['@type']).toBe('ItemList')
+  })
+})

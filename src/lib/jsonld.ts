@@ -1,7 +1,7 @@
 // AI Place — JSON-LD Structured Data Generation
 // AI 크롤러가 구조적으로 읽을 수 있는 Schema.org 데이터 생성
 
-import type { Place, FAQ } from './types'
+import type { Place, FAQ, BlogPostSummary } from './types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type JsonLd = Record<string, any>
@@ -296,5 +296,63 @@ export function generateWebPage(opts: {
       name: 'AI 플레이스',
       url: 'https://aiplace.kr',
     },
+  }
+}
+
+// --- 블로그 (T-010c, T-010d) ---
+
+/**
+ * BlogPostSummary 배열을 ItemList JSON-LD 로 변환.
+ * /blog 홈, 사이드바 추천, 도시별 섹션에 사용.
+ */
+export function generateBlogItemList(
+  posts: BlogPostSummary[],
+  title: string,
+  baseUrl: string,
+): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: title,
+    numberOfItems: posts.length,
+    itemListElement: posts.map((p, idx) => ({
+      '@type': 'ListItem',
+      position: idx + 1,
+      item: {
+        '@type': 'Article',
+        '@id': `${baseUrl}/blog/${p.city}/${p.sector}/${p.slug}`,
+        url: `${baseUrl}/blog/${p.city}/${p.sector}/${p.slug}`,
+        headline: p.title,
+        description: p.summary,
+        datePublished: p.publishedAt ?? undefined,
+      },
+    })),
+  }
+}
+
+/**
+ * /blog 홈용 CollectionPage JSON-LD.
+ * mainEntity 로 ItemList 등 자식 schema 를 받을 수 있음.
+ */
+export function generateCollectionPage(opts: {
+  name: string
+  url: string
+  description: string
+  mainEntity?: JsonLd
+}): JsonLd {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    '@id': opts.url,
+    name: opts.name,
+    url: opts.url,
+    description: opts.description,
+    publisher: {
+      '@type': 'Organization',
+      '@id': 'https://aiplace.kr/#organization',
+      name: 'AI 플레이스',
+      url: 'https://aiplace.kr',
+    },
+    ...(opts.mainEntity && { mainEntity: opts.mainEntity }),
   }
 }

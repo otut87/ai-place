@@ -164,7 +164,11 @@ export function dbBlogPostToBlogPost(row: DbBlogPost): BlogPost {
     targetQuery: row.target_query,
     faqs: row.faqs,
     statistics: row.statistics,
-    sources: row.sources,
+    // DB sources: { title, url } → app Source: { name, url? }
+    sources: (row.sources ?? []).map(s => ({
+      name: s.title,
+      url: s.url || undefined,
+    })),
     viewCount: row.view_count,
     qualityScore: row.quality_score,
     status: row.status,

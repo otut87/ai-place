@@ -499,7 +499,19 @@ scripts/harness/
 - [src/lib/__tests__/blog/data.supabase.test.ts](src/lib/__tests__/blog/data.supabase.test.ts) — 12개 테스트 (mock 체인 + camelCase 변환 + 폴백 검증)
 - 폴백 정책: Supabase 실패 시 `getBlogPost` → null, 목록 → `[]` (T-010e 마이그레이션 완료 전 안전)
 
-## T-010c. 블로그 홈 라우트 /blog [SEO][GEO] 🔜
+## T-010c. 블로그 홈 라우트 /blog [SEO][GEO] ✅
+
+**완료**: 2026-04-17
+**구현**:
+- [src/app/blog/page.tsx](src/app/blog/page.tsx) — Hero(DAB 45자) + 인기글 TOP5 + 도시×대분류 섹션 + Breadcrumb
+- [src/lib/jsonld.ts](src/lib/jsonld.ts) — `generateBlogItemList(posts, title, baseUrl)` + `generateCollectionPage(opts)`
+- [src/lib/__tests__/jsonld.test.ts](src/lib/__tests__/jsonld.test.ts) — 4개 신규 JSON-LD 테스트
+- [src/lib/supabase-types.ts](src/lib/supabase-types.ts) — DB sources `{title,url}` → app `{name, url?}` 변환
+
+**검증** (npx next start, /blog):
+- HTTP 200, HTML 정상 렌더
+- CollectionPage + ItemList(numberOfItems=10) + BreadcrumbList JSON-LD 모두 출력
+- 12개 글 모두 표시 (인기 5 + 천안 의료 섹션 12)
 
 **예상 공수**: 3h
 
@@ -549,18 +561,20 @@ scripts/harness/
 
 **프로덕션 실행 가이드**:
 ```bash
-# 환경변수 확인
-echo $NEXT_PUBLIC_SUPABASE_URL && echo ${SUPABASE_SERVICE_ROLE_KEY:0:10}
-
-# 1차: dry-run
-npx tsx scripts/migrate-to-blog.ts --dry-run
+# 1차: dry-run (DB 변경 없음)
+node --env-file=.env.local --import tsx scripts/migrate-to-blog.ts --dry-run
 
 # 2차: 실제 insert (동일 slug 는 skip)
-npx tsx scripts/migrate-to-blog.ts
+node --env-file=.env.local --import tsx scripts/migrate-to-blog.ts
 
 # 재실행으로 덮어쓰려면
-npx tsx scripts/migrate-to-blog.ts --force
+node --env-file=.env.local --import tsx scripts/migrate-to-blog.ts --force
 ```
+
+**프로덕션 실행 결과** (2026-04-17):
+- 011_blog_posts_extend.sql 적용 ✅ (사용자 수동, Supabase Studio)
+- migrate-to-blog 실행: inserted 12, updated 0, skipped 0
+- 12개 슬러그: cheonan-dermatology-{acne, botox, lifting, blemish, night-clinic, recommend, hair-loss, scar, acne-treatment, laser-treatment, anti-aging, guide}
 
 **예상 공수**: 4h
 
