@@ -218,7 +218,7 @@ export default async function BlogPostPage({ params }: Props) {
         )}
       </main>
 
-      <Footer />
+      <Footer currentCity={city} currentSector={sector} currentCategory={post.category ?? undefined} />
     </>
   )
 }

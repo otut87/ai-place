@@ -376,7 +376,7 @@ export default async function ProfilePage({ params }: Props) {
         </article>
       </main>
 
-      <Footer />
+      <Footer currentCity={city} currentCategory={category} />
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(localBusinessJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(webPageJsonLd) }} />

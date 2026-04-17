@@ -342,7 +342,22 @@ scripts/harness/
 - [ ] `/cheonan/dermatology/dr-evers` 의료 문구 유지
 - [ ] `grep "의료 결정은 전문의와 상담" src/app/` 0건
 
-## T-005. 푸터 동적화 [SEO]
+## T-005. 푸터 동적화 [SEO] ✅
+
+**완료**: 2026-04-17
+**구현**:
+- [src/components/footer.tsx](src/components/footer.tsx) — 서버 컴포넌트 전환 + `FooterProps` (currentCity/currentCategory/currentSector 선택)
+  - 도시: `stats.activeCities` 기준 filter + 도시별 대표 카테고리 링크
+  - 업종: 실제 업체 있는 카테고리만 (`Set(allPlaces.map(p => p.category))`)
+  - 블로그: sector 문맥 있으면 해당 sector, 없으면 전체 최신. sector 에 0개면 **빈 배열 유지** (cross-sector 오염 방지)
+- 6개 사용처 업데이트: home/about/blog-home (문맥 없음), category/place-detail/blog-detail (props 전달)
+
+**검증** (next build + curl):
+- `/cheonan/auto-repair/*` 푸터에 `/blog/cheonan/*` 링크 0개 ✓
+- `/cheonan/dermatology/*` 푸터에 `/blog/cheonan/medical/*` 링크 노출 ✓
+- 홈 `/` 푸터에 전체 최신 4개 노출 ✓
+
+---(기존 원본 유지)---
 
 **WO 참조**: #5
 **축**: SEO (내부링크)

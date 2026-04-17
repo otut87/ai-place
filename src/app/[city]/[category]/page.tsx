@@ -182,7 +182,7 @@ export default async function ListingPage({ params }: Props) {
         </section>
       </main>
 
-      <Footer />
+      <Footer currentCity={city} currentCategory={category} />
 
       <script
         type="application/ld+json"
