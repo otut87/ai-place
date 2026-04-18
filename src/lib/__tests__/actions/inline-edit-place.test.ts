@@ -28,6 +28,8 @@ beforeEach(() => {
   mockFrom.mockImplementation(() => ({
     select: vi.fn(() => ({ eq: vi.fn(() => ({ single: mockSingle })) })),
     update: vi.fn(() => ({ eq: mockUpdateEq })),
+    // T-055: 감사 로그 insert (recordUpdateDiffs)
+    insert: vi.fn().mockResolvedValue({ error: null }),
   }))
 })
 

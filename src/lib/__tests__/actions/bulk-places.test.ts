@@ -30,6 +30,8 @@ beforeEach(() => {
     select: vi.fn(() => ({ in: vi.fn().mockResolvedValue({ data: [{ city: 'cheonan', category: 'dermatology', slug: 'x' }] }) })),
     update: vi.fn(() => ({ in: vi.fn().mockResolvedValue({ error: null, count: 2 }) })),
     delete: vi.fn(() => ({ in: vi.fn().mockResolvedValue({ error: null, count: 2 }) })),
+    // T-055: 감사 로그 insert (recordAudit)
+    insert: vi.fn().mockResolvedValue({ error: null }),
   }))
 })
 

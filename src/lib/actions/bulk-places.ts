@@ -4,6 +4,7 @@ import { requireAuthForAction } from '@/lib/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { revalidatePath } from 'next/cache'
 import { parseBulkAction, type BulkAction } from '@/lib/admin/places-bulk'
+import { recordAudit } from '@/lib/actions/audit-places'
 
 interface BulkResponse {
   success: boolean
@@ -33,7 +34,7 @@ function revalidateAffected(rows: Array<{ city: string; category: string; slug: 
 }
 
 export async function bulkUpdateStatus(ids: string[], action: BulkAction): Promise<BulkResponse> {
-  await requireAuthForAction()
+  const user = await requireAuthForAction()
   if (ids.length === 0) return { success: false, error: '선택된 업체가 없습니다.' }
 
   const parsed = parseBulkAction(action)
@@ -58,11 +59,16 @@ export async function bulkUpdateStatus(ids: string[], action: BulkAction): Promi
   }
 
   revalidateAffected(affected)
+  const actorId = (user as { id?: string } | null)?.id ?? null
+  await Promise.all(ids.map(id => recordAudit({
+    placeId: id, actorId, action: 'status',
+    field: 'status', before: null, after: nextStatus,
+  })))
   return { success: true, processed: count ?? ids.length }
 }
 
 export async function bulkDeletePlaces(ids: string[]): Promise<BulkResponse> {
-  await requireAuthForAction()
+  const user = await requireAuthForAction()
   if (ids.length === 0) return { success: false, error: '선택된 업체가 없습니다.' }
 
   const supabase = getAdminClient()
@@ -81,5 +87,9 @@ export async function bulkDeletePlaces(ids: string[]): Promise<BulkResponse> {
   }
 
   revalidateAffected(affected)
+  const actorId = (user as { id?: string } | null)?.id ?? null
+  await Promise.all(ids.map(id => recordAudit({
+    placeId: id, actorId, action: 'delete',
+  })))
   return { success: true, processed: count ?? ids.length }
 }

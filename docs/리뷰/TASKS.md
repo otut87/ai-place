@@ -1702,9 +1702,27 @@ IndexNow [DRY-RUN]: 29개 URL
 
 **WO 참조**: #41 — 예상 공수: 3-5일
 
-## T-055. 버전 관리·감사 로그 [Ops]
+## T-055. 버전 관리·감사 로그 ✅ [Ops]
 
 **WO 참조**: #42 — 예상 공수: 2일
+
+**목적**: 업체 변경 이력을 append-only 로 기록하여 감사·롤백·의심 활동 추적 기반 제공.
+
+**작업**
+- [x] `supabase/migrations/015_place_audit_log.sql` — `place_audit_log` 테이블 + 3개 인덱스 + RLS(서비스 롤 전용)
+- [x] `src/lib/admin/audit.ts` — `diffUpdate`, `isAuditableField`, `summarizeAction`, `AUDIT_ACTIONS`, `AUDITABLE_FIELDS` (12 tests, 100% 커버리지)
+- [x] `src/lib/actions/audit-places.ts` — `recordAudit`, `recordUpdateDiffs`, `listAuditForPlace` (10 tests)
+- [x] `inline-edit-place.ts` 에 감사 로깅 hook — 변경 직후 diff 를 `place_audit_log` 에 append
+- [x] `bulk-places.ts` 상태 변경 + 삭제 액션에 감사 로깅 추가
+- [x] `/admin/places/[id]/history` 페이지 — 타임라인 (action / field / before-after JSON / 시각)
+
+**DoD**
+- [x] 모든 인라인 편집이 `place_audit_log` 에 1행 이상 기록
+- [x] 일괄 상태 변경·삭제 시 ids 개수만큼 `status` / `delete` 행 기록
+- [x] `/admin/places/[id]/history` 페이지에서 최근 100개 타임라인 렌더
+- [x] 전체 테스트 836개 통과 (T-055 22개 추가)
+- [x] Review log 기록
+- [ ] 실제 롤백 UI(이전 값으로 되돌리기)는 향후 과제 — 현재는 읽기 전용 타임라인
 
 ## T-056. AI 인용 추적 대시보드 (admin 통합) [GEO]
 
