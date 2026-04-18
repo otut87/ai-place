@@ -6,6 +6,8 @@ import { bulkUpdateStatus, bulkDeletePlaces } from '@/lib/actions/bulk-places'
 import { summarizeBulkResult, type BulkAction } from '@/lib/admin/places-bulk'
 import { PlaceActions } from './place-actions'
 import { InlineEditField } from './inline-edit-field'
+import { ConfirmNameModal } from '@/components/admin/confirm-name-modal'
+import { useToast } from '@/components/admin/toast'
 
 export interface TableRow {
   id: string
@@ -31,12 +33,14 @@ function StatusPill({ status }: { status: string }) {
   return <span className={`text-xs px-2 py-1 rounded-full ${cls}`}>{status}</span>
 }
 
+const BULK_DELETE_CONFIRM_TOKEN = 'DELETE'
+
 export function PlacesTable({ places }: { places: TableRow[] }) {
   const router = useRouter()
+  const toast = useToast()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [working, setWorking] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   const allIds = useMemo(() => places.map((p) => p.id), [places])
   const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id))
@@ -55,32 +59,41 @@ export function PlacesTable({ places }: { places: TableRow[] }) {
   }
 
   async function runBulk(action: BulkAction) {
-    setError(null)
-    setMessage(null)
     const ids = Array.from(selected)
     if (ids.length === 0) return
 
     if (action === 'delete') {
-      if (!confirm(`선택한 ${ids.length}개 업체를 삭제하시겠습니까? 되돌릴 수 없습니다.`)) return
+      // 삭제는 ConfirmNameModal 에서 "DELETE" 타이핑 일치 후에만 진행.
+      setConfirmDeleteOpen(true)
+      return
     }
 
+    await executeBulk(action, ids)
+  }
+
+  async function executeBulk(action: BulkAction, ids: string[]) {
     setWorking(true)
     try {
       const result =
         action === 'delete' ? await bulkDeletePlaces(ids) : await bulkUpdateStatus(ids, action)
 
       if (!result.success) {
-        setError(result.error ?? '처리 실패')
+        toast.error(result.error ?? '처리 실패')
       } else {
         const processed = result.processed ?? ids.length
-        setMessage(summarizeBulkResult({ successes: processed, failures: ids.length - processed }))
+        toast.success(summarizeBulkResult({ successes: processed, failures: ids.length - processed }))
         setSelected(new Set())
       }
     } catch (e) {
-      setError(String((e as Error)?.message ?? e))
+      toast.error(String((e as Error)?.message ?? e))
     }
     setWorking(false)
     router.refresh()
+  }
+
+  async function confirmBulkDelete() {
+    setConfirmDeleteOpen(false)
+    await executeBulk('delete', Array.from(selected))
   }
 
   const selectedCount = selected.size
@@ -133,8 +146,14 @@ export function PlacesTable({ places }: { places: TableRow[] }) {
         </div>
       </div>
 
-      {message && <p className="mb-3 text-sm text-green-700">{message}</p>}
-      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      <ConfirmNameModal
+        open={confirmDeleteOpen}
+        expectedName={BULK_DELETE_CONFIRM_TOKEN}
+        title={`${selectedCount}개 업체 일괄 삭제`}
+        description={`선택된 ${selectedCount}개 업체를 영구 삭제합니다. 되돌릴 수 없습니다.`}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={confirmBulkDelete}
+      />
 
       <div className="space-y-3">
         {places.map((place) => {
@@ -183,7 +202,7 @@ export function PlacesTable({ places }: { places: TableRow[] }) {
               </div>
               <div className="flex items-center gap-3">
                 <StatusPill status={place.status} />
-                <PlaceActions placeId={place.id} status={place.status} />
+                <PlaceActions placeId={place.id} placeName={place.name} status={place.status} />
               </div>
             </div>
           )

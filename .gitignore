@@ -44,3 +44,4 @@ docs/api-key.md
 next-env.d.ts
 
 .vercel
+.gstack/

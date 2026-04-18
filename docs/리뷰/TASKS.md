@@ -243,7 +243,7 @@ TASK 등록 (🔜) → Tests 먼저 (TDD) → 구현 (tests green) → coverage 
 
 ### Milestone 0 — Hotfix
 
-#### T-057h. `citation_results` 코드-DB 정합화 ✅ [GEO]
+## T-057h. `citation_results` 코드-DB 정합화 ✅ [GEO]
 (하네스 호환: T-NNN 형식. 구 명칭 H-01)
 `001_initial_schema.sql` 이 이미 `citation_results` 정의 (prompt_id uuid FK, text[], session_id NOT NULL). Phase 6 의 `016_*` 은 `create table if not exists` 라 noop. 코드만 정합화 필요.
 - [ ] `src/lib/actions/citations.ts` — `cited_sources/places` `string[]`, `session_id` required
@@ -253,19 +253,19 @@ TASK 등록 (🔜) → Tests 먼저 (TDD) → 구현 (tests green) → coverage 
 
 ### Milestone 1 — 성능·UX 패치 (1주)
 
-#### T-058. Admin Link prefetch 비활성화 ✅ [Ops]
+## T-058. Admin Link prefetch 비활성화 ✅ [Ops]
 속도 진단 원인 1 — `_rsc` 6회 반복(2.7초).
 - [ ] admin 전수 `<Link prefetch={false}>`, `AdminNavLink` 공용 추출
 - **DoD**: admin 이동 시 `_rsc` prefetch 0건
 
-#### T-059. Production 빌드 검증 ✅ [Ops]
+## T-059. Production 빌드 검증 ✅ [Ops]
 속도 진단 원인 2 — turbopack 청크 의심.
 - [ ] Vercel build logs 에서 `next build` + `NODE_ENV=production` 확인
 - [ ] `/admin/*` 에 `runtime = 'nodejs'` 명시
 - [ ] bundle analyzer 리포트
 - **DoD**: 청크에 turbopack 흔적 없음
 
-#### T-060. GA `lazyOnload` ✅ [Ops]
+## T-060. GA `lazyOnload` ✅ [Ops]
 현재 `analytics.tsx` = `afterInteractive`.
 - [ ] `<Script strategy="lazyOnload">` 로 변경
 - [ ] `/admin/*`, `/owner/*` 에서 Analytics 제외
@@ -273,13 +273,13 @@ TASK 등록 (🔜) → Tests 먼저 (TDD) → 구현 (tests green) → coverage 
 
 ### Milestone 2 — IA 재구성 + 대시보드 (2주)
 
-#### T-061. 좌측 사이드바 + 글로벌 바 🔜 [Admin]
+## T-061. 좌측 사이드바 + 글로벌 바 ✅ [Admin]
 - [ ] `components/admin/sidebar.tsx` (접기, localStorage persist)
 - [ ] `components/admin/topbar.tsx` (⌘K 자리 · 검수 뱃지 · 결제 실패 뱃지)
 - [ ] `admin/layout.tsx` 리팩터, shadcn `--primary` Place Green 오버라이드
 - **DoD**: 모든 admin 페이지 동일 섀시 + 풀폭
 
-#### T-062. `/admin/review` 검수 큐 v1 🔜 [Admin]
+## T-062. `/admin/review` 검수 큐 v1 🔜 [Admin]
 설계안 §3.2 — 가장 자주 쓰는 페이지.
 - [ ] 좌측 pending 리스트 + 우측 diff 분할 뷰
 - [ ] 단축키 `⌘↵`/`⌘⌫`/`J/K`
@@ -287,47 +287,47 @@ TASK 등록 (🔜) → Tests 먼저 (TDD) → 구현 (tests green) → coverage 
 - [ ] `approvePlace` / `rejectPlace` 서버 액션 — 기존 `bulk-places` + audit 로깅 재사용
 - **DoD**: 키보드만으로 pending 처리 가능
 
-#### T-063. 저장 토스트 + 파괴 액션 모달 🔜 [Admin]
+## T-063. 저장 토스트 + 파괴 액션 모달 ✅ [Admin]
 - [ ] `sonner` 도입 또는 `useToast` hook
 - [ ] `<ConfirmNameModal>` — 삭제·대량 비활성
 - [ ] `window.confirm()` 2곳 교체
 - **DoD**: 파괴 액션은 업체명 타이핑 일치 강제
 
-#### T-064. `/admin` 운영 대시보드 🔜 [Admin]
+## T-064. `/admin` 운영 대시보드 🔜 [Admin]
 현재 2-link 런처.
 - [ ] 액션 카드 4개 (검수 대기 / 발행 예정 / 실패 작업 / 결제 실패·만료임박)
 - [ ] 중단 지표 (AI 크롤러 추이 · MRR · 결제 실패)
 - [ ] 하단 활동 로그 (T-068 actor_type 아이콘)
 - **DoD**: "오늘 해야 할 일" 한 장 파악
 
-#### T-065. Places 목록 보강 (증분) 🔜 [Admin]
+## T-065. Places 목록 보강 (증분) 🔜 [Admin]
 T-046 위에 증분. 필터·URL 쿼리·일괄 액션은 완료됨.
 - [ ] 컬럼 추가: 구독상태(T-070 조인), AI 노출 점수(`quality_score`)
 - [ ] 필터 `subscription` · `min_quality_score`
 - **DoD**: `?subscription=paid&min_quality_score=70` 동작
 
-#### T-066. `/admin/places/[id]` 탭 + 체크리스트 🔜 [Admin]
+## T-066. `/admin/places/[id]` 탭 + 체크리스트 🔜 [Admin]
 현재 145줄 flat form.
 - [ ] 탭: 개요/서비스/FAQ/태그/블로그/SEO/자동화 이력/변경 로그
 - [ ] 자동저장 + 토스트 + diff (`recordUpdateDiffs` 재사용)
 - [ ] 우측 사이드바 체크리스트 — `place-validation.ts` 재활용
 - **DoD**: 완성도 90점 미만 업체는 경고 배너
 
-#### T-067. SC 병렬화 + `cache()` 🔜 [Ops]
+## T-067. SC 병렬화 + `cache()` 🔜 [Ops]
 속도 진단 원인 4 — DOM Ready 1.8s 직렬.
 - [ ] `/admin/places` places query `Promise.all`
 - [ ] admin 내부 `requireAuth()` 중복 제거 (middleware 단일화)
 - [ ] `React.cache()` + `loading.tsx` Suspense
 - **DoD**: `/admin/places` DOM Ready < 600ms
 
-#### T-068. `place_audit_log.actor_type` 🔜 [Ops]
+## T-068. `place_audit_log.actor_type` 🔜 [Ops]
 T-055 누락분.
 - [ ] `018_audit_actor_type.sql` — `alter table place_audit_log add column actor_type text default 'human'`
 - [ ] `recordAudit`/`recordUpdateDiffs` 에 `actorType?: 'human' | 'pipeline'`
 - [ ] 파이프라인 호출 지점 `actorType='pipeline'`
 - **DoD**: 변경 로그 UI 에 사람/로봇 구분
 
-#### T-069. `places.field_meta` JSONB 🔜 [GEO][Admin]
+## T-069. `places.field_meta` JSONB 🔜 [GEO][Admin]
 필드별 출처·신뢰도 메타. **1 컬럼 통합**.
 - [ ] `019_place_field_meta.sql` — `alter table places add column field_meta jsonb`
 - [ ] 구조: `{ description: { source, confidence, generated_at }, services: {...} }`
@@ -337,108 +337,108 @@ T-055 누락분.
 
 ### Milestone 3 — 결제·구독 (2주)
 
-#### T-070. 결제 스키마 🔜 [Billing]
+## T-070. 결제 스키마 🔜 [Billing]
 - [ ] `020_billing.sql`: `customers / subscriptions / payments / billing_keys`
 - [ ] RLS: service role 전용, 사장님 포털에서 본인 구독 select
 - [ ] `places.customer_id` 연결
 - **DoD**: 마이그레이션 + 타입 동기화
 
-#### T-071. PG 어댑터 + 포트원 🔜 [Billing]
+## T-071. PG 어댑터 + 포트원 🔜 [Billing]
 - [ ] `src/lib/billing/adapter.ts` — `issueBillingKey / chargeOnce / scheduleNext / revoke`
 - [ ] `portone.ts` 1차 구현 + mock 폴백 (notify 패턴)
 - [ ] 테스트: 성공/실패/만료/한도초과
 - **DoD**: 실 PG 키 없이도 테스트 완결
 
-#### T-072. 결제 정책 문구 단일 소스 🔜 [Billing]
+## T-072. 결제 정책 문구 단일 소스 🔜 [Billing]
 "카드매출전표가 부가세 적격증빙…" 4곳 일괄.
 - [ ] `src/lib/billing/policy.ts` 상수
 - [ ] 렌더: 결제 / 약관 / 영수증 / FAQ
 - **DoD**: 4곳 동일 상수 import
 
-#### T-073. `/admin/billing/failures` 결제 실패 큐 🔜 [Billing]
+## T-073. `/admin/billing/failures` 결제 실패 큐 🔜 [Billing]
 - [ ] PG 응답코드 한국어 매핑 + 재시도 스케줄(+1d/+3d/+7d)
 - [ ] 3회 실패 → `suspended`
 - [ ] 알림: `payment.failed`, `payment.retry_exhausted` (notify/* 재사용)
 - **DoD**: 실패 1건 4영업일 이내 재시도 3회
 
-#### T-074. 카드 만료임박 자동 안내 🔜 [Billing]
+## T-074. 카드 만료임박 자동 안내 🔜 [Billing]
 - [ ] Vercel Cron 매일 스캔
 - [ ] 30일/7일 이내 만료 고객 이메일 (`billing.expiry_warning`)
 - **DoD**: 만료 30/7일 전 각 1회 발송
 
 ### Milestone 4 — 자동화·콘텐츠 (6주)
 
-#### T-075. Regenerate 공통 컴포넌트 🔜 [GEO][Admin]
+## T-075. Regenerate 공통 컴포넌트 🔜 [GEO][Admin]
 현재 `CandidatePicker` register 전용.
 - [ ] `<RegenerateButton field options={tone,length,keywords}>`
 - [ ] T-052 `generateContentCandidates` 재사용
 - [ ] T-066 탭 + T-078 블로그 편집기에 삽입
 - **DoD**: description/services/faqs/tags 재생성 가능
 
-#### T-076. `/admin/pipelines` 작업 모니터링 🔜 [Ops][Admin]
+## T-076. `/admin/pipelines` 작업 모니터링 🔜 [Ops][Admin]
 - [ ] `021_pipeline_jobs.sql` — job_type/status/input_payload/error/retried
 - [ ] UI: 실패 필터 + 재시도 + 페이로드
 - [ ] API 쿼터 표시 (네이버/카카오/Google)
 - [ ] LLM 토큰·비용은 **기존 `ai_generations`(013) 재사용** — 신규 테이블 금지
 - **DoD**: 실패 가시화 + 재시도 원클릭
 
-#### T-077. 프롬프트 템플릿 버전 관리 🔜 [GEO]
+## T-077. 프롬프트 템플릿 버전 관리 🔜 [GEO]
 - [ ] `022_prompt_templates.sql` — `(category, version, system_prompt, user_template, active)`
 - [ ] list/upsert/activate 서버 액션
 - [ ] A/B 집계: **기존 `ai_generations` 에 `prompt_template_id` 컬럼 1개 추가**
 - **DoD**: 버전별 저장·활성화·통과율 비교
 
-#### T-078. 블로그 캘린더 + 검수 큐 🔜 [SEO][GEO]
+## T-078. 블로그 캘린더 + 검수 큐 🔜 [SEO][GEO]
 - [ ] `/admin/blog` 월/주 캘린더
 - [ ] 토픽 큐 — `blog_posts`(004) `status` 재사용
 - [ ] 편집기: 마크다운 + 프리뷰 + 내부링크
 - [ ] T-062 `/admin/review` 에 블로그 타입 탭 추가 (별도 라우트 금지)
 - **DoD**: 주간 발행 캘린더로 조율
 
-#### T-079. 자동발행 안전장치 🔜 [Ops]
+## T-079. 자동발행 안전장치 🔜 [Ops]
 - [ ] `023_autopublish_policy.sql` — `categories.autopublish_enabled` + `review_delay_hours default 24`
 - [ ] 24시간 이내 생성물은 pending 유지
 - **DoD**: 카테고리별 ON/OFF + 유예 설정
 
-#### T-080. 수동 등록 → 자동 파이프라인 🔜 [Admin]
+## T-080. 수동 등록 → 자동 파이프라인 🔜 [Admin]
 - [ ] `/admin/register` "AI 자동완성 등록" 버튼 → `pipeline_jobs` insert
 - [ ] 수집 → 생성 → 검수 통합 테스트
 - **DoD**: 업체명 한 줄 입력 → pending 진입
 
 ### Milestone 5 — 분석·고도화 (10주+)
 
-#### T-081. `/admin/seo` AI 봇 로그 🔜 [GEO]
+## T-081. `/admin/seo` AI 봇 로그 🔜 [GEO]
 추가리뷰 §10 — "증명 도구가 제품의 핵심".
 - [ ] 미들웨어에서 AI 봇 UA 감지 → `bot_visits` insert
 - [ ] GPTBot/ClaudeBot/PerplexityBot/CCBot/Google-Extended 10+ 종
 - [ ] 집계는 **기존 `citations/aggregate.ts` 패턴 재사용**
 - **DoD**: 월 1회 리포트 자동 생성 기반 확보
 
-#### T-082. `/admin/customers` 라이프사이클·LTV·코호트 🔜 [Billing]
+## T-082. `/admin/customers` 라이프사이클·LTV·코호트 🔜 [Billing]
 - [ ] 구독 상태별 보기 + LTV
 - [ ] 월별 코호트 리텐션
 - [ ] 해지 사유 태그 집계
 - **DoD**: 코호트 리텐션 관측 가능
 
-#### T-083. 커맨드 팔레트 (⌘K) 🔜 [Admin]
+## T-083. 커맨드 팔레트 (⌘K) 🔜 [Admin]
 - [ ] `cmdk` 도입
 - [ ] 업체 검색 · 페이지 이동 · 최근 본 항목 · 검수 큐
 - **DoD**: 전역 ⌘K 검색
 
-#### T-084. A/B 프롬프트 실험 🔜 [GEO]
+## T-084. A/B 프롬프트 실험 🔜 [GEO]
 - [ ] T-077 버전 ↔ T-027 `quality_score` 연결
 - [ ] 버전별 평균 스코어 + 통과율 비교 UI
 - **DoD**: "v3 대비 +12%" 관측 가능
 
 ### 컴플라이언스 (병렬)
 
-#### T-CP1. 의료 카테고리 정책 가드 🔜 [Compliance]
+## T-CP1. 의료 카테고리 정책 가드 🔜 [Compliance]
 추가리뷰 §4 리스크 2.
 - [ ] 피부과·치과·한의원은 가격 "상담 문의" 강제 (T-048 확장)
 - [ ] 시술명 자동 생성 시 의료광고 금칙어 필터
 - [ ] 참고 문구 강제 표시 (T-004 재사용)
 
-#### T-CP2. 리뷰 저작권 안전 🔜 [Compliance]
+## T-CP2. 리뷰 저작권 안전 🔜 [Compliance]
 추가리뷰 §4 리스크 3.
 - [ ] Google/Naver 리뷰 본문 스크래핑 금지 — URL + 점수만
 - [ ] `review_summaries.sampleQuote` 패러프레이즈 여부 플래그로 재정의
