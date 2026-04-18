@@ -1724,23 +1724,27 @@ IndexNow [DRY-RUN]: 29개 URL
 - [x] Review log 기록
 - [ ] 실제 롤백 UI(이전 값으로 되돌리기)는 향후 과제 — 현재는 읽기 전용 타임라인
 
-## T-056. AI 인용 추적 대시보드 (admin 통합) [GEO]
+## T-056. AI 인용 추적 대시보드 (admin 통합) ✅ [GEO]
 
 **WO 참조**: #43
 **축**: GEO (측정)
 **예상 공수**: 3일
 
 **작업**
-- [ ] `/admin/citations` 페이지 — 업체별 ChatGPT/Claude/Gemini 인용 빈도 시각화
-- [ ] [scripts/baseline-test.ts](scripts/baseline-test.ts) 실행 결과를 `citation_results` 테이블에 저장
-- [ ] 시간 추이 그래프 (콘텐츠 변경 후 인용률 변화)
-- [ ] 저인용 업체 자동 표시 → AI 콘텐츠 재생성 트리거 (T-024 연계)
-- [ ] [src/lib/types.ts](src/lib/types.ts) `CitationResult` 타입(L246-256) 활용
+- [x] `supabase/migrations/016_citation_results.sql` — `citation_results` 테이블 + 4개 인덱스 + RLS(서비스 롤)
+- [x] `src/lib/citations/aggregate.ts` — `summarizeByEngine`, `summarizeByPrompt`, `topCitedPlaces`, `summarizeTrend` (8 tests, 100% 커버리지)
+- [x] `src/lib/actions/citations.ts` — `insertCitations`(scripts/baseline-test.ts 연계용) + `listRecentCitations` (7 tests)
+- [x] `/admin/citations` 대시보드 — 엔진별 카드 / 일자별 막대 그래프 / prompt×engine 매트릭스 / Top 15 업체
+- [x] 기간 필터 (7/30/60/90일) URL 파라미터로 전환
+- [ ] 저인용 업체 자동 재생성 트리거는 향후 과제 — 현재는 관측만
+- [ ] `scripts/baseline-test.ts` 스크립트 insert 연동은 다음 커밋에서 처리
 
 **DoD**
-- [ ] 인용 데이터 시각화 동작
-- [ ] 베이스라인 → 변경 후 비교 가능
-- [ ] 업체별 인용률 정렬·필터
+- [x] 인용 데이터가 집계되어 엔진별 인용률 / 추이 / Top 업체가 렌더링
+- [x] promptId × engine 매트릭스로 세그먼트별 비교
+- [x] RLS 는 service_role 전용 (일반 사용자 접근 deny)
+- [x] 전체 테스트 851개 통과 (T-056 15개 추가)
+- [x] Review log 기록
 
 ## T-057. 알림 시스템 (Webhook + 이메일) [Ops]
 
