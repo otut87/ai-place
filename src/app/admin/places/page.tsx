@@ -2,7 +2,7 @@ import { requireAuth } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
 import { getCities, getSectors, getCategories } from '@/lib/data'
 import { parseListParams, clampPage, buildRange } from '@/lib/admin/places-query'
-import Link from 'next/link'
+import { AdminLink } from '@/components/admin/admin-link'
 import { PlacesFilterForm } from './places-filter-form'
 import { PlacesPagination } from './places-pagination'
 import { PlacesTable, type TableRow } from './places-table'
@@ -72,12 +72,12 @@ export default async function AdminPlacesPage({
             총 {total.toLocaleString()}개 · {safePage}/{totalPages} 페이지
           </p>
         </div>
-        <Link
+        <AdminLink
           href="/admin/register"
           className="h-10 px-4 inline-flex items-center rounded-lg bg-[#222222] text-white text-sm font-medium"
         >
           새 업체 등록
-        </Link>
+        </AdminLink>
       </div>
 
       <PlacesFilterForm

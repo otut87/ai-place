@@ -2,7 +2,7 @@
 import { requireOwnerUser } from '@/lib/owner/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { canOwnerEdit } from '@/lib/owner/permissions'
-import Link from 'next/link'
+import { AdminLink } from '@/components/admin/admin-link'
 import { OwnerEditForm } from './owner-edit-form'
 
 interface Params {
@@ -40,7 +40,7 @@ export default async function OwnerPlaceEditPage({ params }: Params) {
     <div className="mx-auto max-w-2xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">{row.name} 편집</h1>
-        <Link href="/owner" className="text-xs text-[#4c1d95] underline">← 내 업체</Link>
+        <AdminLink href="/owner" className="text-xs text-[#4c1d95] underline">← 내 업체</AdminLink>
       </div>
       <p className="mb-4 text-xs text-[#6a6a6a]">
         공개 페이지: /{row.city}/{row.category}/{row.slug} · 상태: {row.status}

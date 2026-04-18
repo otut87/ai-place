@@ -1,6 +1,6 @@
 // T-054 — 사장님 셀프 포털 홈.
 // 로그인된 사용자 본인 소유 업체 목록. 각 업체의 편집 페이지로 이동.
-import Link from 'next/link'
+import { AdminLink } from '@/components/admin/admin-link'
 import { requireOwnerUser } from '@/lib/owner/auth'
 import { listOwnerPlaces } from '@/lib/actions/owner-places'
 
@@ -36,12 +36,12 @@ export default async function OwnerPortalPage() {
                   /{p.city}/{p.category}/{p.slug}
                 </p>
               </div>
-              <Link
+              <AdminLink
                 href={`/owner/places/${p.id}`}
                 className="text-xs text-[#4c1d95] underline"
               >
                 편집
-              </Link>
+              </AdminLink>
             </li>
           ))}
         </ul>

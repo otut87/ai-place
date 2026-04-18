@@ -1,7 +1,7 @@
 // T-055 — 업체별 감사 로그 타임라인
 import { listAuditForPlace } from '@/lib/actions/audit-places'
 import { summarizeAction, type AuditAction } from '@/lib/admin/audit'
-import Link from 'next/link'
+import { AdminLink } from '@/components/admin/admin-link'
 
 interface Params {
   params: Promise<{ id: string }>
@@ -17,7 +17,7 @@ export default async function PlaceHistoryPage({ params }: Params) {
     <div className="mx-auto max-w-3xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">변경 이력</h1>
-        <Link href="/admin/places" className="text-xs text-[#4c1d95] underline">← 목록으로</Link>
+        <AdminLink href="/admin/places" className="text-xs text-[#4c1d95] underline">← 목록으로</AdminLink>
       </div>
 
       {entries.length === 0 ? (

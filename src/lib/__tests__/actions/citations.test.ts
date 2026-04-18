@@ -40,26 +40,31 @@ describe('insertCitations', () => {
     vi.mocked(getAdminClient).mockReturnValueOnce(null)
     const { insertCitations } = await import('@/lib/actions/citations')
     const r = await insertCitations([{
-      promptId: 'p', engine: 'chatgpt', response: '', aiplaceCited: false,
+      promptId: 'p', engine: 'chatgpt', sessionId: 's-1', response: '', aiplaceCited: false,
     }])
     expect(r.success).toBe(false)
   })
 
-  it('정상 insert', async () => {
+  it('정상 insert — sessionId 와 text[] 페이로드 전송', async () => {
     mockInsert.mockResolvedValueOnce({ error: null, count: 2 })
     const { insertCitations } = await import('@/lib/actions/citations')
     const r = await insertCitations([
-      { promptId: 'a', engine: 'chatgpt', response: 'x', aiplaceCited: true, citedPlaces: ['닥터에버스'] },
-      { promptId: 'b', engine: 'claude', response: 'y', aiplaceCited: false },
+      { promptId: 'a', engine: 'chatgpt', sessionId: 'run-1', response: 'x', aiplaceCited: true, citedPlaces: ['닥터에버스'] },
+      { promptId: 'b', engine: 'claude', sessionId: 'run-1', response: 'y', aiplaceCited: false },
     ])
     expect(r.success).toBe(true)
     expect(r.inserted).toBe(2)
+    const payload = mockInsert.mock.calls[0][0] as Array<Record<string, unknown>>
+    // 001 스키마 정합성: session_id 는 string 이어야 하고 cited_* 는 array
+    expect(typeof payload[0].session_id).toBe('string')
+    expect(Array.isArray(payload[0].cited_sources)).toBe(true)
+    expect(Array.isArray(payload[0].cited_places)).toBe(true)
   })
 
   it('DB 실패 → error', async () => {
     mockInsert.mockResolvedValueOnce({ error: { message: 'x' }, count: 0 })
     const { insertCitations } = await import('@/lib/actions/citations')
-    const r = await insertCitations([{ promptId: 'a', engine: 'chatgpt', response: '', aiplaceCited: false }])
+    const r = await insertCitations([{ promptId: 'a', engine: 'chatgpt', sessionId: 's', response: '', aiplaceCited: false }])
     expect(r.success).toBe(false)
   })
 })
@@ -81,7 +86,7 @@ describe('listRecentCitations', () => {
   it('정상 반환', async () => {
     mockSelect.mockResolvedValueOnce({
       data: [
-        { id: '1', prompt_id: 'a', engine: 'chatgpt', response: '', cited_sources: [], cited_places: [], aiplace_cited: false, tested_at: '2026-04-10T00:00:00Z' },
+        { id: '1', prompt_id: 'a', engine: 'chatgpt', session_id: 's', response: '', cited_sources: [], cited_places: [], aiplace_cited: false, tested_at: '2026-04-10T00:00:00Z' },
       ],
       error: null,
     })
@@ -89,5 +94,6 @@ describe('listRecentCitations', () => {
     const r = await listRecentCitations(7, 100)
     expect(r).toHaveLength(1)
     expect(r[0].prompt_id).toBe('a')
+    expect(r[0].session_id).toBe('s')
   })
 })

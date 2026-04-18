@@ -1,23 +1,17 @@
--- 016: citation_results — AI 인용 추적 (T-056)
--- 목적: scripts/baseline-test.ts 가 각 AI 엔진에 프롬프트를 던져 얻은 응답을
---        저장하고, 시간 추이·업체별 인용 빈도를 어드민에서 관찰한다.
+-- 016: citation_results 보조 인덱스 (H-01)
+-- 목적: 001_initial_schema.sql 이 이미 citation_results 테이블을 생성했으므로
+--        중복 생성 금지. 대시보드 조회·필터 패턴에 필요한 인덱스만 추가한다.
+--
+-- 001 스키마 (참고):
+--   prompt_id uuid NOT NULL REFERENCES test_prompts(id)
+--   cited_sources text[], cited_places text[]  — jsonb 아님
+--   session_id text NOT NULL
 
-create table if not exists citation_results (
-  id uuid primary key default gen_random_uuid(),
-  prompt_id text not null,                     -- 'cheonan-dermatology-top', 'cheonan-pet-hospital', ...
-  engine text not null,                        -- 'chatgpt' | 'claude' | 'gemini'
-  session_id text,                             -- 같은 세션·runId 를 그룹핑
-  response text not null,                      -- AI 전체 응답
-  cited_sources jsonb,                         -- string[] URL 목록
-  cited_places jsonb,                          -- string[] 언급 업체명
-  aiplace_cited boolean not null default false,
-  tested_at timestamptz not null default now()
-);
+-- 최근 N일 슬라이스 성능 — created_at DESC 스캔
+create index if not exists idx_citation_results_tested_at_desc
+  on citation_results(tested_at desc);
 
-create index if not exists idx_citations_prompt on citation_results(prompt_id);
-create index if not exists idx_citations_engine on citation_results(engine);
-create index if not exists idx_citations_tested_at on citation_results(tested_at desc);
-create index if not exists idx_citations_aiplace_cited on citation_results(aiplace_cited) where aiplace_cited;
-
-alter table citation_results enable row level security;
--- service role 만 읽기/쓰기 — 일반 사용자 기본 deny.
+-- aiplace_cited = true 만 보는 쿼리(대시보드 성공 건) 용 partial 인덱스
+create index if not exists idx_citation_results_aiplace_cited_partial
+  on citation_results(tested_at desc)
+  where aiplace_cited;

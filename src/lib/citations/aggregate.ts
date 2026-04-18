@@ -6,9 +6,11 @@ export type AIEngine = 'chatgpt' | 'claude' | 'gemini'
 
 export interface CitationRow {
   id: string
+  // 001 스키마: uuid FK → test_prompts.id
   prompt_id: string
   engine: AIEngine
-  session_id?: string | null
+  // 001 스키마: NOT NULL
+  session_id: string
   response: string
   cited_sources: string[]
   cited_places: string[]

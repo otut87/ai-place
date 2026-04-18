@@ -8,10 +8,13 @@ import { getAdminClient } from '@/lib/supabase/admin-client'
 import type { AIEngine, CitationRow } from '@/lib/citations/aggregate'
 
 export interface CitationInsert {
+  // 001 스키마: prompt_id 는 test_prompts.id 를 가리키는 uuid
   promptId: string
   engine: AIEngine
-  sessionId?: string
+  // 001 스키마: session_id NOT NULL — batch 호출 전 runId 생성 필수
+  sessionId: string
   response: string
+  // 001 스키마: text[] NOT NULL default '{}' — nullable 허용 안 함
   citedSources?: string[]
   citedPlaces?: string[]
   aiplaceCited: boolean
@@ -27,7 +30,7 @@ export async function insertCitations(rows: CitationInsert[]): Promise<{ success
   const payload = rows.map(r => ({
     prompt_id: r.promptId,
     engine: r.engine,
-    session_id: r.sessionId ?? null,
+    session_id: r.sessionId,
     response: r.response,
     cited_sources: r.citedSources ?? [],
     cited_places: r.citedPlaces ?? [],

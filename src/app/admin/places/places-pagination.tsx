@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { AdminLink } from '@/components/admin/admin-link'
 import { buildPageList } from '@/lib/admin/places-query'
 
 interface Props {
@@ -30,13 +30,13 @@ export function PlacesPagination({ currentPage, totalPages, baseParams }: Props)
 
   return (
     <nav className="mt-8 flex items-center justify-center gap-1" aria-label="페이지네이션">
-      <Link
+      <AdminLink
         href={hrefFor(prevPage, baseParams)}
         className={`${baseBtn} ${currentPage === 1 ? disabled : inactive}`}
         aria-disabled={currentPage === 1}
       >
         이전
-      </Link>
+      </AdminLink>
 
       {items.map((item, idx) =>
         item === 'ellipsis' ? (
@@ -44,24 +44,24 @@ export function PlacesPagination({ currentPage, totalPages, baseParams }: Props)
             …
           </span>
         ) : (
-          <Link
+          <AdminLink
             key={item}
             href={hrefFor(item, baseParams)}
             aria-current={item === currentPage ? 'page' : undefined}
             className={`${baseBtn} ${item === currentPage ? active : inactive}`}
           >
             {item}
-          </Link>
+          </AdminLink>
         ),
       )}
 
-      <Link
+      <AdminLink
         href={hrefFor(nextPage, baseParams)}
         className={`${baseBtn} ${currentPage === totalPages ? disabled : inactive}`}
         aria-disabled={currentPage === totalPages}
       >
         다음
-      </Link>
+      </AdminLink>
     </nav>
   )
 }

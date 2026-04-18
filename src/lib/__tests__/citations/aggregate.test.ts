@@ -12,6 +12,7 @@ function row(over: Partial<CitationRow> = {}): CitationRow {
     id: 'x',
     prompt_id: 'cheonan-dermatology',
     engine: 'chatgpt',
+    session_id: 'run-test',
     response: '',
     cited_sources: [],
     cited_places: [],
