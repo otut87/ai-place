@@ -320,14 +320,14 @@ T-046 위에 증분. 필터·URL 쿼리·일괄 액션은 완료됨.
 - [ ] `React.cache()` + `loading.tsx` Suspense
 - **DoD**: `/admin/places` DOM Ready < 600ms
 
-## T-068. `place_audit_log.actor_type` 🔜 [Ops]
+## T-068. `place_audit_log.actor_type` ✅ [Ops]
 T-055 누락분.
 - [ ] `018_audit_actor_type.sql` — `alter table place_audit_log add column actor_type text default 'human'`
 - [ ] `recordAudit`/`recordUpdateDiffs` 에 `actorType?: 'human' | 'pipeline'`
 - [ ] 파이프라인 호출 지점 `actorType='pipeline'`
 - **DoD**: 변경 로그 UI 에 사람/로봇 구분
 
-## T-069. `places.field_meta` JSONB 🔜 [GEO][Admin]
+## T-069. `places.field_meta` JSONB ✅ [GEO][Admin]
 필드별 출처·신뢰도 메타. **1 컬럼 통합**.
 - [ ] `019_place_field_meta.sql` — `alter table places add column field_meta jsonb`
 - [ ] 구조: `{ description: { source, confidence, generated_at }, services: {...} }`

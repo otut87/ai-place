@@ -1,7 +1,8 @@
-// T-055 — 업체별 감사 로그 타임라인
+// T-055 — 업체별 감사 로그 타임라인. T-068 로 actor_type 아이콘 추가.
 import { listAuditForPlace } from '@/lib/actions/audit-places'
-import { summarizeAction, type AuditAction } from '@/lib/admin/audit'
+import { summarizeAction, actorTypeLabel, type AuditAction, type ActorType } from '@/lib/admin/audit'
 import { AdminLink } from '@/components/admin/admin-link'
+import { User, Bot, Cog } from 'lucide-react'
 
 interface Params {
   params: Promise<{ id: string }>
@@ -29,7 +30,8 @@ export default async function PlaceHistoryPage({ params }: Params) {
           {entries.map(e => (
             <li key={e.id} className="rounded-lg border border-[#e5e7eb] bg-white p-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-[#222222]">
+                <span className="flex items-center gap-2 font-medium text-[#222222]">
+                  <ActorIcon type={e.actor_type} />
                   {summarizeAction(e.action as AuditAction, {
                     field: e.field ?? undefined,
                     before: e.before_value,
@@ -51,5 +53,28 @@ export default async function PlaceHistoryPage({ params }: Params) {
         </ol>
       )}
     </div>
+  )
+}
+
+function ActorIcon({ type }: { type: ActorType }) {
+  const base = 'inline-flex h-5 w-5 items-center justify-center rounded-full'
+  if (type === 'pipeline') {
+    return (
+      <span className={`${base} bg-[#ede9fe] text-[#4c1d95]`} title={actorTypeLabel(type)}>
+        <Bot className="h-3 w-3" />
+      </span>
+    )
+  }
+  if (type === 'system') {
+    return (
+      <span className={`${base} bg-[#f3f4f6] text-[#484848]`} title={actorTypeLabel(type)}>
+        <Cog className="h-3 w-3" />
+      </span>
+    )
+  }
+  return (
+    <span className={`${base} bg-[#e6f7f1] text-[#00a67c]`} title={actorTypeLabel(type)}>
+      <User className="h-3 w-3" />
+    </span>
   )
 }

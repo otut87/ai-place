@@ -6,8 +6,10 @@
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import {
   diffUpdate,
+  normalizeActorType,
   type AuditAction,
   type AuditInsert,
+  type ActorType,
   type FieldDiff,
 } from '@/lib/admin/audit'
 
@@ -15,6 +17,7 @@ export interface AuditLogEntry {
   id: string
   place_id: string | null
   actor_id: string | null
+  actor_type: ActorType
   action: AuditAction
   field: string | null
   before_value: unknown
@@ -30,6 +33,7 @@ export async function recordAudit(entry: AuditInsert): Promise<{ success: boolea
   const row = {
     place_id: entry.placeId,
     actor_id: entry.actorId,
+    actor_type: normalizeActorType(entry.actorType),
     action: entry.action,
     field: entry.field ?? null,
     before_value: entry.before ?? null,
@@ -53,6 +57,7 @@ export async function recordUpdateDiffs(
   before: Record<string, unknown>,
   after: Record<string, unknown>,
   reason?: string,
+  actorType?: ActorType,
 ): Promise<{ success: boolean; recorded: number; error?: string }> {
   const diffs: FieldDiff[] = diffUpdate(before, after)
   if (diffs.length === 0) return { success: true, recorded: 0 }
@@ -60,9 +65,11 @@ export async function recordUpdateDiffs(
   const supabase = getAdminClient()
   if (!supabase) return { success: false, recorded: 0, error: 'Admin 클라이언트 초기화 실패' }
 
+  const normalizedActor = normalizeActorType(actorType)
   const rows = diffs.map(d => ({
     place_id: placeId,
     actor_id: actorId,
+    actor_type: normalizedActor,
     action: d.field === 'status' ? 'status' : 'update',
     field: d.field,
     before_value: d.before,
@@ -84,7 +91,7 @@ export async function listAuditForPlace(placeId: string, limit = 50): Promise<Au
   if (!supabase) return []
   const { data, error } = await supabase
     .from('place_audit_log')
-    .select('id, place_id, actor_id, action, field, before_value, after_value, reason, created_at')
+    .select('id, place_id, actor_id, actor_type, action, field, before_value, after_value, reason, created_at')
     .eq('place_id', placeId)
     .order('created_at', { ascending: false })
     .limit(limit)

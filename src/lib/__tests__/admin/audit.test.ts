@@ -95,3 +95,45 @@ describe('AUDIT_ACTIONS 상수', () => {
     expect(AUDIT_ACTIONS).toEqual(['create', 'update', 'status', 'delete', 'restore'])
   })
 })
+
+// T-068: actor_type
+import {
+  ACTOR_TYPES,
+  isActorType,
+  normalizeActorType,
+  actorTypeLabel,
+  type ActorType,
+} from '@/lib/admin/audit'
+
+describe('ACTOR_TYPES / isActorType', () => {
+  it('3종 포함', () => {
+    expect(ACTOR_TYPES).toEqual(['human', 'pipeline', 'system'])
+  })
+  it('화이트리스트 판별', () => {
+    expect(isActorType('human')).toBe(true)
+    expect(isActorType('pipeline')).toBe(true)
+    expect(isActorType('bot')).toBe(false)
+    expect(isActorType(undefined)).toBe(false)
+  })
+})
+
+describe('normalizeActorType', () => {
+  it('허용 값은 그대로', () => {
+    expect(normalizeActorType('pipeline')).toBe('pipeline')
+  })
+  it('잘못된 값은 human 으로 폴백', () => {
+    expect(normalizeActorType('bogus')).toBe('human')
+    expect(normalizeActorType(undefined)).toBe('human')
+    expect(normalizeActorType(null)).toBe('human')
+  })
+})
+
+describe('actorTypeLabel', () => {
+  it('각 타입 한국어 라벨', () => {
+    for (const t of ACTOR_TYPES) {
+      const label = actorTypeLabel(t as ActorType)
+      expect(label).not.toBe('')
+      expect(label).not.toBe(t)
+    }
+  })
+})

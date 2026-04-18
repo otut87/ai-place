@@ -96,10 +96,34 @@ export function summarizeAction(
   }
 }
 
+// T-068: 변경 주체 종류. 'human' = 사람 어드민, 'pipeline' = 자동화 파이프라인,
+// 'system' = 크론·웹훅 등. 기본값은 'human' (마이그레이션 default).
+export const ACTOR_TYPES = ['human', 'pipeline', 'system'] as const
+export type ActorType = (typeof ACTOR_TYPES)[number]
+
+const ACTOR_TYPE_SET: ReadonlySet<string> = new Set(ACTOR_TYPES)
+
+export function isActorType(value: unknown): value is ActorType {
+  return typeof value === 'string' && ACTOR_TYPE_SET.has(value)
+}
+
+export function normalizeActorType(value: unknown): ActorType {
+  return isActorType(value) ? value : 'human'
+}
+
+export function actorTypeLabel(type: ActorType): string {
+  switch (type) {
+    case 'human': return '사람'
+    case 'pipeline': return '자동화'
+    case 'system': return '시스템'
+  }
+}
+
 export interface AuditInsert {
   placeId: string | null
   actorId: string | null
   action: AuditAction
+  actorType?: ActorType
   field?: string | null
   before?: unknown
   after?: unknown
