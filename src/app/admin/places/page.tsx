@@ -1,6 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
-import { getCities, getSectors, getCategories } from '@/lib/data'
+import { cachedCities, cachedCategories, cachedSectors } from '@/lib/admin/cached-data'
 import { parseListParams, clampPage, buildRange } from '@/lib/admin/places-query'
 import { AdminLink } from '@/components/admin/admin-link'
 import { PlacesFilterForm } from './places-filter-form'
@@ -17,7 +17,7 @@ export default async function AdminPlacesPage({
   const raw = await searchParams
   const params = parseListParams(raw)
 
-  const [cities, sectors, categories] = await Promise.all([getCities(), getSectors(), getCategories()])
+  const [cities, sectors, categories] = await Promise.all([cachedCities(), cachedSectors(), cachedCategories()])
 
   // sector → categories 매핑 (sector 필터가 설정되면 카테고리도 함께 좁힘)
   let categorySlugsForSector: string[] | null = null

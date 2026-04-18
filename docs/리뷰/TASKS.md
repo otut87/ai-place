@@ -293,7 +293,7 @@ TASK 등록 (🔜) → Tests 먼저 (TDD) → 구현 (tests green) → coverage 
 - [ ] `window.confirm()` 2곳 교체
 - **DoD**: 파괴 액션은 업체명 타이핑 일치 강제
 
-## T-064. `/admin` 운영 대시보드 🔜 [Admin]
+## T-064. `/admin` 운영 대시보드 ✅ [Admin]
 현재 2-link 런처.
 - [ ] 액션 카드 4개 (검수 대기 / 발행 예정 / 실패 작업 / 결제 실패·만료임박)
 - [ ] 중단 지표 (AI 크롤러 추이 · MRR · 결제 실패)
@@ -313,7 +313,7 @@ T-046 위에 증분. 필터·URL 쿼리·일괄 액션은 완료됨.
 - [ ] 우측 사이드바 체크리스트 — `place-validation.ts` 재활용
 - **DoD**: 완성도 90점 미만 업체는 경고 배너
 
-## T-067. SC 병렬화 + `cache()` 🔜 [Ops]
+## T-067. SC 병렬화 + `cache()` ✅ [Ops]
 속도 진단 원인 4 — DOM Ready 1.8s 직렬.
 - [ ] `/admin/places` places query `Promise.all`
 - [ ] admin 내부 `requireAuth()` 중복 제거 (middleware 단일화)
