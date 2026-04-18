@@ -279,7 +279,7 @@ TASK 등록 (🔜) → Tests 먼저 (TDD) → 구현 (tests green) → coverage 
 - [ ] `admin/layout.tsx` 리팩터, shadcn `--primary` Place Green 오버라이드
 - **DoD**: 모든 admin 페이지 동일 섀시 + 풀폭
 
-## T-062. `/admin/review` 검수 큐 v1 🔜 [Admin]
+## T-062. `/admin/review` 검수 큐 v1 ✅ [Admin]
 설계안 §3.2 — 가장 자주 쓰는 페이지.
 - [ ] 좌측 pending 리스트 + 우측 diff 분할 뷰
 - [ ] 단축키 `⌘↵`/`⌘⌫`/`J/K`
