@@ -243,6 +243,9 @@ export async function generatePlaceContent(input: {
   editorialSummary?: string
   placeId?: string          // 텔레메트리용 (DB insert 전이면 null)
   naverSummary?: import('@/lib/ai/haiku-preprocess').NaverSummary
+  // T-052: 후보별 차별화. 다중 후보 생성 시 각 호출에 서로 다른 toneHint 전달.
+  toneHint?: string           // 예: "친근한 어조로", "전문 용어 중심으로"
+  feedback?: string           // 어드민 재생성 피드백: "좀 더 간결하게"
 }): Promise<ActionResult<{
   description: string
   services: Array<{ name: string; description: string; priceRange: string }>
@@ -325,6 +328,8 @@ export async function generatePlaceContent(input: {
     '- 서비스·FAQ·태그는 위 데이터에 실제로 뒷받침되는 것만 생성.',
     '- 네이버 블로그·카페 요약이 있으면 실제 언급 시술·질문을 우선 반영.',
     '- 모든 결과는 한국어.',
+    input.toneHint ? `- 어조 지시: ${input.toneHint}` : '',
+    input.feedback ? `- 어드민 피드백 반영: ${input.feedback}` : '',
   ].filter(Boolean).join('\n')
 
   const categoryKeyword = (() => {

@@ -1636,9 +1636,27 @@ IndexNow [DRY-RUN]: 29개 URL
 - [x] 전체 테스트 743개 통과 (T-051 12개 추가)
 - [x] Review log 기록
 
-## T-052. 다중 후보 LLM 생성 + 어드민 선택 [GEO]
+## T-052. 다중 후보 LLM 생성 + 어드민 선택 ✅ [GEO]
 
 **WO 참조**: #37 — 예상 공수: 6h
+
+**목적**: description 단일 후보를 자동 채택하는 대신, 3개 후보를 병렬 생성하고 어드민이 카드 UI 에서 직접 큐레이션할 수 있도록 한다.
+
+**작업**
+- [x] `src/lib/ai/multi-candidates.ts` — `rankDescriptionCandidates`, `mergeServicePool`, `mergeFaqPool`, `mergeTagPool`, `buildCandidatePool` + `normalizeForDedup`
+- [x] 테스트 13개, 라이브러리 커버리지 **100%**
+- [x] `generatePlaceContent` 에 선택적 `toneHint` / `feedback` 주입 (기존 API 유지)
+- [x] 서버 액션 `src/lib/actions/generate-candidates.ts` — 3종 어조로 병렬 호출 후 풀 병합
+- [x] UI `src/app/admin/register/candidate-picker.tsx` — description 카드 택일 + 서비스/FAQ/태그 체크박스 + 피드백 재생성 입력
+- [x] `/admin/register` 페이지에 "다중 후보 생성" 버튼 + `CandidatePicker` 통합 — 기존 단일 생성 버튼과 공존
+- [x] 누락 태스크 보강: `bulk-places` / `inline-edit-place` / `import-csv-places` 서버 액션 테스트 (18개 추가)
+
+**DoD**
+- [x] description 3개 후보가 품질 스코어 순으로 카드 렌더링 (중복 자동 제거)
+- [x] 서비스·FAQ·태그는 풀 병합 후 체크박스로 큐레이션
+- [x] 재생성 피드백("좀 더 간결하게") 입력 후 재호출 시 user-prompt 에 반영
+- [x] 전체 테스트 774개 통과 (T-052 13개 + 액션 보강 18개 추가)
+- [x] Review log 기록
 
 ## T-053. CSV 일괄 등록 ✅ [Admin]
 

@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { searchPlaceUnified, enrichPlace, registerPlace, generatePlaceContent, getAdminOptions } from '@/lib/actions/register-place'
+import { generateContentCandidates } from '@/lib/actions/generate-candidates'
 import type { PlaceSearchResult } from '@/lib/google-places'
 import { AddressPicker, type AddressResult } from '@/components/admin/address-picker'
 import { validatePlaceDraft, type PlaceDraft } from '@/lib/admin/place-validation'
 import { RegisterValidationPreview } from './register-validation-preview'
+import { CandidatePicker, type PickerSelection } from './candidate-picker'
+import type { CandidatePool } from '@/lib/ai/multi-candidates'
 
 type UnifiedCandidate = {
   kakaoPlaceId?: string
@@ -50,6 +53,9 @@ export default function RegisterPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
+  const [candidatesLoading, setCandidatesLoading] = useState(false)
+  const [candidatePool, setCandidatePool] = useState<CandidatePool | null>(null)
+  const [candidateScores, setCandidateScores] = useState<number[]>([])
   const [error, setError] = useState<string | null>(null)
 
   // 카테고리/도시 옵션
@@ -229,6 +235,46 @@ export default function RegisterPage() {
     } else {
       setError(result.error)
     }
+  }
+
+  // T-052: 3개 후보 병렬 생성 → 큐레이션 패널 오픈
+  async function handleGenerateCandidates(feedback?: string) {
+    if (!selectedPlace) return
+    setCandidatesLoading(true)
+    setError(null)
+    const result = await generateContentCandidates({
+      name: selectedPlace.name,
+      category,
+      address: selectedPlace.address,
+      rating: selectedPlace.rating,
+      reviewCount: selectedPlace.reviewCount,
+      reviews: enrichedReviews,
+      openingHours: enrichedData?.openingHours,
+      editorialSummary: enrichedData?.editorialSummary,
+      variantCount: 3,
+      feedback,
+    })
+    setCandidatesLoading(false)
+    if (result.success) {
+      setCandidatePool(result.data.pool)
+      setCandidateScores(result.data.qualityScores)
+    } else {
+      setError(result.error)
+    }
+  }
+
+  function handleApplyCandidate(selection: PickerSelection) {
+    if (selection.description) setDescription(selection.description)
+    if (selection.services.length > 0) {
+      setServices(selection.services.map(s => ({
+        name: s.name,
+        description: s.description ?? '',
+        priceRange: s.priceRange ?? '',
+      })))
+    }
+    if (selection.faqs.length > 0) setFaqs(selection.faqs)
+    if (selection.tags.length > 0) setTags(selection.tags.join(', '))
+    setCandidatePool(null)
   }
 
   async function handleSubmit() {
@@ -431,13 +477,33 @@ export default function RegisterPage() {
           </div>
 
           {/* AI 전체 자동 생성 버튼 */}
-          <button
-            onClick={handleAiGenerate}
-            disabled={aiLoading}
-            className="w-full h-12 rounded-lg bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {aiLoading ? 'AI 생성 중...' : 'AI로 설명/서비스/FAQ/태그 전체 자동 생성'}
-          </button>
+          <div className="grid gap-2 md:grid-cols-2">
+            <button
+              onClick={handleAiGenerate}
+              disabled={aiLoading || candidatesLoading}
+              className="h-12 rounded-lg bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {aiLoading ? 'AI 생성 중...' : '단일 결과 자동 생성'}
+            </button>
+            <button
+              onClick={() => handleGenerateCandidates()}
+              disabled={aiLoading || candidatesLoading}
+              className="h-12 rounded-lg border border-[#6366f1] bg-white font-medium text-[#4c1d95] hover:bg-[#f5f3ff] transition-colors disabled:opacity-50"
+            >
+              {candidatesLoading ? '3개 후보 생성 중...' : '다중 후보 생성 (어드민 선택)'}
+            </button>
+          </div>
+
+          {candidatePool && (
+            <CandidatePicker
+              pool={candidatePool}
+              qualityScores={candidateScores}
+              onApply={handleApplyCandidate}
+              onRegenerate={fb => handleGenerateCandidates(fb)}
+              regenerating={candidatesLoading}
+              onCancel={() => setCandidatePool(null)}
+            />
+          )}
 
           {/* 기본 정보 */}
           <div className="grid grid-cols-2 gap-4">
