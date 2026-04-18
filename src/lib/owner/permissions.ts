@@ -1,0 +1,93 @@
+// T-054 — 사장님 셀프 포털 권한/검증 순수 로직.
+// 서버 액션은 여기 노출된 화이트리스트와 validator 로만 업데이트를 허용해야 한다.
+
+export const OWNER_EDITABLE_FIELDS = [
+  'description',
+  'phone',
+  'opening_hours',
+  'tags',
+  'images',
+] as const
+export type OwnerEditableField = (typeof OWNER_EDITABLE_FIELDS)[number]
+
+const OWNER_EDITABLE_SET: ReadonlySet<string> = new Set(OWNER_EDITABLE_FIELDS)
+
+export function isOwnerEditableField(value: unknown): value is OwnerEditableField {
+  return typeof value === 'string' && OWNER_EDITABLE_SET.has(value)
+}
+
+export interface OwnerIdentity {
+  userId: string
+  email: string | null
+}
+
+export interface PlaceOwnershipRow {
+  owner_id: string | null
+  owner_email: string | null
+}
+
+/** 현재 사용자가 해당 업체를 편집할 수 있는지 (owner_id 또는 owner_email 매칭). */
+export function canOwnerEdit(place: PlaceOwnershipRow | null, user: OwnerIdentity): boolean {
+  if (!place) return false
+  if (place.owner_id && place.owner_id === user.userId) return true
+  if (place.owner_email && user.email && place.owner_email === user.email) return true
+  return false
+}
+
+export type OwnerPatch = Partial<{
+  description: string
+  phone: string
+  opening_hours: string[]
+  tags: string[]
+  images: Array<{ url: string; alt: string; type: string }>
+}>
+
+/** 입력 객체에서 허용 필드만 뽑아 새 오브젝트로 반환. undefined 는 제외. */
+export function normalizeOwnerPatch(input: Record<string, unknown>): OwnerPatch {
+  const out: OwnerPatch = {}
+  for (const [k, v] of Object.entries(input)) {
+    if (v === undefined) continue
+    if (!isOwnerEditableField(k)) continue
+    ;(out as Record<string, unknown>)[k] = v
+  }
+  return out
+}
+
+const PHONE_RE = /^[\d\s\-+()]*$/
+const MAX_TAGS = 10
+const DESC_MIN = 10
+const DESC_MAX = 300
+
+export type ValidationResult =
+  | { ok: true }
+  | { ok: false; errors: string[] }
+
+export function validateOwnerPatch(patch: OwnerPatch): ValidationResult {
+  const errors: string[] = []
+  if (Object.keys(patch).length === 0) errors.push('변경할 내용이 없습니다.')
+
+  if (patch.description !== undefined) {
+    const d = patch.description.trim()
+    if (d.length < DESC_MIN) errors.push(`소개 문구는 최소 ${DESC_MIN}자 이상이어야 합니다.`)
+    else if (d.length > DESC_MAX) errors.push(`소개 문구는 최대 ${DESC_MAX}자까지 허용됩니다.`)
+  }
+
+  if (patch.phone !== undefined && patch.phone !== '' && !PHONE_RE.test(patch.phone)) {
+    errors.push('전화번호 형식이 올바르지 않습니다.')
+  }
+
+  if (patch.tags !== undefined) {
+    if (!Array.isArray(patch.tags)) errors.push('태그는 배열이어야 합니다.')
+    else if (patch.tags.length > MAX_TAGS) errors.push(`태그는 최대 ${MAX_TAGS}개까지 입력할 수 있습니다.`)
+  }
+
+  if (patch.opening_hours !== undefined && !Array.isArray(patch.opening_hours)) {
+    errors.push('영업시간은 문자열 배열이어야 합니다.')
+  }
+
+  if (patch.images !== undefined && !Array.isArray(patch.images)) {
+    errors.push('이미지는 배열이어야 합니다.')
+  }
+
+  return errors.length === 0 ? { ok: true } : { ok: false, errors }
+}

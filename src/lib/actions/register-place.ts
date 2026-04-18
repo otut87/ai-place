@@ -631,6 +631,8 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,
     owner_id: user.id,
+    // T-054: 사장님 포털 매칭용 — owner_id 와 별도로 이메일도 보관.
+    owner_email: user.email ?? null,
     status: 'pending' as const,
   }
   // Supabase generic 타입 추론 한계로 타입 단언 사용

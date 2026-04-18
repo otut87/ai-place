@@ -1698,9 +1698,30 @@ IndexNow [DRY-RUN]: 29개 URL
 - [x] 전체 테스트 731개 통과 (T-053 19개 추가)
 - [x] Review log 기록
 
-## T-054. 사장님 셀프 포털 [GEO][Admin]
+## T-054. 사장님 셀프 포털 ✅ [GEO][Admin]
 
 **WO 참조**: #41 — 예상 공수: 3-5일
+
+**목적**: 업체 사장님이 로그인 후 본인 소유 업체의 소개·전화·영업시간·태그·이미지를 직접 수정할 수 있도록 셀프 서비스 포털 제공.
+
+**작업**
+- [x] `supabase/migrations/017_place_owner_email.sql` — `places.owner_email` 컬럼 + 인덱스 + self-service RLS (select/update)
+- [x] `src/lib/owner/permissions.ts` — 화이트리스트 5개 필드 + `canOwnerEdit` / `normalizeOwnerPatch` / `validateOwnerPatch` (16 tests, 100% 커버리지)
+- [x] `src/lib/owner/auth.ts` — `getOwnerUser` / `requireOwnerUser` / `requireOwnerForAction`
+- [x] `src/lib/actions/owner-places.ts` — `listOwnerPlaces` + `updateOwnerPlace` (소유권 검증 + 감사 로그 + revalidate) (11 tests)
+- [x] `/owner` 포털 홈 — 본인 업체 목록 + 상태 뱃지
+- [x] `/owner/places/[id]` 편집 페이지 + 클라이언트 폼
+- [x] `middleware.ts` — `/owner/:path*` 로그인 필수 (admin 화이트리스트 미적용)
+- [x] `register-place.ts` — insert 시 `owner_email` 도 함께 기록
+
+**DoD**
+- [x] 비로그인 사용자가 `/owner` 접근 시 `/admin/login?next=/owner` 로 리다이렉트
+- [x] 본인 소유 아닌 업체 편집 시도 → 서버 액션 거부
+- [x] 어드민 전용 필드(status/slug/city/category/owner_id) 는 owner-side 에서 거부
+- [x] 모든 수정이 `place_audit_log` 에 `owner self-service` reason 으로 기록
+- [x] 전체 테스트 899개 통과 (T-054 27개 추가)
+- [x] Review log 기록
+- [ ] 실제 배포 검증은 `017_place_owner_email.sql` 적용 후 Supabase Auth 테스트 사용자로 수동 확인 필요
 
 ## T-055. 버전 관리·감사 로그 ✅ [Ops]
 

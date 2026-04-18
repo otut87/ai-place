@@ -14,6 +14,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // /owner 는 어드민 이메일 화이트리스트 미적용 — 로그인만 요구
+  const isOwnerRoute = pathname.startsWith('/owner')
+
   // Supabase 세션 갱신 + 인증 확인
   const response = NextResponse.next({ request })
 
@@ -39,6 +42,7 @@ export async function middleware(request: NextRequest) {
 
   if (!user) {
     const loginUrl = new URL('/admin/login', request.url)
+    if (isOwnerRoute) loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
@@ -46,5 +50,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path((?!login).*)'],
+  // /admin 전체(로그인 제외) + /owner 전체 보호
+  matcher: ['/admin/:path((?!login).*)', '/owner/:path*'],
 }
