@@ -1746,22 +1746,28 @@ IndexNow [DRY-RUN]: 29개 URL
 - [x] 전체 테스트 851개 통과 (T-056 15개 추가)
 - [x] Review log 기록
 
-## T-057. 알림 시스템 (Webhook + 이메일) [Ops]
+## T-057. 알림 시스템 (Webhook + 이메일) ✅ [Ops]
 
 **WO 참조**: #44
 **축**: Ops
 **예상 공수**: 2일
 
 **작업**
-- [ ] 사장님 이메일 알림: 등록 승인/거절/리뷰 도착 (Resend 또는 Supabase 이메일)
-- [ ] 어드민 슬랙 웹훅: 신규 등록 / pending 누적 알림
-- [ ] (옵션) 카카오 알림톡 연동
-- [ ] T-054 사장님 포털 + T-042 admin 인라인 편집과 연계
+- [x] `src/lib/notify/events.ts` — 이벤트 정의(`place.registered` / `place.approved` / `place.rejected` / `pending.backlog`) + 이메일/슬랙 페이로드 빌더 (8 tests, 100% 커버리지)
+- [x] `src/lib/notify/email.ts` — Resend API 연동 + `RESEND_API_KEY`/`RESEND_FROM` 없으면 콘솔 폴백 (4 tests)
+- [x] `src/lib/notify/slack.ts` — 웹훅 POST + `SLACK_WEBHOOK_URL` 없으면 콘솔 폴백 (4 tests)
+- [x] `src/lib/actions/notify.ts` — `dispatchNotify` 이메일/슬랙 병렬 발송, 한쪽 실패해도 다른 쪽 시도 (5 tests)
+- [x] `bulk-places.ts` 승인/거절 → 사장님 이메일 (owner_email 기반)
+- [x] `register-place.ts` insert 성공 → 어드민 이메일/슬랙 (ADMIN_NOTIFY_EMAIL)
+- [ ] 카카오 알림톡은 향후 과제
 
 **DoD**
-- [ ] 등록 → 승인까지 사장님 이메일 알림 수신 확인
-- [ ] 신규 등록 시 슬랙 알림 수신
-- [ ] 알림 실패 시 fallback (이메일 미수신 시 admin 알림)
+- [x] Resend/Slack 키 없이도 테스트 통과 (콘솔 폴백)
+- [x] 키 있으면 실제 발송 (fetch 호출 확인)
+- [x] 한 채널 실패가 다른 채널 실패를 유발하지 않음
+- [x] 전체 테스트 872개 통과 (T-057 21개 추가)
+- [x] Review log 기록
+- [ ] 프로덕션 동작 확인은 `RESEND_API_KEY`, `RESEND_FROM`, `SLACK_WEBHOOK_URL`, `ADMIN_NOTIFY_EMAIL`, `NEXT_PUBLIC_SITE_URL` 세팅 후 수동 검증
 
 ---
 

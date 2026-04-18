@@ -5,6 +5,7 @@ import { getAdminClient } from '@/lib/supabase/admin-client'
 import { revalidatePath } from 'next/cache'
 import { parseBulkAction, type BulkAction } from '@/lib/admin/places-bulk'
 import { recordAudit } from '@/lib/actions/audit-places'
+import { dispatchNotify } from '@/lib/actions/notify'
 
 interface BulkResponse {
   success: boolean
@@ -12,11 +13,16 @@ interface BulkResponse {
   error?: string
 }
 
-async function loadAffectedPaths(ids: string[]): Promise<Array<{ city: string; category: string; slug: string }>> {
+async function loadAffectedPaths(ids: string[]): Promise<Array<{ city: string; category: string; slug: string; name?: string; owner_email?: string | null }>> {
   const supabase = getAdminClient()
   if (!supabase) return []
-  const { data } = await supabase.from('places').select('city, category, slug').in('id', ids)
-  return (data ?? []) as Array<{ city: string; category: string; slug: string }>
+  const { data } = await supabase.from('places').select('city, category, slug, name, owner_email').in('id', ids)
+  return (data ?? []) as Array<{ city: string; category: string; slug: string; name?: string; owner_email?: string | null }>
+}
+
+function placePublicUrl(row: { city: string; category: string; slug: string }) {
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 'https://aiplace.kr'
+  return `${base}/${row.city}/${row.category}/${row.slug}`
 }
 
 function revalidateAffected(rows: Array<{ city: string; category: string; slug: string }>) {
@@ -63,6 +69,14 @@ export async function bulkUpdateStatus(ids: string[], action: BulkAction): Promi
   await Promise.all(ids.map(id => recordAudit({
     placeId: id, actorId, action: 'status',
     field: 'status', before: null, after: nextStatus,
+  })))
+  // T-057: 사장님 알림 — 승인/거절 시만
+  const notifyType = nextStatus === 'active' ? 'place.approved' as const : 'place.rejected' as const
+  await Promise.all(affected.map(row => dispatchNotify({
+    type: notifyType,
+    placeName: row.name ?? row.slug,
+    placeUrl: placePublicUrl(row),
+    ownerEmail: row.owner_email ?? undefined,
   })))
   return { success: true, processed: count ?? ids.length }
 }

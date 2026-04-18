@@ -641,6 +641,20 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
     return { success: false, error: '업체 등록에 실패했습니다.' }
   }
 
+  // T-057: 어드민 알림 — pending 업체가 생성되었음을 이메일/슬랙으로 공지
+  try {
+    const { dispatchNotify } = await import('@/lib/actions/notify')
+    const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 'https://aiplace.kr'
+    await dispatchNotify({
+      type: 'place.registered',
+      placeName: input.name,
+      placeUrl: `${base}/admin/places`,
+      adminEmail: process.env.ADMIN_NOTIFY_EMAIL,
+    })
+  } catch (e) {
+    console.error('[register-place] notify dispatch failed:', e)
+  }
+
   return { success: true, data: { slug: input.slug } }
 }
 
