@@ -306,7 +306,7 @@ T-046 위에 증분. 필터·URL 쿼리·일괄 액션은 완료됨.
 - [ ] 필터 `subscription` · `min_quality_score`
 - **DoD**: `?subscription=paid&min_quality_score=70` 동작
 
-## T-066. `/admin/places/[id]` 탭 + 체크리스트 🔜 [Admin]
+## T-066. `/admin/places/[id]` 탭 + 체크리스트 ✅ [Admin]
 현재 145줄 flat form.
 - [ ] 탭: 개요/서비스/FAQ/태그/블로그/SEO/자동화 이력/변경 로그
 - [ ] 자동저장 + 토스트 + diff (`recordUpdateDiffs` 재사용)
