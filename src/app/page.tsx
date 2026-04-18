@@ -11,15 +11,9 @@ import { generateFAQPage, generateWebSite, generateItemList } from "@/lib/jsonld
 import { safeJsonLd } from "@/lib/utils"
 import type { Metadata } from "next"
 import type { FAQ, StatisticItem, Source } from "@/lib/types"
+import { buildHomeMetadata } from "@/lib/seo/page-meta"
 
-export const metadata: Metadata = {
-  alternates: { canonical: '/' },
-  openGraph: {
-    title: 'AI Place — AI가 추천하는 우리 동네 업체',
-    description: 'ChatGPT, Claude, Gemini에서 추천되는 로컬 업체를 찾아보세요. 피부과, 치과, 미용실, 인테리어 등.',
-    url: '/',
-  },
-}
+export const metadata: Metadata = buildHomeMetadata()
 
 export default async function HomePage() {
   const [cities, categories, allPlaces, blogPosts, stats] = await Promise.all([

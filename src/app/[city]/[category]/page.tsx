@@ -13,6 +13,7 @@ import { getPlaces, getCities, getCategories, getMetaDescriptorForCategory, getS
 import { getBlogPostsBySector } from "@/lib/blog/data.supabase"
 import { generateItemList } from "@/lib/jsonld"
 import { generateBreadcrumbList, generateCategoryDAB } from "@/lib/seo"
+import { buildCategoryMetadata } from "@/lib/seo/page-meta"
 
 interface Props {
   params: Promise<{ city: string; category: string }>
@@ -35,20 +36,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!cityObj || !catObj) return {}
 
-  const title = `${cityObj.name} ${catObj.name} 추천 — ${new Date().getFullYear()}년 업데이트`
   const places = await getPlaces(city, category)
   const hasPlaces = places.length > 0
   const descriptor = await getMetaDescriptorForCategory(category)
   const description = hasPlaces
     ? generateCategoryDAB(places, cityObj.name, catObj.name, descriptor)
     : `${cityObj.name}시에 위치한 ${catObj.name} 목록. ${descriptor}, 위치, 리뷰 기반 정리.`
-  return {
-    title,
+
+  return buildCategoryMetadata({
+    cityName: cityObj.name,
+    categoryName: catObj.name,
+    citySlug: city,
+    categorySlug: category,
+    hasPlaces,
     description,
-    alternates: { canonical: `/${city}/${category}` },
-    openGraph: { title, description, url: `/${city}/${category}` },
-    ...(hasPlaces ? {} : { robots: { index: false, follow: true } }),
-  }
+  })
 }
 
 const SLUG_PATTERN = /^[a-z0-9-]+$/

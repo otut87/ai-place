@@ -1528,37 +1528,137 @@ IndexNow [DRY-RUN]: 29개 URL
 
 # Phase 6 — 확장성·운영 (1-2주)
 
-## T-046. Admin 목록 검색·필터·페이지네이션 [Admin]
+## T-046. Admin 목록 검색·필터·페이지네이션 ✅ [Admin]
 
 **WO 참조**: #29 — 예상 공수: 6h
 
-## T-047. Admin 일괄 작업 (Bulk Actions) [Admin]
+**목적**: `/admin/places` 목록에 검색·필터·페이지네이션을 추가해 업체 수 증가 시 운영성 확보.
+
+**작업**
+- [x] 순수 함수 `src/lib/admin/places-query.ts`
+  - `parseListParams(searchParams)` — URL 파라미터 → 정규화 객체 (`q`, `city`, `category`, `sector`, `status`, `page`, `pageSize`)
+  - `clampPage(page, totalPages)` — 1-based 페이지 안전 범위
+  - `buildRange(page, pageSize)` — `{ from, to }` Supabase `.range()` 입력
+  - `buildPageList(currentPage, totalPages, window)` — 페이지네이션 표시 번호 + ellipsis
+- [x] 테스트 `src/lib/__tests__/admin/places-query.test.ts` — 21 tests, **커버리지 100%**
+- [x] `/admin/places/page.tsx` — `searchParams: Promise<{...}>` 수신, Supabase `.ilike()` / `.eq()` / `.in()` / `.range()` + `count: 'exact'` 적용
+- [x] `/admin/places/places-filter-form.tsx` (client) — 검색 입력·도시·섹터·업종·상태 select → URL 쿼리 반영 (섹터 선택 시 업종 옵션 자동 좁힘)
+- [x] `/admin/places/places-pagination.tsx` (서버 컴포 — 링크 렌더)
+
+**DoD**
+- [x] 검색어로 이름 필터링 동작 (`ilike %q%`)
+- [x] 도시·섹터·업종·상태 다중 필터 조합 동작 (섹터는 `categories.sector` 매핑으로 `.in()` 처리)
+- [x] 페이지 이동 시 URL 파라미터 유지
+- [x] `pageSize` 기본 20, 최대 100
+- [x] 필터 후 결과 0개 empty state
+- [x] 전체 테스트 670개 통과 (T-046 21개 추가)
+- [x] Review log 기록
+
+## T-047. Admin 일괄 작업 (Bulk Actions) ✅ [Admin]
 
 **WO 참조**: #30 — 예상 공수: 6h
 
-## T-048. Admin 실시간 검증 + 미리보기 [Admin][GEO]
+**목적**: 목록에서 체크박스 다중 선택 → 일괄 승인/반려/삭제로 대량 운영 속도 확보.
+
+**작업**
+- [x] `src/lib/admin/places-bulk.ts` — 순수 헬퍼 (`parseBulkAction`, `partitionIds`, `summarizeBulkResult`)
+- [x] 테스트 10개, **커버리지 100%**
+- [x] 서버 액션 `src/lib/actions/bulk-places.ts` — `.in('id', ids)` + `count: 'exact'` + 공개 경로 revalidate
+- [x] `places-table.tsx` (client) — indeterminate 전체 선택 + 선택 N개 토올바 + activate/reject/delete 버튼
+- [x] `/admin/places/page.tsx` — `PlacesTable` 교체 리팩터
+
+**DoD**
+- [x] 3가지 일괄 액션 동작
+- [x] 전체/개별 체크박스 UX (indeterminate 상태 포함)
+- [x] 빈 선택 시 버튼 disabled
+- [x] 삭제 시 confirm
+- [x] 전체 테스트 680개 통과 (T-047 10개 추가)
+- [x] Review log 기록
+
+## T-048. Admin 실시간 검증 + 미리보기 ✅ [Admin][GEO]
 
 **WO 참조**: #31 — 예상 공수: 6h
 
-## T-049. Admin 인라인 편집 [Admin]
+**목적**: 등록 폼에서 실시간으로 필수·권장 항목을 검증하고 미리보기 카드를 보여 서버 왕복 전에 문제 발견.
+
+**작업**
+- [x] `src/lib/admin/place-validation.ts` — `validatePlaceDraft` + `{ errors, warnings, completeness }` (10개 시그널 × 10점)
+- [x] 테스트 15개, **커버리지 100%**
+- [x] `register-validation-preview.tsx` — 진행률 바 (색상 tier: green/yellow/red) + 에러·경고 리스트 + 프리뷰 카드
+- [x] `register/page.tsx` 연결 — 등록 버튼 `hasErrors` 시 disabled + "필수 항목 N개 남음" 라벨
+
+**DoD**
+- [x] 필수 누락 필드 즉시 표시 + 등록 버튼 disabled
+- [x] 완성도 0-100 % 실시간 갱신
+- [x] 프리뷰 카드가 현재 입력값 반영 (도시·업종 한글명, 태그 pill)
+- [x] 전체 테스트 712개 통과 (T-048 15개 추가)
+- [x] Review log 기록
+
+## T-049. Admin 인라인 편집 ✅ [Admin]
 
 **WO 참조**: #32 — 예상 공수: 4h
+
+**목적**: 목록에서 이름/전화/태그를 클릭 → 인라인 편집 → Enter/Blur 저장. 편집 페이지 이동 비용 제거.
+
+**작업**
+- [x] `src/lib/admin/inline-edit.ts` — 화이트리스트 (`name`, `phone`, `tags`) + 필드별 검증 + `normalizeTagsInput`
+- [x] 테스트 17개, **커버리지 97%**
+- [x] 서버 액션 `src/lib/actions/inline-edit-place.ts` — `isInlineField` + `validateInlineField` 이중 검증
+- [x] `inline-edit-field.tsx` — 클릭 전환 / Enter 저장 / Esc 취소 / Blur 자동 저장
+
+**DoD**
+- [x] 이름·전화·태그 인라인 수정 동작
+- [x] 화이트리스트 외 필드는 서버에서 거부
+- [x] 태그는 공백·콤마 분리 + 중복 제거 후 배열로 저장
+- [x] 검증 실패 시 inline 에러 표시
+- [x] 전체 테스트 697개 통과 (T-049 17개 추가)
+- [x] Review log 기록
 
 ## T-050. 이미지 업로드 (Supabase Storage) [Admin][SEO][GEO]
 
 **WO 참조**: #33 — 예상 공수: 8h
 
-## T-051. 메타데이터 중앙화 (`lib/seo/page-meta.ts`) [SEO][AEO][GEO]
+## T-051. 메타데이터 중앙화 (`lib/seo/page-meta.ts`) ✅ [SEO][AEO][GEO]
 
 **WO 참조**: #21 — 예상 공수: 1일 (대규모 리팩터)
+
+**목적**: 모든 페이지의 `Metadata` 생성 로직을 `src/lib/seo/page-meta.ts` 로 중앙화.
+
+**작업**
+- [x] `src/lib/seo/page-meta.ts` 빌더 7종 — home / about / category / place / blogIndex / blogPost / guide / compare
+- [x] 테스트 12개, **커버리지 94%**
+- [x] 페이지 리팩터 — home / category (`[city]/[category]`) / place (`[city]/[category]/[slug]`) 적용
+- [ ] 후속(별도 PR 권장): blog, guide, compare 페이지 migrate
+
+**DoD**
+- [x] title·description·canonical·OG 일관된 형식
+- [x] 빈 카테고리 → robots: noindex 유지
+- [x] 전체 테스트 743개 통과 (T-051 12개 추가)
+- [x] Review log 기록
 
 ## T-052. 다중 후보 LLM 생성 + 어드민 선택 [GEO]
 
 **WO 참조**: #37 — 예상 공수: 6h
 
-## T-053. CSV 일괄 등록 [Admin]
+## T-053. CSV 일괄 등록 ✅ [Admin]
 
 **WO 참조**: #40 — 예상 공수: 1일
+
+**목적**: CSV 파일로 수십~수백 업체를 한 번에 업로드 → 서버에서 검증·매핑·삽입, 결과 리포트 UI.
+
+**작업**
+- [x] `src/lib/admin/csv-import.ts` — `parseCsv` (인용부호/escaped quotes/CRLF), `normalizeRow`, `validateCsvRow`, `summarizeImport`, `CSV_TEMPLATE_HEADERS`
+- [x] 테스트 19개, **커버리지 97.5%**
+- [x] 서버 액션 `src/lib/actions/import-csv-places.ts` — 행별 검증 → 유효 행만 `insert` + revalidate
+- [x] UI `/admin/import-csv/page.tsx` + `csv-import-client.tsx` — 파일 선택 / 붙여넣기 / 템플릿 로드 + 결과 표 (행 / 업체명 / 성공-실패 / 메시지)
+
+**DoD**
+- [x] CSV 파싱 — 인용부호·escaped quotes·CRLF·빈줄 허용
+- [x] 행 단위 에러 표시 (rowNumber = header + 1)
+- [x] 성공 행만 DB 삽입 (status=pending, source=csv-import)
+- [x] 템플릿 로드 버튼 (`CSV_TEMPLATE_HEADERS` + 예시 한 줄)
+- [x] 전체 테스트 731개 통과 (T-053 19개 추가)
+- [x] Review log 기록
 
 ## T-054. 사장님 셀프 포털 [GEO][Admin]
 

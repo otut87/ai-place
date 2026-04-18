@@ -13,6 +13,7 @@ import { getPlaceBySlug, getPlaces, getCities, getCategories, getSchemaTypeForCa
 import { getBlogPostsByPlace } from "@/lib/blog/data.supabase"
 import { generateLocalBusiness, generateFAQPage, generateWebPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
+import { buildPlaceMetadata } from "@/lib/seo/page-meta"
 import { safeJsonLd } from "@/lib/utils"
 import { getPlaceDetails } from "@/lib/google-places"
 
@@ -47,21 +48,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const cityObj = cities.find(c => c.slug === city)
   const catObj = categories.find(c => c.slug === category)
 
-  const title = `${place.name} - ${cityObj?.name ?? city} ${catObj?.name ?? category}`
-  const description = `${cityObj?.name} ${catObj?.name} ${place.name} — ${place.services.map(s => s.name).join(', ')}. 주소: ${normalizeAddress(place.address)}. ${place.rating ? `평점 ${place.rating}점.` : ''}`
-
-  return {
-    title,
-    description,
-    alternates: {
-      canonical: `/${city}/${category}/${slug}`,
-    },
-    openGraph: {
-      title,
-      description,
-      url: `/${city}/${category}/${slug}`,
-    },
-  }
+  return buildPlaceMetadata({
+    place,
+    cityName: cityObj?.name ?? city,
+    categoryName: catObj?.name ?? category,
+    citySlug: city,
+    categorySlug: category,
+  })
 }
 
 const SLUG_PATTERN = /^[a-z0-9-]+$/

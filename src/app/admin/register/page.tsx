@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { searchPlaceUnified, enrichPlace, registerPlace, generatePlaceContent, getAdminOptions } from '@/lib/actions/register-place'
 import type { PlaceSearchResult } from '@/lib/google-places'
 import { AddressPicker, type AddressResult } from '@/components/admin/address-picker'
+import { validatePlaceDraft, type PlaceDraft } from '@/lib/admin/place-validation'
+import { RegisterValidationPreview } from './register-validation-preview'
 
 type UnifiedCandidate = {
   kakaoPlaceId?: string
@@ -268,6 +270,25 @@ export default function RegisterPage() {
       setError(result.error)
     }
   }
+
+  const draft: PlaceDraft = {
+    name: selectedPlace?.name ?? '',
+    city,
+    category,
+    slug,
+    description,
+    address: selectedPlace?.address || manualAddress?.roadAddress || '',
+    phone,
+    hours,
+    services,
+    faqs,
+    tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+    sameAs: [naverPlaceUrl, kakaoMapUrl].filter(Boolean) as string[],
+  }
+  const validation = validatePlaceDraft(draft)
+  const hasErrors = Object.keys(validation.errors).length > 0
+  const categoryName = allCategories.find((c) => c.slug === category)?.name
+  const cityName = cities.find((c) => c.slug === city)?.name
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12">
@@ -543,9 +564,22 @@ export default function RegisterPage() {
             <input type="text" value={tags} onChange={e => setTags(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" placeholder="여드름, 레이저, 보톡스" />
           </div>
 
+          {/* 실시간 검증 + 미리보기 (T-048) */}
+          <RegisterValidationPreview
+            draft={draft}
+            validation={validation}
+            categoryName={categoryName}
+            cityName={cityName}
+          />
+
           {/* 등록 버튼 */}
-          <button onClick={handleSubmit} disabled={loading} className="w-full h-12 rounded-lg bg-[#222222] text-white font-medium disabled:opacity-50">
-            {loading ? '등록 중...' : '업체 등록'}
+          <button
+            onClick={handleSubmit}
+            disabled={loading || hasErrors}
+            className="w-full h-12 rounded-lg bg-[#222222] text-white font-medium disabled:opacity-50"
+            title={hasErrors ? '필수 항목을 먼저 채우세요.' : undefined}
+          >
+            {loading ? '등록 중...' : hasErrors ? `필수 항목 ${Object.keys(validation.errors).length}개 남음` : '업체 등록'}
           </button>
         </div>
       )}
