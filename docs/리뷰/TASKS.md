@@ -1614,9 +1614,29 @@ IndexNow [DRY-RUN]: 29개 URL
 - [x] 전체 테스트 697개 통과 (T-049 17개 추가)
 - [x] Review log 기록
 
-## T-050. 이미지 업로드 (Supabase Storage) [Admin][SEO][GEO]
+## T-050. 이미지 업로드 (Supabase Storage) ✅ [Admin][SEO][GEO]
 
 **WO 참조**: #33 — 예상 공수: 8h
+
+**목적**: 업체 이미지를 Supabase Storage 에 업로드하고 `places.images` JSONB 로 alt/type 메타까지 저장. 대체 이미지 SVG placeholder 를 실사진으로 대체할 인프라 완성.
+
+**작업**
+- [x] `supabase/migrations/014_places_images_storage.sql` — `places.images` JSONB 컬럼 + `places-images` 버킷 + 공개 읽기 / service_role 쓰기 RLS
+- [x] `src/lib/admin/place-images.ts` — `validateImageUpload`, `validateAlt`, `sanitizeFilenameStem`, `makeStorageKey`, `IMAGE_TYPE_OPTIONS` 상수
+- [x] 검증 라이브러리 테스트 21개 (5MB 제한 / MIME 화이트리스트 / 디렉터리 이탈 방지 / alt 길이)
+- [x] `src/lib/actions/upload-place-image.ts` — `uploadPlaceImage`, `removePlaceImage` (Storage upload + `places.images` JSONB 병합 + revalidate)
+- [x] 서버 액션 테스트 12개 (mock Supabase client + storage)
+- [x] `src/components/admin/place-image-uploader.tsx` — 파일 선택 + type/alt 입력 + 미리보기/삭제 UI
+- [ ] 자동 리사이즈·CDN 변환은 향후 과제 — 우선 원본 업로드(최대 5MB) 허용
+
+**DoD**
+- [x] 업로드 전 MIME/크기/alt/type 검증 통과 필수
+- [x] `placeId` 경로 이탈(`/`, `..`) 시도 차단
+- [x] 업로드 후 public URL + alt/type 이 `places.images` JSONB 에 append
+- [x] Uploader 컴포넌트는 기존 이미지 갤러리 + 삭제 버튼 포함
+- [x] 전체 테스트 814개 통과 (T-050 33개 + T-052 generate-candidates 6개 추가)
+- [x] Review log 기록
+- [ ] 실제 버킷 provisioning 은 `014_places_images_storage.sql` 적용 후 Supabase 대시보드에서 확인 필요
 
 ## T-051. 메타데이터 중앙화 (`lib/seo/page-meta.ts`) ✅ [SEO][AEO][GEO]
 
