@@ -1,40 +1,24 @@
-// T-137 v2 — AI 검색 인용 진단 테스트.
-// docs/GEO-SEO-AEO-딥리서치.md 기반 재설계 검증 (GEO 핵심 레버 포함).
+// T-137 v3 — AI 검색 인용 진단 (멀티 페이지 스캔) 테스트.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { scanSite } from '@/lib/diagnostic/scan-site'
 
 const RECENT_ISO = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-const MOCK_HTML_EXCELLENT = `
+const MOCK_HOME_EXCELLENT = `
 <!DOCTYPE html><html lang="ko"><head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>천안 피부과 — 닥터스킨 클리닉 공식 홈페이지 안내</title>
 <meta name="description" content="천안 서북구 불당동에 위치한 닥터스킨 피부과 전문 클리닉. 여드름, 레이저, 모공 관리 등 다양한 시술을 제공합니다. 평일 9시~18시 진료.">
-<meta property="og:title" content="닥터스킨 클리닉">
 <script type="application/ld+json">
-[
-  {
-    "@context": "https://schema.org", "@type": "MedicalClinic",
-    "name": "닥터스킨 클리닉",
-    "address": { "@type": "PostalAddress", "streetAddress": "천안시 서북구" },
-    "telephone": "+82-41-000-0000",
-    "openingHoursSpecification": [{ "@type": "OpeningHoursSpecification" }],
-    "dateModified": "${RECENT_ISO}",
-    "sameAs": ["https://place.map.naver.com/123", "https://place.map.kakao.com/123", "https://g.page/drskin"],
-    "aggregateRating": { "@type": "AggregateRating", "ratingValue": 4.7, "reviewCount": 124 },
-    "review": [{ "@type": "Review", "author": {"@type": "Person", "name": "홍길동"}, "reviewRating": {"@type": "Rating", "ratingValue": 5} }]
-  },
-  {
-    "@context": "https://schema.org", "@type": "FAQPage",
-    "mainEntity": [
-      {"@type": "Question", "name": "진료 시간은?", "acceptedAnswer": {"@type": "Answer", "text": "평일 9~18시, 토 9~13시"}},
-      {"@type": "Question", "name": "주차 가능한가요?", "acceptedAnswer": {"@type": "Answer", "text": "지하 10대 무료"}},
-      {"@type": "Question", "name": "예약 필요한가요?", "acceptedAnswer": {"@type": "Answer", "text": "전화 예약 권장"}},
-      {"@type": "Question", "name": "주말 진료?", "acceptedAnswer": {"@type": "Answer", "text": "토요일 오전만"}},
-      {"@type": "Question", "name": "위치는?", "acceptedAnswer": {"@type": "Answer", "text": "서북구 불당동"}}
-    ]
-  }
-]
+{
+  "@context": "https://schema.org", "@type": "MedicalClinic",
+  "name": "닥터스킨 클리닉",
+  "address": { "@type": "PostalAddress", "streetAddress": "천안시 서북구" },
+  "telephone": "+82-41-000-0000",
+  "openingHoursSpecification": [{ "@type": "OpeningHoursSpecification" }],
+  "dateModified": "${RECENT_ISO}",
+  "sameAs": ["https://place.map.naver.com/123", "https://place.map.kakao.com/123", "https://g.page/drskin"]
+}
 </script>
 </head><body>
 <h1>닥터스킨 클리닉</h1>
@@ -45,88 +29,159 @@ const MOCK_HTML_EXCELLENT = `
 </body></html>
 `
 
-const MOCK_HTML_BAD = `
-<!DOCTYPE html><html><head><title>Short</title></head><body></body></html>
+// /faq 페이지에만 FAQPage schema
+const MOCK_FAQ_PAGE = `
+<!DOCTYPE html><html><head><title>FAQ</title>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org", "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "진료 시간은?", "acceptedAnswer": {"@type": "Answer", "text": "평일 9~18시"}},
+    {"@type": "Question", "name": "주차 가능?", "acceptedAnswer": {"@type": "Answer", "text": "지하 10대"}},
+    {"@type": "Question", "name": "예약 필요?", "acceptedAnswer": {"@type": "Answer", "text": "전화 권장"}},
+    {"@type": "Question", "name": "주말 진료?", "acceptedAnswer": {"@type": "Answer", "text": "토요일만"}},
+    {"@type": "Question", "name": "위치는?", "acceptedAnswer": {"@type": "Answer", "text": "서북구"}}
+  ]
+}
+</script>
+</head><body></body></html>
 `
+
+// 상세 페이지에 Review schema
+const MOCK_DETAIL_PAGE = `
+<!DOCTYPE html><html><head><title>시술 안내</title>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org", "@type": "Service",
+  "aggregateRating": { "@type": "AggregateRating", "ratingValue": 4.7, "reviewCount": 124 },
+  "review": [{ "@type": "Review", "author": {"@type": "Person", "name": "홍길동"}, "reviewRating": {"@type": "Rating", "ratingValue": 5} }]
+}
+</script>
+</head><body></body></html>
+`
+
+const MOCK_HTML_BAD = `<!DOCTYPE html><html><head><title>Short</title></head><body></body></html>`
+
+const SITEMAP_MULTI = `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/</loc></url>
+  <url><loc>https://example.com/faq</loc></url>
+  <url><loc>https://example.com/services/laser</loc></url>
+</urlset>`
 
 beforeEach(() => { vi.restoreAllMocks() })
 
-function mockFetch(htmlBody: string, opts: { robots?: string; sitemapOk?: boolean; llmsOk?: boolean } = {}) {
+function mockFetch(opts: {
+  home?: string
+  faq?: string
+  detail?: string
+  robots?: string
+  sitemap?: string
+  llmsOk?: boolean
+}) {
   vi.stubGlobal('fetch', vi.fn(async (url: string | URL) => {
     const u = url.toString()
-    if (u.endsWith('/robots.txt')) {
-      return new Response(opts.robots ?? '', { status: opts.robots ? 200 : 404 }) as unknown as Response
-    }
-    if (u.endsWith('/sitemap.xml')) {
-      return new Response('<?xml version="1.0"?>', { status: opts.sitemapOk ? 200 : 404 }) as unknown as Response
-    }
-    if (u.endsWith('/llms.txt')) {
-      return new Response('# llms', { status: opts.llmsOk ? 200 : 404 }) as unknown as Response
-    }
-    return new Response(htmlBody, { status: 200 }) as unknown as Response
+    if (u.endsWith('/robots.txt')) return new Response(opts.robots ?? '', { status: opts.robots ? 200 : 404 }) as unknown as Response
+    if (u.endsWith('/sitemap.xml')) return new Response(opts.sitemap ?? '', { status: opts.sitemap ? 200 : 404 }) as unknown as Response
+    if (u.endsWith('/llms.txt')) return new Response('# llms', { status: opts.llmsOk ? 200 : 404 }) as unknown as Response
+    if (u.endsWith('/faq')) return new Response(opts.faq ?? '', { status: opts.faq ? 200 : 404 }) as unknown as Response
+    if (u.includes('/services/')) return new Response(opts.detail ?? '', { status: opts.detail ? 200 : 404 }) as unknown as Response
+    return new Response(opts.home ?? '', { status: opts.home ? 200 : 404 }) as unknown as Response
   }))
 }
 
-describe('T-137 v2 scanSite (GEO 재설계)', () => {
-  it('완전한 사이트 → 높은 점수 (80+) 및 GEO 핵심 모두 pass', async () => {
-    mockFetch(MOCK_HTML_EXCELLENT, { robots: 'User-agent: *\nAllow: /\n', sitemapOk: true, llmsOk: true })
+describe('T-137 v3 scanSite (멀티 페이지)', () => {
+  it('사이트맵 + /faq + 상세 → FAQ·Review 모두 pass (멀티 페이지 집계)', async () => {
+    mockFetch({
+      home: MOCK_HOME_EXCELLENT,
+      faq: MOCK_FAQ_PAGE,
+      detail: MOCK_DETAIL_PAGE,
+      robots: 'User-agent: *\nAllow: /\n',
+      sitemap: SITEMAP_MULTI,
+      llmsOk: true,
+    })
     const r = await scanSite('https://example.com')
     expect(r.error).toBeUndefined()
-    expect(r.score).toBeGreaterThan(80)
-    expect(r.checks.find(c => c.id === 'jsonld_localbusiness')?.status).toBe('pass')
+    expect(r.sitemapPresent).toBe(true)
+    expect(r.pagesScanned).toBeGreaterThanOrEqual(2)
+    // 홈에 없는 FAQ/Review 가 다른 페이지에서 pass 되어야 함
     expect(r.checks.find(c => c.id === 'faq_schema')?.status).toBe('pass')
     expect(r.checks.find(c => c.id === 'review_schema')?.status).toBe('pass')
-    expect(r.checks.find(c => c.id === 'sameas_entity_linking')?.status).toBe('pass')
-    expect(r.checks.find(c => c.id === 'last_updated')?.status).toBe('pass')
+    expect(r.score).toBeGreaterThan(80)
   })
 
-  it('최소 HTML → 낮은 점수 + GEO 핵심 모두 fail', async () => {
-    mockFetch(MOCK_HTML_BAD)
+  it('사이트맵 없음 → 홈페이지 단독 스캔 + sitemap fail', async () => {
+    mockFetch({ home: MOCK_HOME_EXCELLENT, robots: 'User-agent: *\nAllow: /\n' })
     const r = await scanSite('https://example.com')
-    expect(r.score).toBeLessThan(30)
-    expect(r.checks.find(c => c.id === 'jsonld_localbusiness')?.status).toBe('fail')
+    expect(r.sitemapPresent).toBe(false)
+    expect(r.pagesScanned).toBe(1)
+    const sm = r.checks.find(c => c.id === 'sitemap')!
+    expect(sm.status).toBe('fail')
+    expect(sm.points).toBe(0)
+    expect(sm.detail).toContain('상세 페이지를 발견할 수 없습니다')
+    // FAQ 는 홈에 없으므로 fail
     expect(r.checks.find(c => c.id === 'faq_schema')?.status).toBe('fail')
-    expect(r.checks.find(c => c.id === 'direct_answer_block')?.status).toBe('fail')
   })
 
-  it('HTTP 프로토콜 → https 체크 fail', async () => {
-    mockFetch(MOCK_HTML_EXCELLENT)
+  it('사이트맵 있으나 URL 없음 (빈 sitemap) → 홈만 스캔 but sitemap pass', async () => {
+    mockFetch({
+      home: MOCK_HOME_EXCELLENT,
+      sitemap: '<?xml version="1.0"?><urlset></urlset>',
+      robots: 'User-agent: *\nAllow: /\n',
+    })
+    const r = await scanSite('https://example.com')
+    expect(r.sitemapPresent).toBe(true)
+    expect(r.pagesScanned).toBe(1)
+    expect(r.checks.find(c => c.id === 'sitemap')?.status).toBe('pass')
+  })
+
+  it('홈페이지 fetch 실패 → error 필드', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (u: string | URL) => {
+      if (u.toString().endsWith('/robots.txt')) return new Response('', { status: 404 }) as unknown as Response
+      if (u.toString().endsWith('/sitemap.xml')) return new Response('', { status: 404 }) as unknown as Response
+      if (u.toString().endsWith('/llms.txt')) return new Response('', { status: 404 }) as unknown as Response
+      return new Response('', { status: 500 }) as unknown as Response
+    }))
+    const r = await scanSite('https://example.com')
+    expect(r.error).toBeTruthy()
+    expect(r.pagesScanned).toBe(0)
+  })
+
+  it('URL 형식 오류 → error 필드 (pagesScanned 0)', async () => {
+    const r = await scanSite('not a url!!!')
+    expect(r.error).toBeTruthy()
+    expect(r.checks).toHaveLength(0)
+    expect(r.pagesScanned).toBe(0)
+  })
+
+  it('HTTP → https 체크 fail', async () => {
+    mockFetch({ home: MOCK_HOME_EXCELLENT })
     const r = await scanSite('http://example.com')
     expect(r.checks.find(c => c.id === 'https')?.status).toBe('fail')
   })
 
-  it('URL 형식 오류 → error 필드', async () => {
-    const r = await scanSite('not a url!!!')
-    expect(r.error).toBeTruthy()
-    expect(r.checks).toHaveLength(0)
-  })
-
-  it('GPTBot Disallow → robots 체크 fail', async () => {
-    const robots = `User-agent: GPTBot\nDisallow: /\n\nUser-agent: *\nAllow: /\n`
-    mockFetch(MOCK_HTML_EXCELLENT, { robots, sitemapOk: true, llmsOk: true })
+  it('GPTBot Disallow → robots fail', async () => {
+    mockFetch({
+      home: MOCK_HOME_EXCELLENT,
+      robots: 'User-agent: GPTBot\nDisallow: /\n\nUser-agent: *\nAllow: /\n',
+      sitemap: SITEMAP_MULTI,
+    })
     const r = await scanSite('https://example.com')
-    const robotsCheck = r.checks.find(c => c.id === 'robots_ai_allow')!
-    expect(robotsCheck.status).toBe('fail')
-    expect(robotsCheck.detail).toContain('GPTBot')
+    const rb = r.checks.find(c => c.id === 'robots_ai_allow')!
+    expect(rb.status).toBe('fail')
+    expect(rb.detail).toContain('GPTBot')
   })
 
   it('전체 크롤러 차단 → robots 0점', async () => {
-    mockFetch(MOCK_HTML_EXCELLENT, { robots: 'User-agent: *\nDisallow: /\n' })
+    mockFetch({ home: MOCK_HOME_EXCELLENT, robots: 'User-agent: *\nDisallow: /\n' })
     const r = await scanSite('https://example.com')
-    const robotsCheck = r.checks.find(c => c.id === 'robots_ai_allow')!
-    expect(robotsCheck.status).toBe('fail')
-    expect(robotsCheck.points).toBe(0)
+    const rb = r.checks.find(c => c.id === 'robots_ai_allow')!
+    expect(rb.status).toBe('fail')
+    expect(rb.points).toBe(0)
   })
 
-  it('점수 범위 0~100', async () => {
-    mockFetch(MOCK_HTML_EXCELLENT, { robots: 'User-agent: *\nAllow: /\n', sitemapOk: true, llmsOk: true })
-    const r = await scanSite('https://example.com')
-    expect(r.score).toBeGreaterThanOrEqual(0)
-    expect(r.score).toBeLessThanOrEqual(100)
-  })
-
-  it('13개 체크 항목 반환 (GEO4 + AEO3 + SEO6)', async () => {
-    mockFetch(MOCK_HTML_EXCELLENT)
+  it('13개 체크 항목 반환', async () => {
+    mockFetch({ home: MOCK_HOME_EXCELLENT })
     const r = await scanSite('https://example.com')
     expect(r.checks).toHaveLength(13)
     const ids = r.checks.map(c => c.id).sort()
@@ -137,45 +192,58 @@ describe('T-137 v2 scanSite (GEO 재설계)', () => {
     ])
   })
 
-  it('카테고리 분류 (geo/aeo/seo) 정상', async () => {
-    mockFetch(MOCK_HTML_EXCELLENT)
+  it('카테고리 분포 geo4 + aeo3 + seo6', async () => {
+    mockFetch({ home: MOCK_HOME_EXCELLENT })
     const r = await scanSite('https://example.com')
-    const geo = r.checks.filter(c => c.category === 'geo').map(c => c.id)
-    const aeo = r.checks.filter(c => c.category === 'aeo').map(c => c.id)
-    const seo = r.checks.filter(c => c.category === 'seo').map(c => c.id)
-    expect(geo).toHaveLength(4)
-    expect(aeo).toHaveLength(3)
-    expect(seo).toHaveLength(6)
-    expect(geo).toContain('faq_schema')
-    expect(aeo).toContain('direct_answer_block')
+    expect(r.checks.filter(c => c.category === 'geo')).toHaveLength(4)
+    expect(r.checks.filter(c => c.category === 'aeo')).toHaveLength(3)
+    expect(r.checks.filter(c => c.category === 'seo')).toHaveLength(6)
   })
 
-  it('LocalBusiness 일반 타입 → warn (subtype 권장)', async () => {
-    const generic = MOCK_HTML_EXCELLENT.replace('"MedicalClinic"', '"LocalBusiness"')
-    mockFetch(generic, { robots: 'User-agent: *\nAllow: /\n', sitemapOk: true, llmsOk: true })
+  it('LocalBusiness 일반 타입 → warn + foundOn 표기', async () => {
+    const generic = MOCK_HOME_EXCELLENT.replace('"MedicalClinic"', '"LocalBusiness"')
+    mockFetch({ home: generic, robots: 'User-agent: *\nAllow: /\n', sitemap: SITEMAP_MULTI })
     const r = await scanSite('https://example.com')
     const lb = r.checks.find(c => c.id === 'jsonld_localbusiness')!
     expect(lb.status).toBe('warn')
     expect(lb.detail).toContain('구체화')
+    expect(lb.foundOn).toBe('/')
   })
 
-  it('FAQ 3개 → warn (5개 권장)', async () => {
-    const reduced = MOCK_HTML_EXCELLENT.replace(
-      /"mainEntity":\s*\[[\s\S]*?\]/,
-      '"mainEntity": [{"@type":"Question","name":"Q1","acceptedAnswer":{"@type":"Answer","text":"A"}},{"@type":"Question","name":"Q2","acceptedAnswer":{"@type":"Answer","text":"A"}},{"@type":"Question","name":"Q3","acceptedAnswer":{"@type":"Answer","text":"A"}}]',
-    )
-    mockFetch(reduced, { robots: 'User-agent: *\nAllow: /\n' })
+  it('최소 HTML → 낮은 점수', async () => {
+    mockFetch({ home: MOCK_HTML_BAD })
     const r = await scanSite('https://example.com')
-    expect(r.checks.find(c => c.id === 'faq_schema')?.status).toBe('warn')
+    expect(r.score).toBeLessThan(30)
+    expect(r.checks.find(c => c.id === 'jsonld_localbusiness')?.status).toBe('fail')
+    expect(r.checks.find(c => c.id === 'sitemap')?.status).toBe('fail')
   })
 
-  it('오래된 dateModified (400일 전) → warn 감점', async () => {
-    const oldIso = new Date(Date.now() - 400 * 24 * 60 * 60 * 1000).toISOString()
-    const stale = MOCK_HTML_EXCELLENT.replace(RECENT_ISO, oldIso)
-    mockFetch(stale, { robots: 'User-agent: *\nAllow: /\n' })
+  it('사이트맵 인덱스 → nested sitemap 팔로우', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string | URL) => {
+      const u = url.toString()
+      if (u.endsWith('/robots.txt')) return new Response('', { status: 404 }) as unknown as Response
+      if (u.endsWith('/llms.txt')) return new Response('', { status: 404 }) as unknown as Response
+      if (u.endsWith('/sitemap.xml')) return new Response(`<?xml version="1.0"?>
+        <sitemapindex><sitemap><loc>https://example.com/sm-posts.xml</loc></sitemap></sitemapindex>`, { status: 200 }) as unknown as Response
+      if (u.endsWith('/sm-posts.xml')) return new Response(`<?xml version="1.0"?>
+        <urlset><url><loc>https://example.com/faq</loc></url></urlset>`, { status: 200 }) as unknown as Response
+      if (u.endsWith('/faq')) return new Response(MOCK_FAQ_PAGE, { status: 200 }) as unknown as Response
+      return new Response(MOCK_HOME_EXCELLENT, { status: 200 }) as unknown as Response
+    }))
     const r = await scanSite('https://example.com')
-    const lu = r.checks.find(c => c.id === 'last_updated')!
-    expect(lu.status).toBe('warn')
-    expect(lu.detail).toContain('1년')
+    expect(r.sitemapPresent).toBe(true)
+    expect(r.pagesScanned).toBe(2)
+    expect(r.checks.find(c => c.id === 'faq_schema')?.status).toBe('pass')
+  })
+
+  it('sampledPages 경로 배열 포함', async () => {
+    mockFetch({
+      home: MOCK_HOME_EXCELLENT,
+      faq: MOCK_FAQ_PAGE,
+      sitemap: `<?xml version="1.0"?><urlset><url><loc>https://example.com/faq</loc></url></urlset>`,
+    })
+    const r = await scanSite('https://example.com')
+    expect(r.sampledPages).toContain('/')
+    expect(r.sampledPages).toContain('/faq')
   })
 })

@@ -59,12 +59,29 @@ export default async function CheckPage({ searchParams }: Props) {
                   </div>
                 ) : (
                   <>
+                    {/* 사이트맵 없음 경고 */}
+                    {!result.sitemapPresent && (
+                      <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+                        <p className="font-semibold">⚠ 사이트맵(sitemap.xml)이 없습니다</p>
+                        <p className="mt-1 text-xs">
+                          AI 크롤러가 상세 페이지를 발견하지 못합니다. 현재 진단은 <strong>홈페이지 한 페이지만</strong> 스캔한 결과입니다.
+                          실제 사이트에는 FAQ·리뷰가 있어도 크롤러가 찾을 수 없으면 없는 것과 같습니다.
+                        </p>
+                      </div>
+                    )}
+
                     {/* 점수 헤더 */}
                     <div className="rounded-2xl border border-[#e7e7e7] bg-white p-6">
                       <div className="flex items-end justify-between">
                         <div>
                           <p className="text-xs text-[#6a6a6a]">진단 대상</p>
                           <p className="mt-0.5 break-all font-mono text-sm text-[#191919]">{result.url}</p>
+                          <p className="mt-1 text-xs text-[#6a6a6a]">
+                            {result.pagesScanned}개 페이지 스캔
+                            {result.sampledPages && result.sampledPages.length > 1 && (
+                              <span className="ml-1 font-mono">({result.sampledPages.slice(0, 5).join(', ')}{result.sampledPages.length > 5 ? '...' : ''})</span>
+                            )}
+                          </p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-[#6a6a6a]">AI 가독성 점수</p>
@@ -122,6 +139,7 @@ export default async function CheckPage({ searchParams }: Props) {
                                         <p className="text-sm font-medium text-[#191919]">
                                           {c.label}
                                           {c.reference && <span className="ml-1.5 text-[10px] text-[#9a9a9a]">{c.reference}</span>}
+                                          {c.foundOn && <span className="ml-1.5 font-mono text-[10px] text-emerald-700">발견: {c.foundOn}</span>}
                                         </p>
                                         {c.detail && <p className="mt-0.5 text-xs text-[#6a6a6a]">{c.detail}</p>}
                                       </div>
