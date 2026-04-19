@@ -208,16 +208,34 @@ async function sampleSitemapUrls(
     }
   }
 
-  // 우선순위: /faq > /about|contact|services > 기타
-  const priority = (u: string): number => {
-    const p = urlPath(u).toLowerCase()
-    if (/\/(faq|faqs|q-?and-?a|questions)(\/|$)/i.test(p)) return 0
-    if (/\/(about|contact|services?|info)(\/|$)/i.test(p)) return 1
-    if (/\/(review|testimonial)/i.test(p)) return 2
-    return 3
+  // 샘플링 전략: 깊이 기반 다양성 확보.
+  // 디렉토리·이커머스 사이트는 **상세 페이지(depth ≥ 3)**에 LocalBusiness/Review/sameAs 가 집중됨.
+  // 상세 페이지를 강제로 포함해야 스키마 집계가 의미 있음.
+  const pathDepth = (u: string): number => urlPath(u).split('/').filter(Boolean).length
+  const isFaq = (u: string) => /\/(faq|faqs|q-?and-?a|questions)(\/|$)/i.test(urlPath(u))
+  const isAboutContact = (u: string) => /\/(about|contact|services?|info)(\/|$)/i.test(urlPath(u))
+  const isReviewPath = (u: string) => /\/(review|testimonial)/i.test(urlPath(u))
+
+  const all = [...urlSet]
+  const faqUrls = all.filter(isFaq)
+  const deepUrls = all.filter(u => !isFaq(u) && !isAboutContact(u) && pathDepth(u) >= 3).sort((a, b) => pathDepth(b) - pathDepth(a))
+  const aboutUrls = all.filter(isAboutContact)
+  const reviewUrls = all.filter(u => !isFaq(u) && !isAboutContact(u) && isReviewPath(u))
+  const shallowUrls = all.filter(u => !isFaq(u) && !isAboutContact(u) && !isReviewPath(u) && pathDepth(u) < 3)
+
+  const picked: string[] = []
+  const take = (arr: string[], n: number) => {
+    for (const u of arr) { if (picked.length >= limit || n <= 0) break; if (!picked.includes(u)) { picked.push(u); n -= 1 } }
   }
-  const urls = [...urlSet].sort((a, b) => priority(a) - priority(b))
-  return { present: true, urls: urls.slice(0, limit) }
+  // 쿼터: FAQ 1, 상세(deep) 3, about/contact 1, review 1, 샐로우 나머지
+  take(faqUrls, 1)
+  take(deepUrls, 3)
+  take(aboutUrls, 1)
+  take(reviewUrls, 1)
+  take(shallowUrls, limit)      // 남은 자리 샐로우로 채우기
+  take(deepUrls, limit)          // 그래도 남으면 더 많은 상세
+
+  return { present: true, urls: picked.slice(0, limit) }
 }
 
 // ---------- 개별 체크 ----------

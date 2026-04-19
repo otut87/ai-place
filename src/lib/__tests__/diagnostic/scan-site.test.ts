@@ -236,6 +236,29 @@ describe('T-137 v3 scanSite (멀티 페이지)', () => {
     expect(r.checks.find(c => c.id === 'faq_schema')?.status).toBe('pass')
   })
 
+  it('샘플링 우선순위: 상세 페이지(depth ≥ 3) 우선 포함', async () => {
+    // 얕은 URL 많고 깊은 URL 소수 → 깊은 URL이 먼저 샘플되어야 함
+    const sitemap = `<?xml version="1.0"?>
+    <urlset>
+      <url><loc>https://example.com/cheonan</loc></url>
+      <url><loc>https://example.com/seoul</loc></url>
+      <url><loc>https://example.com/about</loc></url>
+      <url><loc>https://example.com/cheonan/dermatology/dr-skin</loc></url>
+      <url><loc>https://example.com/cheonan/dermatology/clinic-a</loc></url>
+      <url><loc>https://example.com/cheonan/auto-repair/shop-b</loc></url>
+    </urlset>`
+    mockFetch({
+      home: MOCK_HOME_EXCELLENT,
+      detail: MOCK_DETAIL_PAGE,
+      sitemap,
+      robots: 'User-agent: *\nAllow: /\n',
+    })
+    const r = await scanSite('https://example.com')
+    // 깊이 3짜리 URL 중 하나라도 샘플됐는지
+    const deepSampled = r.sampledPages?.some(p => p.split('/').filter(Boolean).length >= 3) ?? false
+    expect(deepSampled).toBe(true)
+  })
+
   it('sampledPages 경로 배열 포함', async () => {
     mockFetch({
       home: MOCK_HOME_EXCELLENT,
