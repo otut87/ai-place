@@ -77,7 +77,7 @@ export default async function CheckPage({ searchParams }: Props) {
                           <p className="text-xs text-[#6a6a6a]">진단 대상</p>
                           <p className="mt-0.5 break-all font-mono text-sm text-[#191919]">{result.url}</p>
                           <p className="mt-1 text-xs text-[#6a6a6a]">
-                            {result.pagesScanned}개 페이지 스캔
+                            {result.pagesScanned}개 고유 경로 스캔 (route pattern 단위)
                             {result.sampledPages && result.sampledPages.length > 1 && (
                               <span className="ml-1 font-mono">({result.sampledPages.slice(0, 5).join(', ')}{result.sampledPages.length > 5 ? '...' : ''})</span>
                             )}

@@ -236,16 +236,44 @@ describe('T-137 v3 scanSite (멀티 페이지)', () => {
     expect(r.checks.find(c => c.id === 'faq_schema')?.status).toBe('pass')
   })
 
-  it('샘플링 우선순위: 상세 페이지(depth ≥ 3) 우선 포함', async () => {
-    // 얕은 URL 많고 깊은 URL 소수 → 깊은 URL이 먼저 샘플되어야 함
+  it('Route pattern 그룹화: 같은 템플릿은 1개, 다른 경로는 전부', async () => {
+    // 상세 페이지 100개(같은 템플릿) + /about + /blog 구조
+    const detailUrls = Array.from({ length: 30 }, (_, i) =>
+      `<url><loc>https://example.com/cheonan/dermatology/place-${i}</loc></url>`,
+    ).join('')
+    const blogUrls = Array.from({ length: 20 }, (_, i) =>
+      `<url><loc>https://example.com/blog/post-${i}</loc></url>`,
+    ).join('')
     const sitemap = `<?xml version="1.0"?>
     <urlset>
+      <url><loc>https://example.com/about</loc></url>
       <url><loc>https://example.com/cheonan</loc></url>
-      <url><loc>https://example.com/seoul</loc></url>
+      <url><loc>https://example.com/cheonan/dermatology</loc></url>
+      ${detailUrls}
+      ${blogUrls}
+    </urlset>`
+    mockFetch({
+      home: MOCK_HOME_EXCELLENT,
+      sitemap,
+      robots: 'User-agent: *\nAllow: /\n',
+    })
+    const r = await scanSite('https://example.com')
+    // 100개 상세 중 1개만 샘플됐어야 함 (같은 pattern)
+    const detailSampled = r.sampledPages?.filter(p => p.startsWith('/cheonan/dermatology/') && p.length > '/cheonan/dermatology/'.length) ?? []
+    expect(detailSampled.length).toBe(1)
+    // 20개 블로그 중 1개만
+    const blogSampled = r.sampledPages?.filter(p => p.startsWith('/blog/') && p.length > '/blog/'.length) ?? []
+    expect(blogSampled.length).toBe(1)
+    // 총 샘플 수: 홈 + /about + /cheonan + /cheonan/dermatology + 1 상세 + 1 블로그 ≈ 6
+    expect(r.pagesScanned).toBeLessThanOrEqual(10)
+    expect(r.pagesScanned).toBeGreaterThanOrEqual(4)
+  })
+
+  it('샘플링: 상세 페이지(depth ≥ 3) 우선 포함', async () => {
+    const sitemap = `<?xml version="1.0"?>
+    <urlset>
       <url><loc>https://example.com/about</loc></url>
       <url><loc>https://example.com/cheonan/dermatology/dr-skin</loc></url>
-      <url><loc>https://example.com/cheonan/dermatology/clinic-a</loc></url>
-      <url><loc>https://example.com/cheonan/auto-repair/shop-b</loc></url>
     </urlset>`
     mockFetch({
       home: MOCK_HOME_EXCELLENT,
@@ -254,7 +282,6 @@ describe('T-137 v3 scanSite (멀티 페이지)', () => {
       robots: 'User-agent: *\nAllow: /\n',
     })
     const r = await scanSite('https://example.com')
-    // 깊이 3짜리 URL 중 하나라도 샘플됐는지
     const deepSampled = r.sampledPages?.some(p => p.split('/').filter(Boolean).length >= 3) ?? false
     expect(deepSampled).toBe(true)
   })

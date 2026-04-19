@@ -64,7 +64,8 @@ const WEIGHTS: Record<CheckId, number> = {
 }
 
 const FETCH_TIMEOUT_MS = 10_000
-const MAX_SAMPLE_PAGES = 7        // 홈 포함 최대 8 페이지
+const MAX_SAMPLE_PAGES = 49       // 홈 포함 최대 50 페이지 (고유 route pattern 기준)
+const FETCH_CONCURRENCY = 6       // 병렬 fetch 동시 수 (서버 부담 완화)
 const USER_AGENT = 'AIPlaceDiagnostic/3.0 (+https://aiplace.kr/check)'
 
 interface PageScan {
@@ -162,6 +163,17 @@ async function scanPage(url: string): Promise<PageScan | null> {
   }
 }
 
+// 동시성 제한 배치 fetch — 서버 부담 완화 및 타임아웃 파편화 방지.
+async function scanPagesBatched(urls: string[], concurrency: number): Promise<PageScan[]> {
+  const results: PageScan[] = []
+  for (let i = 0; i < urls.length; i += concurrency) {
+    const batch = urls.slice(i, i + concurrency)
+    const batchResults = await Promise.all(batch.map(scanPage))
+    for (const r of batchResults) if (r) results.push(r)
+  }
+  return results
+}
+
 // ---------- 사이트맵 샘플링 ----------
 
 async function sampleSitemapUrls(
@@ -208,34 +220,47 @@ async function sampleSitemapUrls(
     }
   }
 
-  // 샘플링 전략: 깊이 기반 다양성 확보.
-  // 디렉토리·이커머스 사이트는 **상세 페이지(depth ≥ 3)**에 LocalBusiness/Review/sameAs 가 집중됨.
-  // 상세 페이지를 강제로 포함해야 스키마 집계가 의미 있음.
-  const pathDepth = (u: string): number => urlPath(u).split('/').filter(Boolean).length
-  const isFaq = (u: string) => /\/(faq|faqs|q-?and-?a|questions)(\/|$)/i.test(urlPath(u))
-  const isAboutContact = (u: string) => /\/(about|contact|services?|info)(\/|$)/i.test(urlPath(u))
-  const isReviewPath = (u: string) => /\/(review|testimonial)/i.test(urlPath(u))
+  // 샘플링 전략: route pattern 그룹화.
+  // URL 을 (depth, parentPath) 로 그룹핑 → 같은 템플릿끼리 묶임.
+  //   /cheonan/derma/A, /cheonan/derma/B, ... → 같은 키 → 1개만 샘플
+  //   /about, /blog, /cheonan → 같은 키(depth 1) → ≤3개 그룹이면 전부
+  // 이유: "같은 템플릿 반복 fetch" 는 무의미하고, "서로 다른 경로 = 다른 템플릿" 은 반드시 검사해야 스키마 구멍 발견.
+  const groups = new Map<string, string[]>()
+  for (const u of urlSet) {
+    const p = urlPath(u)
+    const segments = p.split('/').filter(Boolean)
+    const depth = segments.length
+    const parent = segments.slice(0, -1).join('/')
+    const key = `${depth}|${parent}`
+    const list = groups.get(key) ?? []
+    list.push(u)
+    groups.set(key, list)
+  }
 
-  const all = [...urlSet]
-  const faqUrls = all.filter(isFaq)
-  const deepUrls = all.filter(u => !isFaq(u) && !isAboutContact(u) && pathDepth(u) >= 3).sort((a, b) => pathDepth(b) - pathDepth(a))
-  const aboutUrls = all.filter(isAboutContact)
-  const reviewUrls = all.filter(u => !isFaq(u) && !isAboutContact(u) && isReviewPath(u))
-  const shallowUrls = all.filter(u => !isFaq(u) && !isAboutContact(u) && !isReviewPath(u) && pathDepth(u) < 3)
+  // FAQ/상세 경로 우선순위 부여: 먼저 뽑히도록 그룹 순서 정렬
+  const groupEntries = [...groups.entries()].sort((a, b) => {
+    const scoreGroup = (key: string, urls: string[]) => {
+      if (urls.some(u => /\/(faq|faqs|q-?and-?a|questions)(\/|$)/i.test(urlPath(u)))) return 0
+      const depth = Number(key.split('|')[0])
+      if (depth >= 3) return 1           // 상세 페이지 그룹 먼저
+      if (depth === 2) return 2
+      return 3
+    }
+    return scoreGroup(a[0], a[1]) - scoreGroup(b[0], b[1])
+  })
 
   const picked: string[] = []
-  const take = (arr: string[], n: number) => {
-    for (const u of arr) { if (picked.length >= limit || n <= 0) break; if (!picked.includes(u)) { picked.push(u); n -= 1 } }
+  for (const [, urls] of groupEntries) {
+    if (picked.length >= limit) break
+    // 그룹 크기 ≤ 3: 전부 샘플 (서로 다른 템플릿일 가능성)
+    // 그룹 크기 > 3: 1개만 (같은 템플릿 반복)
+    const take = urls.length <= 3 ? urls.length : 1
+    for (let i = 0; i < take && picked.length < limit; i++) {
+      picked.push(urls[i])
+    }
   }
-  // 쿼터: FAQ 1, 상세(deep) 3, about/contact 1, review 1, 샐로우 나머지
-  take(faqUrls, 1)
-  take(deepUrls, 3)
-  take(aboutUrls, 1)
-  take(reviewUrls, 1)
-  take(shallowUrls, limit)      // 남은 자리 샐로우로 채우기
-  take(deepUrls, limit)          // 그래도 남으면 더 많은 상세
 
-  return { present: true, urls: picked.slice(0, limit) }
+  return { present: true, urls: picked }
 }
 
 // ---------- 개별 체크 ----------
@@ -599,9 +624,8 @@ export async function scanSite(rawUrl: string): Promise<ScanResult> {
     }
   }
 
-  // 추가 페이지 병렬 스캔 (사이트맵 있을 때만)
-  const additionalScans = await Promise.all(sitemapInfo.urls.map(scanPage))
-  const extraPages = additionalScans.filter((p): p is PageScan => p !== null)
+  // 추가 페이지 배치 스캔 (사이트맵 있을 때만)
+  const extraPages = await scanPagesBatched(sitemapInfo.urls, FETCH_CONCURRENCY)
   const allPages = [homeScan, ...extraPages]
   const allNodes = allPages.flatMap(p => p.nodes)
   const detailHtml = extraPages[0]?.html
@@ -610,7 +634,7 @@ export async function scanSite(rawUrl: string): Promise<ScanResult> {
     ? {
         id: 'sitemap', label: 'sitemap.xml', category: 'seo',
         status: 'pass', points: WEIGHTS.sitemap, maxPoints: WEIGHTS.sitemap,
-        detail: `sitemap.xml 존재 · ${allPages.length}개 페이지 스캔 (홈 + ${extraPages.length} 샘플)`,
+        detail: `sitemap.xml 존재 · ${allPages.length}개 고유 경로 스캔 (홈 + ${extraPages.length} route pattern)`,
       }
     : {
         id: 'sitemap', label: 'sitemap.xml', category: 'seo',
