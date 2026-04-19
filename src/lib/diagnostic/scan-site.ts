@@ -84,38 +84,75 @@ function checkHttps(url: URL): CheckResult {
   }
 }
 
+/**
+ * 표시폭(display width) 계산 — 한글·CJK 는 2, Latin/숫자/공백은 1.
+ * Google 검색결과가 픽셀 단위로 잘리므로 실제 가독성 기준은 "폭" 이 맞다.
+ */
+function displayWidth(text: string): number {
+  let width = 0
+  for (const ch of text) {
+    const code = ch.codePointAt(0) ?? 0
+    // 한글·CJK 통합한자·일본어 가나 등 wide 문자
+    if (
+      (code >= 0xAC00 && code <= 0xD7A3) || // 한글 음절
+      (code >= 0x4E00 && code <= 0x9FFF) || // CJK
+      (code >= 0x3040 && code <= 0x30FF)    // 일본어
+    ) {
+      width += 2
+    } else {
+      width += 1
+    }
+  }
+  return width
+}
+
+// 권장치는 Google 검색결과 픽셀 잘림 기준.
+// title : 약 30~70 display units (짧은 것은 허용, 너무 긴 것만 경고)
+// desc  : 약 80~200 display units (2줄 표시 영역)
+function titleRange(text: string): { min: number; max: number; warnMin: number; warnMax: number; widthValue: number } {
+  return { min: 30, max: 70, warnMin: 20, warnMax: 90, widthValue: displayWidth(text) }
+}
+
+function descRange(text: string): { min: number; max: number; warnMin: number; warnMax: number; widthValue: number } {
+  return { min: 80, max: 180, warnMin: 50, warnMax: 220, widthValue: displayWidth(text) }
+}
+
 function checkTitle(html: string): CheckResult {
   const m = html.match(/<title[^>]*>([^<]+)<\/title>/i)
   const title = m?.[1]?.trim() ?? ''
-  const len = title.length
-  let status: 'pass' | 'warn' | 'fail' = 'fail'
-  let points = 0
-  let detail = '<title> 태그 없음'
-  if (len >= 30 && len <= 60) {
-    status = 'pass'; points = WEIGHTS.title
-    detail = `"${title}" (${len}자, 권장 30~60)`
-  } else if (len > 0) {
-    status = 'warn'; points = Math.round(WEIGHTS.title / 2)
-    detail = `"${title}" (${len}자, 권장 30~60자 범위 벗어남)`
+  const chars = title.length
+  const r = titleRange(title)
+  const w = r.widthValue
+
+  if (chars === 0) {
+    return { id: 'title', label: '페이지 제목', status: 'fail', points: 0, maxPoints: WEIGHTS.title, detail: '<title> 태그 없음' }
   }
-  return { id: 'title', label: '페이지 제목', status, points, maxPoints: WEIGHTS.title, detail }
+  if (w >= r.min && w <= r.max) {
+    return { id: 'title', label: '페이지 제목', status: 'pass', points: WEIGHTS.title, maxPoints: WEIGHTS.title, detail: `"${title}" (${chars}자)` }
+  }
+  if (w >= r.warnMin && w <= r.warnMax) {
+    return { id: 'title', label: '페이지 제목', status: 'warn', points: Math.round(WEIGHTS.title * 0.75), maxPoints: WEIGHTS.title, detail: `"${title}" (${chars}자, 검색결과 표시폭 ${w}/권장 ${r.min}~${r.max})` }
+  }
+  return { id: 'title', label: '페이지 제목', status: 'warn', points: Math.round(WEIGHTS.title / 2), maxPoints: WEIGHTS.title, detail: `"${title}" (${chars}자, 표시폭 ${w} — 검색결과에서 잘릴 수 있음)` }
 }
 
 function checkMetaDescription(html: string): CheckResult {
   const m = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i)
   const desc = m?.[1]?.trim() ?? ''
-  const len = desc.length
-  let status: 'pass' | 'warn' | 'fail' = 'fail'
-  let points = 0
-  let detail = 'meta description 없음'
-  if (len >= 80 && len <= 160) {
-    status = 'pass'; points = WEIGHTS.meta_description
-    detail = `${len}자 (권장 80~160)`
-  } else if (len > 0) {
-    status = 'warn'; points = Math.round(WEIGHTS.meta_description / 2)
-    detail = `${len}자 (권장 80~160자 벗어남)`
+  const chars = desc.length
+  const r = descRange(desc)
+  const w = r.widthValue
+
+  if (chars === 0) {
+    return { id: 'meta_description', label: '메타 설명', status: 'fail', points: 0, maxPoints: WEIGHTS.meta_description, detail: 'meta description 없음' }
   }
-  return { id: 'meta_description', label: '메타 설명', status, points, maxPoints: WEIGHTS.meta_description, detail }
+  if (w >= r.min && w <= r.max) {
+    return { id: 'meta_description', label: '메타 설명', status: 'pass', points: WEIGHTS.meta_description, maxPoints: WEIGHTS.meta_description, detail: `${chars}자` }
+  }
+  if (w >= r.warnMin && w <= r.warnMax) {
+    return { id: 'meta_description', label: '메타 설명', status: 'warn', points: Math.round(WEIGHTS.meta_description * 0.75), maxPoints: WEIGHTS.meta_description, detail: `${chars}자 (표시폭 ${w}/권장 ${r.min}~${r.max})` }
+  }
+  return { id: 'meta_description', label: '메타 설명', status: 'warn', points: Math.round(WEIGHTS.meta_description / 2), maxPoints: WEIGHTS.meta_description, detail: `${chars}자 (표시폭 ${w} — 권장 ${r.min}~${r.max})` }
 }
 
 function checkViewport(html: string): CheckResult {
