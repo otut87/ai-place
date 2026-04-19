@@ -286,7 +286,7 @@ describe('T-137 v3 scanSite (멀티 페이지)', () => {
     expect(deepSampled).toBe(true)
   })
 
-  it('AggregateRating 단독 → pass 80% (개별 Review 복제 방지 정책 대응)', async () => {
+  it('AggregateRating 단독 → pass 만점 (저작권 정책상 개별 Review 권장 안함)', async () => {
     const homeWithAggOnly = `
 <!DOCTYPE html><html><head><title>Test Title 30자 이상 충분한 길이</title>
 <meta name="description" content="메타 설명 기본 80자 이상 채워넣습니다 네이버 카카오 구글 연결 모두 완비된 업체 디렉토리 홈페이지">
@@ -302,8 +302,8 @@ describe('T-137 v3 scanSite (멀티 페이지)', () => {
     const r = await scanSite('https://example.com')
     const rev = r.checks.find(c => c.id === 'review_schema')!
     expect(rev.status).toBe('pass')
-    expect(rev.points).toBe(4)  // 5 × 0.8 = 4
-    expect(rev.detail).toContain('AggregateRating')
+    expect(rev.points).toBe(5)  // 만점
+    expect(rev.detail).toContain('평점')
   })
 
   it('sameAs: naver.me / business.google / goo.gl 인식', async () => {

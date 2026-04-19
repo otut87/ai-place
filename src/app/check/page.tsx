@@ -203,7 +203,7 @@ export default async function CheckPage({ searchParams }: Props) {
                       <li>✓ JSON-LD LocalBusiness (subtype)</li>
                       <li>✓ robots.txt AI 크롤러 허용</li>
                       <li>✓ FAQPage schema</li>
-                      <li>✓ Review·AggregateRating</li>
+                      <li>✓ AggregateRating (집계 평점)</li>
                     </ul>
                   </div>
                   <div>

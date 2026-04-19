@@ -417,24 +417,19 @@ function checkReviewSchema(allNodes: NodeWithSource[]): CheckResult {
     if (typesOf(n).some(t => /^Review$/i.test(t))) { hasReview = true; foundOn = foundOn ?? ns.pagePath }
   }
 
-  if (hasAggregate && hasReview) return {
-    id: 'review_schema', label: 'Review · AggregateRating schema', category: 'geo',
-    status: 'pass', points: WEIGHTS.review_schema, maxPoints: WEIGHTS.review_schema,
-    detail: `평점 ${ratingValue ?? '?'}/5 · 리뷰 ${reviewCount ?? '?'}개 — ChatGPT 리뷰 선호 신호`,
-    reference: '§3.1', foundOn,
-  }
-  // AggregateRating 은 AI가 인용할 때 핵심 수치 신호이므로 단독이어도 대부분 OK (80%).
-  // 개별 Review 는 타 플랫폼 복제 위험이 있어 저장하지 않는 사이트도 많음.
+  // AggregateRating (집계 평점) 은 AI가 인용할 때 가장 중요한 수치 신호.
+  // 개별 Review 텍스트는 대부분 타 플랫폼(네이버·카카오) 복제라 저작권 이슈가 있어
+  // 수집·노출하지 않는 것이 모범 사례 (§13.2). 따라서 AggregateRating 단독도 만점 처리.
   if (hasAggregate) return {
-    id: 'review_schema', label: 'Review · AggregateRating schema', category: 'geo',
-    status: 'pass', points: Math.round(WEIGHTS.review_schema * 0.8), maxPoints: WEIGHTS.review_schema,
-    detail: `평점 ${ratingValue ?? '?'}/5 · 리뷰 ${reviewCount ?? '?'}개 (AggregateRating) — 개별 Review 추가 시 만점`,
+    id: 'review_schema', label: 'AggregateRating (집계 평점)', category: 'geo',
+    status: 'pass', points: WEIGHTS.review_schema, maxPoints: WEIGHTS.review_schema,
+    detail: `평점 ${ratingValue ?? '?'}/5 · 리뷰 ${reviewCount ?? '?'}개 — ChatGPT 리뷰 선호 신호 완비`,
     reference: '§3.1', foundOn,
   }
   if (hasReview) return {
-    id: 'review_schema', label: 'Review · AggregateRating schema', category: 'geo',
-    status: 'warn', points: Math.round(WEIGHTS.review_schema * 0.5), maxPoints: WEIGHTS.review_schema,
-    detail: 'Review만 있음 — AggregateRating (집계 평점) 도 권장',
+    id: 'review_schema', label: 'AggregateRating (집계 평점)', category: 'geo',
+    status: 'warn', points: Math.round(WEIGHTS.review_schema * 0.6), maxPoints: WEIGHTS.review_schema,
+    detail: '개별 Review schema만 있고 AggregateRating(집계 평점) 누락 — 수치 신호가 핵심',
     reference: '§3.1', foundOn,
   }
   return {
