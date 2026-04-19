@@ -42,7 +42,8 @@ export default async function HomePage() {
     { label: '블로그 글', value: `${stats.totalBlogPosts}편`, note: '가이드·비교·키워드' },
   ]
   const homeSources: Source[] = [
-    { name: 'AI플레이스 자체 조사', year: 2026 },
+    // T-125: "자체 조사" 링크는 /about/methodology 로 수렴
+    { name: 'AI플레이스 자체 조사', year: 2026, url: '/about/methodology' },
     { name: '네이버 플레이스', year: 2026 },
   ]
 

@@ -99,7 +99,8 @@ export default async function ListingPage({ params }: Props) {
     { label: '평균 평점', value: `${avgRating.toFixed(1)}점`, note: 'Google/네이버 기준' },
   ]
   const categorySources: Source[] = [
-    { name: 'AI플레이스 자체 조사', year: 2026 },
+    // T-125: "자체 조사" 링크는 /about/methodology 로 수렴
+    { name: 'AI플레이스 자체 조사', year: 2026, url: '/about/methodology' },
     { name: '네이버 플레이스', year: 2026 },
     { name: 'Google Places', year: 2026 },
   ]

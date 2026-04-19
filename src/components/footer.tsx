@@ -127,6 +127,11 @@ export async function Footer({ currentCity, currentCategory, currentSector }: Fo
                 </Link>
               </li>
               <li>
+                <Link href="/about/methodology" className="text-sm text-[#6a6a6a] hover:text-[#008f6b]">
+                  조사 방법론
+                </Link>
+              </li>
+              <li>
                 <Link href="/about" className="text-sm text-[#6a6a6a] hover:text-[#008f6b]">
                   업체 등록 문의
                 </Link>

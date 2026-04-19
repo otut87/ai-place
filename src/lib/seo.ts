@@ -40,6 +40,14 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
     priority: 0.7,
   })
 
+  // T-125: 조사 방법론 페이지
+  entries.push({
+    url: `${baseUrl}/about/methodology`,
+    lastModified: now,
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  })
+
   const cities = await getCities()
   const categories = await getCategories()
   const { getSectors } = await import('./data.supabase')

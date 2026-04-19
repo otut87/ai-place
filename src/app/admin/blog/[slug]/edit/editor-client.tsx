@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Save, Eye, FileText, LinkIcon, Calendar } from 'lucide-react'
 import { saveBlogPost, type SaveBlogInput } from '@/lib/actions/blog-edit'
 import { renderMarkdown } from '@/lib/admin/blog-editor'
+import { getBlockChecklist } from '@/lib/blog/template'
 import { useToast } from '@/components/admin/toast'
 import { AdminLink } from '@/components/admin/admin-link'
 
@@ -66,6 +67,10 @@ export function BlogEditorClient({
     setContent(prev => prev + (prev.endsWith('\n') ? '' : '\n') + snippet + '\n')
     toast.info(`${sug.label} 링크 추가됨`)
   }
+
+  // T-111: 7블록 체크리스트 (Admin 사이드바)
+  const blockChecklist = getBlockChecklist(content, post.category ?? undefined)
+  const blockPassed = blockChecklist.filter(b => b.status === 'ok').length
 
   return (
     <div className="flex h-[calc(100vh-3rem)] flex-col">
@@ -157,6 +162,35 @@ export function BlogEditorClient({
           </div>
           <div className="flex-1 overflow-y-auto p-5">
             <article className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }} />
+          </div>
+
+          {/* T-111: 7블록 체크리스트 */}
+          <div className="border-t border-[#e7e7e7] bg-[#fafafa] p-4">
+            <div className="mb-2 flex items-center gap-1 text-xs font-medium text-[#6b6b6b]">
+              <FileText className="h-3 w-3" /> 7블록 체크리스트 ({blockPassed}/7)
+            </div>
+            <ul className="space-y-0.5">
+              {blockChecklist.map(({ block, status }) => (
+                <li key={block.id} className="flex items-center gap-1.5 text-xs">
+                  <span
+                    className={
+                      status === 'ok' ? 'text-[#22aa77]' :
+                      status === 'short' ? 'text-[#d4a84a]' :
+                      'text-[#c26a6a]'
+                    }
+                    aria-label={status}
+                  >
+                    {status === 'ok' ? '●' : status === 'short' ? '◐' : '○'}
+                  </span>
+                  <span className="text-[#191919]">{block.title}</span>
+                  {status !== 'ok' && (
+                    <span className="text-[10px] text-[#9a9a9a]">
+                      {status === 'missing' ? '미작성' : '본문 부족'}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="border-t border-[#e7e7e7] bg-[#fafafa] p-4">

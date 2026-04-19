@@ -53,6 +53,108 @@ describe('suggestCategoryFromKorean (휴리스틱 fallback)', () => {
   })
 })
 
+describe('suggestCategoryFromKorean (추가 브랜치)', () => {
+  it('법률 카테고리 → compliance medium + 변호사법', () => {
+    const s = suggestCategoryFromKorean('변호사 사무소')
+    expect(s.compliance?.riskLevel).toBe('medium')
+    expect(s.compliance?.law[0]).toMatch(/변호사법/)
+  })
+
+  it('세무 카테고리 → compliance medium + 세무사법', () => {
+    const s = suggestCategoryFromKorean('세무 회계')
+    expect(s.compliance?.riskLevel).toBe('medium')
+    expect(s.compliance?.law).toContain('세무사법')
+  })
+
+  it('미용실 → hairsalon + HairSalon', () => {
+    const s = suggestCategoryFromKorean('미용실')
+    expect(s.slug).toBe('hairsalon')
+    expect(s.schemaType).toBe('HairSalon')
+    expect(s.sector).toBe('beauty')
+  })
+
+  it('네일 → nail + NailSalon', () => {
+    const s = suggestCategoryFromKorean('네일샵')
+    expect(s.slug).toBe('nail')
+    expect(s.schemaType).toBe('NailSalon')
+  })
+
+  it('카페 → cafe + CafeOrCoffeeShop (food sector)', () => {
+    const s = suggestCategoryFromKorean('카페')
+    expect(s.slug).toBe('cafe')
+    expect(s.sector).toBe('food')
+  })
+
+  it('동물병원 → vet + VeterinaryCare (pet sector)', () => {
+    const s = suggestCategoryFromKorean('동물병원')
+    expect(s.slug).toBe('vet')
+    expect(s.sector).toBe('pet')
+    expect(s.schemaType).toBe('VeterinaryCare')
+  })
+
+  it('요가 → pilates mapping (같은 hint pattern)', () => {
+    const s = suggestCategoryFromKorean('요가')
+    expect(s.slug).toBe('pilates')
+  })
+
+  it('영문 입력 "nail shop" → slug nail', () => {
+    const s = suggestCategoryFromKorean('nail shop')
+    expect(s.slug).toBe('nail')
+  })
+
+  it('한글 only 미등록 단어 → living 섹터 fallback', () => {
+    const s = suggestCategoryFromKorean('무엇무엇')
+    expect(s.sector).toBe('living')
+    expect(s.schemaType).toBe('LocalBusiness')
+    expect(s.reasoning).toMatch(/매핑 불가/)
+  })
+
+  it('pet 섹터 slug fallback: grooming → pet', () => {
+    const s = suggestCategoryFromKorean('grooming')
+    // inferSectorFromSlug fallback (no hint)
+    expect(s.sector).toBeTruthy()
+  })
+
+  // inferSectorFromSlug 의 모든 분기 커버.
+  it('영문 입력 wedding-hall → wedding 섹터', () => {
+    const s = suggestCategoryFromKorean('wedding-hall')
+    expect(s.sector).toBe('wedding')
+  })
+
+  it('영문 입력 bakery → food 섹터', () => {
+    const s = suggestCategoryFromKorean('bakery')
+    expect(s.sector).toBe('food')
+  })
+
+  it('영문 입력 academy → education 섹터', () => {
+    const s = suggestCategoryFromKorean('academy')
+    expect(s.sector).toBe('education')
+  })
+
+  it('영문 입력 realestate → professional 섹터', () => {
+    const s = suggestCategoryFromKorean('realestate')
+    expect(s.sector).toBe('professional')
+  })
+
+  it('영문 입력 auto-repair → auto 섹터 (dictionary + inferSector)', () => {
+    const s = suggestCategoryFromKorean('auto-repair')
+    expect(s.sector).toBe('auto')
+    expect(s.dictionaryExists).toBe(true)
+  })
+
+  it('영문 입력 semi-permanent → beauty 섹터 (dictionary + inferSector)', () => {
+    const s = suggestCategoryFromKorean('semi-permanent')
+    expect(s.sector).toBe('beauty')
+    expect(s.dictionaryExists).toBe(true)
+  })
+
+  it('영문 입력 pc-room → leisure 섹터 (dictionary + inferSector)', () => {
+    const s = suggestCategoryFromKorean('pc-room')
+    expect(s.sector).toBe('leisure')
+    expect(s.dictionaryExists).toBe(true)
+  })
+})
+
 describe('categorySuggestionToRow', () => {
   it('제안 객체를 master-data.upsertCategory input 으로 변환', () => {
     const suggestion = {
