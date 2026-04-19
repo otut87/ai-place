@@ -34,7 +34,15 @@ export async function listBlogPostsForMonth(year: number, month1to12: number): P
     .limit(200)
 
   if (error || !data) return []
-  return data as BlogCalendarPost[]
+  // 표시용 status 유도: DB check 에 'scheduled' 값이 없어 draft + 미래 published_at 으로 저장됨.
+  // 캘린더에서는 예약된 글을 구분 표시.
+  const now = Date.now()
+  return (data as BlogCalendarPost[]).map(p => {
+    if (p.status === 'draft' && p.published_at && new Date(p.published_at).getTime() > now) {
+      return { ...p, status: 'scheduled' }
+    }
+    return p
+  })
 }
 
 export interface CalendarDay {

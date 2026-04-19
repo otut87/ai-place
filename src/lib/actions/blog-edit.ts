@@ -24,12 +24,15 @@ export async function saveBlogPost(input: SaveBlogInput): Promise<{ success: boo
   if (!admin) return { success: false, error: 'admin_unavailable' }
   if (!input.slug.trim() || !input.title.trim()) return { success: false, error: 'slug·title 필수' }
 
+  // DB check 제약: status in ('draft', 'active', 'archived')
+  // 'scheduled' 상태는 status='draft' + published_at(미래 날짜) 조합으로 저장.
+  const dbStatus = input.status === 'scheduled' ? 'draft' : input.status
   const payload: Record<string, unknown> = {
     title: input.title.trim(),
     summary: input.summary.trim(),
     content: input.content,
     category: input.category,
-    status: input.status,
+    status: dbStatus,
     tags: input.tags ?? [],
     target_query: input.targetQuery ?? null,
     updated_at: new Date().toISOString(),
@@ -38,6 +41,8 @@ export async function saveBlogPost(input: SaveBlogInput): Promise<{ success: boo
     payload.published_at = input.publishedAt
   } else if (input.status === 'active') {
     payload.published_at = new Date().toISOString()
+  } else if (input.status === 'scheduled' && input.publishedAt) {
+    payload.published_at = input.publishedAt
   }
 
   const { error } = await admin.from('blog_posts').update(payload).eq('slug', input.slug)
@@ -81,6 +86,8 @@ export async function createBlogTopic(
   const suffix = Math.random().toString(36).slice(2, 5)
   const slug = (base || 'draft') + '-' + suffix
 
+  // DB check 제약: status in ('draft', 'active', 'archived')
+  // 'scheduled' 은 draft + published_at(미래 날짜) 로 표현.
   const payload = {
     slug,
     title,
@@ -91,7 +98,7 @@ export async function createBlogTopic(
     category: input.category ?? null,
     post_type: input.postType,
     tags: [] as string[],
-    status: input.scheduledDate ? 'scheduled' : 'draft',
+    status: 'draft',
     published_at: input.scheduledDate ? new Date(input.scheduledDate).toISOString() : null,
   }
 
