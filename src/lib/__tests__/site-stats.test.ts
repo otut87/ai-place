@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockGetAllPlaces = vi.fn()
 const mockGetCities = vi.fn()
 const mockGetCategories = vi.fn()
+const mockGetAllActiveBlogPosts = vi.fn()
 
 vi.mock('@/lib/data.supabase', () => ({
   getAllPlaces: mockGetAllPlaces,
@@ -16,10 +17,17 @@ vi.mock('@/lib/data.supabase', () => ({
   getCategories: mockGetCategories,
 }))
 
+vi.mock('@/lib/blog/data.supabase', () => ({
+  getAllActiveBlogPosts: mockGetAllActiveBlogPosts,
+}))
+
 beforeEach(() => {
   mockGetAllPlaces.mockReset()
   mockGetCities.mockReset()
   mockGetCategories.mockReset()
+  mockGetAllActiveBlogPosts.mockReset()
+  // 기본값: 비어있음
+  mockGetAllActiveBlogPosts.mockResolvedValue([])
 })
 
 describe('getSiteStats', () => {
@@ -89,6 +97,21 @@ describe('getSiteStats', () => {
 
     expect(stats.cities).toEqual(['cheonan', 'seoul', 'busan'])
     expect(stats.activeCities).toEqual(['cheonan'])
+  })
+
+  it('T-100: totalBlogPosts 는 getAllActiveBlogPosts().length 런타임 계산', async () => {
+    mockGetAllPlaces.mockResolvedValue([])
+    mockGetCities.mockResolvedValue([])
+    mockGetCategories.mockResolvedValue([])
+    mockGetAllActiveBlogPosts.mockResolvedValue([
+      { city: 'cheonan', sector: 'medical', slug: 'a' },
+      { city: 'cheonan', sector: 'food', slug: 'b' },
+      { city: 'cheonan', sector: 'medical', slug: 'c' },
+    ])
+
+    const { getSiteStats } = await import('@/lib/site-stats')
+    const stats = await getSiteStats()
+    expect(stats.totalBlogPosts).toBe(3)
   })
 })
 

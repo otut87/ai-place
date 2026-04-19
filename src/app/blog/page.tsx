@@ -102,10 +102,18 @@ function PostCard({ post }: { post: BlogPostSummary }) {
   )
 }
 
-export default async function BlogHomePage() {
+interface BlogHomeProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
+  const raw = await searchParams
+  const sectorFilter = typeof raw.sector === 'string' ? raw.sector : ''
+  const sortMode = raw.sort === 'popular' ? 'popular' : 'recent'
+
   const [recent, popular, cities, sectors] = await Promise.all([
-    getRecentBlogPosts(10),
-    getPopularBlogPosts(5),
+    getRecentBlogPosts(50),
+    getPopularBlogPosts(20),
     getCities(),
     getSectors(),
   ])
@@ -120,7 +128,18 @@ export default async function BlogHomePage() {
       merged.push(p)
     }
   }
-  const citySectorGroups = groupByCityAndSector(merged, cities, sectors)
+
+  // T-107: 섹터 필터 + 정렬 (URL 쿼리, JavaScript 없이 동작)
+  const filtered = sectorFilter
+    ? merged.filter(p => p.sector === sectorFilter)
+    : merged
+  const sorted = sortMode === 'popular'
+    ? [...filtered].sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0))
+    : [...filtered].sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''))
+
+  const citySectorGroups = sectorFilter
+    ? []
+    : groupByCityAndSector(merged, cities, sectors)
 
   // Direct Answer Block (40-60자)
   const dab = `AI Place 블로그는 천안 지역 ${recent.length}개 글로 업체 비교·가이드·추천을 제공합니다.`
@@ -154,6 +173,38 @@ export default async function BlogHomePage() {
               AI Place 블로그
             </h1>
             <p className="mt-4 text-base text-[#1a1a1a] max-w-2xl">{dab}</p>
+
+            {/* T-107: 섹터 필터 + 정렬 토글 (URL 쿼리, JS 없이 동작) */}
+            <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-[#eee] pt-4">
+              <Link
+                href="/blog"
+                className={`rounded-full border px-3 py-1 text-xs ${sectorFilter === '' ? 'border-[#1a1a1a] bg-[#1a1a1a] text-white' : 'border-[#e0e0e0] text-[#1a1a1a] hover:bg-[#f7f7f7]'}`}
+              >
+                전체
+              </Link>
+              {sectors.map(s => (
+                <Link
+                  key={s.slug}
+                  href={`/blog?sector=${s.slug}${sortMode === 'popular' ? '&sort=popular' : ''}`}
+                  className={`rounded-full border px-3 py-1 text-xs ${sectorFilter === s.slug ? 'border-[#1a1a1a] bg-[#1a1a1a] text-white' : 'border-[#e0e0e0] text-[#1a1a1a] hover:bg-[#f7f7f7]'}`}
+                >
+                  {s.name}
+                </Link>
+              ))}
+              <span className="mx-2 text-[#ccc]">|</span>
+              <Link
+                href={`/blog${sectorFilter ? `?sector=${sectorFilter}` : ''}`}
+                className={`rounded-full border px-3 py-1 text-xs ${sortMode === 'recent' ? 'border-[#1a1a1a] bg-[#1a1a1a] text-white' : 'border-[#e0e0e0] text-[#1a1a1a] hover:bg-[#f7f7f7]'}`}
+              >
+                최근
+              </Link>
+              <Link
+                href={`/blog?${sectorFilter ? `sector=${sectorFilter}&` : ''}sort=popular`}
+                className={`rounded-full border px-3 py-1 text-xs ${sortMode === 'popular' ? 'border-[#1a1a1a] bg-[#1a1a1a] text-white' : 'border-[#e0e0e0] text-[#1a1a1a] hover:bg-[#f7f7f7]'}`}
+              >
+                인기
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -188,8 +239,25 @@ export default async function BlogHomePage() {
           </section>
         ))}
 
+        {/* T-107: 섹터 필터 선택 시 필터된 글만 + 정렬 적용 */}
+        {sectorFilter && sorted.length > 0 && (
+          <section className="py-12 px-6">
+            <div className="mx-auto max-w-[1200px]">
+              <h2 className="text-[22px] font-bold text-[#1a1a1a]">
+                {sectors.find(s => s.slug === sectorFilter)?.name ?? sectorFilter}
+                <span className="ml-2 text-sm text-[#888]">
+                  {sortMode === 'popular' ? '인기순' : '최근순'} · {sorted.length}편
+                </span>
+              </h2>
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sorted.map(post => <PostCard key={post.slug} post={post} />)}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* 최근 작성 (도시 섹션이 비어있을 때 fallback) */}
-        {citySectorGroups.length === 0 && recent.length > 0 && (
+        {!sectorFilter && citySectorGroups.length === 0 && recent.length > 0 && (
           <section className="py-12 px-6">
             <div className="mx-auto max-w-[1200px]">
               <h2 className="text-[22px] font-bold text-[#1a1a1a]">최근 글</h2>

@@ -9,6 +9,7 @@
 // - 가이드/블로그 본문 생성 시
 
 import { getAllPlaces, getCities, getCategories } from './data.supabase'
+import { getAllActiveBlogPosts } from './blog/data.supabase'
 
 export interface SiteStats {
   /** 전체 등록 업체 수 (status=active) */
@@ -23,16 +24,19 @@ export interface SiteStats {
   activeCities: string[]
   /** 현재 연도 — "2026년 기준" 하드코딩 대체 */
   currentYear: number
+  /** T-100: 전체 active 블로그 글 수 — 홈 통계 "블로그 글 N편" 단일 소스 */
+  totalBlogPosts: number
 }
 
 /**
  * 사이트 수치를 단일 집계. SSG 빌드 시에만 호출 (SSR 최소화).
  */
 export async function getSiteStats(): Promise<SiteStats> {
-  const [places, cities, categories] = await Promise.all([
+  const [places, cities, categories, blogs] = await Promise.all([
     getAllPlaces(),
     getCities(),
     getCategories(),
+    getAllActiveBlogPosts(),
   ])
 
   const activeCategorySlugs = new Set(places.map(p => p.category))
@@ -45,6 +49,7 @@ export async function getSiteStats(): Promise<SiteStats> {
     cities: cities.map(c => c.slug),
     activeCities: cities.filter(c => activeCitySlugs.has(c.slug)).map(c => c.slug),
     currentYear: new Date().getFullYear(),
+    totalBlogPosts: blogs.length,
   }
 }
 

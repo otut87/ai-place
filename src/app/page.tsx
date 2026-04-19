@@ -39,7 +39,7 @@ export default async function HomePage() {
     { label: '등록 업체 수', value: `${stats.totalPlaces}곳`, note: `${stats.currentYear}년 기준` },
     { label: '등록 도시', value: `${stats.cities.length}개 도시` },
     { label: '평균 평점', value: `${avgRating.toFixed(1)}점`, note: 'Google Places 기준' },
-    { label: '블로그 글', value: `${blogPosts.length}편`, note: '가이드·비교·키워드' },
+    { label: '블로그 글', value: `${stats.totalBlogPosts}편`, note: '가이드·비교·키워드' },
   ]
   const homeSources: Source[] = [
     { name: 'AI플레이스 자체 조사', year: 2026 },

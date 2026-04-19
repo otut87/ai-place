@@ -14,6 +14,7 @@ import { groupBlogPostsBySector } from '@/lib/blog/hub'
 import { generateCollectionPage, generateBlogItemList } from '@/lib/jsonld'
 import { generateBreadcrumbList } from '@/lib/seo'
 import { composePageTitle } from '@/lib/seo/compose-title'
+import { clampDirectAnswer } from '@/lib/seo/direct-answer'
 import { safeJsonLd } from '@/lib/utils'
 
 const BASE_URL = 'https://aiplace.kr'
@@ -64,8 +65,10 @@ export default async function BlogCityHubPage({ params }: Props) {
     { name: cityObj.name, url: pageUrl },
   ]
 
-  // Direct Answer Block (40~80자)
-  const dab = `${cityObj.name}에 공개된 업종 가이드 ${posts.length}편입니다. 피부과·미용·음식·인테리어 등 섹터별 추천·비교 정리.`
+  // Direct Answer Block (40~80자) — clampDirectAnswer 로 범위 보장
+  const dab = clampDirectAnswer(
+    `${cityObj.name}에 공개된 업종 가이드 ${posts.length}편입니다. 피부과·미용·음식·인테리어 등 섹터별 추천·비교 정리.`,
+  )
 
   return (
     <>

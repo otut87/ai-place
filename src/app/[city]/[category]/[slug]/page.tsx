@@ -132,28 +132,34 @@ export default async function ProfilePage({ params }: Props) {
       <main className="flex-1">
         <article className="py-20 px-6">
           <div className="mx-auto max-w-[800px]">
-            {/* Breadcrumb */}
-            <nav className="mb-8 text-sm text-[#6a6a6a]">
+            {/* T-105: Breadcrumb 5단계 (홈 › 도시+섹터 › 도시+카테고리 › 업체) — 카테고리 페이지와 계층 일관성 */}
+            <nav className="mb-8 text-sm text-[#6a6a6a]" aria-label="Breadcrumb">
               <Link href="/" className="hover:text-[#008f6b]">홈</Link>
+              {sector && (
+                <>
+                  <span className="mx-2">›</span>
+                  <Link href={`/${city}`} className="hover:text-[#008f6b]">{cityObj?.name} {sector.name}</Link>
+                </>
+              )}
               <span className="mx-2">›</span>
               <Link href={`/${city}/${category}`} className="hover:text-[#008f6b]">{cityObj?.name} {catObj?.name}</Link>
               <span className="mx-2">›</span>
               <span className="text-[#222222] font-medium">{place.name}</span>
             </nav>
 
-            {/* Hero Image */}
-            <div className="aspect-[16/9] rounded-[20px] overflow-hidden bg-[#f2f2f2] mb-8 relative">
-              {place.imageUrl ? (
+            {/* T-098: Hero Image 또는 축약 정보 배너 (사진 없을 때 600px 빈 박스 제거) */}
+            {place.imageUrl ? (
+              <div className="aspect-[16/9] rounded-[20px] overflow-hidden bg-[#f2f2f2] mb-8 relative">
                 <Image src={place.imageUrl} alt={place.name} fill priority className="object-cover" sizes="(max-width: 820px) 100vw, 820px" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <svg aria-hidden="true" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#c1c1c1" strokeWidth="1.5">
-                    <path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0H5m14 0h2m-16 0H3" />
-                    <path d="M9 7h1m-1 4h1m4-4h1m-1 4h1" />
-                  </svg>
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div
+                aria-hidden="true"
+                className="h-24 rounded-[16px] bg-[#ececec] flex items-center justify-center text-[#8a8a8a] text-sm mb-8"
+              >
+                사진 준비 중
+              </div>
+            )}
 
             {/* H1 + Rating (Google Places 데이터 우선, 없으면 수동 데이터) */}
             <h1 className="text-[28px] font-bold text-[#222222] leading-[1.43]">

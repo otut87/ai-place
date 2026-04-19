@@ -3,6 +3,8 @@ import Image from "next/image"
 import type { Place } from "@/lib/types"
 import { formatRatingLine } from "@/lib/format/rating"
 
+// T-098: 사진 없는 업체 플레이스홀더 — 회색 아이콘 대신 업체명 첫 글자로 정돈.
+// 철학 10% UI 비중 내 최소 공수. 복잡한 일러스트/애니메이션 금지.
 export function PlaceCard({ place }: { place: Place }) {
   return (
     <Link
@@ -10,7 +12,7 @@ export function PlaceCard({ place }: { place: Place }) {
       className="group block"
     >
       <article className="rounded-[20px] overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
-        {/* Image */}
+        {/* Image or initial-letter placeholder */}
         <div className="aspect-[16/10] bg-[#f2f2f2] relative overflow-hidden">
           {place.imageUrl ? (
             <Image
@@ -21,11 +23,11 @@ export function PlaceCard({ place }: { place: Place }) {
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <svg aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c1c1c1" strokeWidth="1.5">
-                <path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0H5m14 0h2m-16 0H3" />
-                <path d="M9 7h1m-1 4h1m4-4h1m-1 4h1" />
-              </svg>
+            <div
+              aria-hidden="true"
+              className="w-full h-full flex items-center justify-center bg-[#ececec] text-[#8a8a8a] text-3xl font-semibold select-none"
+            >
+              {place.name.trim().slice(0, 1)}
             </div>
           )}
         </div>

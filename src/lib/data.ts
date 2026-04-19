@@ -563,7 +563,7 @@ const keywordPages: KeywordPage[] = [
     ],
     sources: [
       { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
-      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: 'AI플레이스 자체 조사', year: 2026 },
       { name: '건강보험심사평가원', url: 'https://www.hira.or.kr', year: 2025 },
     ],
     lastUpdated: '2026-04-14',
@@ -590,7 +590,7 @@ const keywordPages: KeywordPage[] = [
     ],
     sources: [
       { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
-      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: 'AI플레이스 자체 조사', year: 2026 },
     ],
     lastUpdated: '2026-04-14',
   },
@@ -616,7 +616,7 @@ const keywordPages: KeywordPage[] = [
     ],
     sources: [
       { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
-      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: 'AI플레이스 자체 조사', year: 2026 },
       { name: '건강보험심사평가원', url: 'https://www.hira.or.kr', year: 2025 },
     ],
     lastUpdated: '2026-04-14',
@@ -643,7 +643,7 @@ const keywordPages: KeywordPage[] = [
     ],
     sources: [
       { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
-      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: 'AI플레이스 자체 조사', year: 2026 },
     ],
     lastUpdated: '2026-04-14',
   },
@@ -668,7 +668,7 @@ const keywordPages: KeywordPage[] = [
       { label: '야간 진료 추가 비용', value: '없음(대부분)', note: '의원별 상이할 수 있음' },
     ],
     sources: [
-      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: 'AI플레이스 자체 조사', year: 2026 },
       { name: '건강보험심사평가원', url: 'https://www.hira.or.kr', year: 2025 },
     ],
     lastUpdated: '2026-04-14',
@@ -696,7 +696,7 @@ const keywordPages: KeywordPage[] = [
     ],
     sources: [
       { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
-      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: 'AI플레이스 자체 조사', year: 2026 },
       { name: '건강보험심사평가원', url: 'https://www.hira.or.kr', year: 2025 },
     ],
     lastUpdated: '2026-04-14',
@@ -723,7 +723,7 @@ const keywordPages: KeywordPage[] = [
     ],
     sources: [
       { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
-      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: 'AI플레이스 자체 조사', year: 2026 },
       { name: '건강보험심사평가원', url: 'https://www.hira.or.kr', year: 2025 },
     ],
     lastUpdated: '2026-04-14',
@@ -751,7 +751,7 @@ const keywordPages: KeywordPage[] = [
     ],
     sources: [
       { name: '대한피부과학회', url: 'https://www.derma.or.kr', year: 2025 },
-      { name: 'AI플레이스 자체 조사', url: 'https://aiplace.kr', year: 2026 },
+      { name: 'AI플레이스 자체 조사', year: 2026 },
       { name: '건강보험심사평가원', url: 'https://www.hira.or.kr', year: 2025 },
     ],
     lastUpdated: '2026-04-14',

@@ -14,6 +14,7 @@ import { groupBlogPostsByCategory } from '@/lib/blog/hub'
 import { generateCollectionPage, generateBlogItemList } from '@/lib/jsonld'
 import { generateBreadcrumbList } from '@/lib/seo'
 import { composePageTitle } from '@/lib/seo/compose-title'
+import { clampDirectAnswer } from '@/lib/seo/direct-answer'
 import { safeJsonLd } from '@/lib/utils'
 
 const BASE_URL = 'https://aiplace.kr'
@@ -68,7 +69,9 @@ export default async function BlogSectorHubPage({ params }: Props) {
     { name: sectorObj.name, url: pageUrl },
   ]
 
-  const dab = `${cityObj.name} ${sectorObj.name} 카테고리 가이드 ${posts.length}편. 업종별 비교·추천·키워드 글 모음.`.slice(0, 80)
+  const dab = clampDirectAnswer(
+    `${cityObj.name} ${sectorObj.name} 카테고리 가이드 ${posts.length}편. 업종별 비교·추천·키워드 글 모음.`,
+  )
 
   return (
     <>

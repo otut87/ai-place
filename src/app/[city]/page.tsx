@@ -16,6 +16,7 @@ import {
 import { generateCollectionPage } from '@/lib/jsonld'
 import { generateBreadcrumbList } from '@/lib/seo'
 import { composePageTitle } from '@/lib/seo/compose-title'
+import { clampDirectAnswer } from '@/lib/seo/direct-answer'
 import { safeJsonLd } from '@/lib/utils'
 
 const BASE_URL = 'https://aiplace.kr'
@@ -73,7 +74,9 @@ export default async function CityHubPage({ params }: Props) {
     { name: cityObj.name, url: pageUrl },
   ]
 
-  const dab = `${cityObj.name}의 AI 추천 업체 ${cityPlaces.length}곳을 업종별로 모았습니다. 의료·뷰티·음식·교육·자동차 등.`.slice(0, 80)
+  const dab = clampDirectAnswer(
+    `${cityObj.name}의 AI 추천 업체 ${cityPlaces.length}곳을 업종별로 모았습니다. 의료·뷰티·음식·교육·자동차 등.`,
+  )
 
   return (
     <>

@@ -5,6 +5,7 @@
 import type { Place } from './types'
 import { getAllPlaces, getCities, getCategories } from './data.supabase'
 import { getAllActiveBlogPosts } from './blog/data.supabase'
+import { formatDABExampleClause } from './seo/category-phrase'
 
 // robots.txt는 app/robots.ts에서 Next.js MetadataRoute로 처리.
 
@@ -156,11 +157,14 @@ export function generateBreadcrumbList(items: Array<{ name: string; url: string 
 }
 
 /**
- * 업체 페이지 breadcrumb (4단계)
- * 홈 › [도시] › [카테고리] › [업체]
+ * 업체 페이지 breadcrumb.
+ * T-105: sector 를 선택적으로 포함해 카테고리 페이지(3-4레벨)와 업체 상세(4-5레벨)의
+ *       hierarchical 구조를 검수 리뷰 #11 에 맞춰 일관화.
  *
- * WO #12: sector 중간 hub("천안 의료") 제거 — 도시명/카테고리명만 노출.
- * placeName 미지정 시 3단계 (홈 › 도시 › 카테고리)
+ * sectorName 미지정: 홈 › 도시 › 카테고리 (› 업체)
+ * sectorName 지정:   홈 › "도시 섹터" › "도시 카테고리" (› 업체)
+ *
+ * 철학: "BreadcrumbList 는 실제 사이트 계층 구조를 정확히 반영한다."
  */
 export function buildBusinessBreadcrumb(args: {
   baseUrl: string
@@ -168,15 +172,21 @@ export function buildBusinessBreadcrumb(args: {
   citySlug: string
   categoryName: string
   categorySlug: string
+  sectorName?: string
   placeName?: string
   placeSlug?: string
 }): Array<{ name: string; url: string }> {
-  const { baseUrl, cityName, citySlug, categoryName, categorySlug, placeName, placeSlug } = args
-  const items = [
-    { name: '홈', url: baseUrl },
-    { name: cityName, url: `${baseUrl}/${citySlug}` },
-    { name: categoryName, url: `${baseUrl}/${citySlug}/${categorySlug}` },
-  ]
+  const { baseUrl, cityName, citySlug, categoryName, categorySlug, sectorName, placeName, placeSlug } = args
+  const items: Array<{ name: string; url: string }> = [{ name: '홈', url: baseUrl }]
+  if (sectorName) {
+    items.push({ name: `${cityName} ${sectorName}`, url: `${baseUrl}/${citySlug}` })
+  } else {
+    items.push({ name: cityName, url: `${baseUrl}/${citySlug}` })
+  }
+  items.push({
+    name: sectorName ? `${cityName} ${categoryName}` : categoryName,
+    url: `${baseUrl}/${citySlug}/${categorySlug}`,
+  })
   if (placeName && placeSlug) {
     items.push({
       name: placeName,
@@ -216,15 +226,15 @@ export function buildBlogBreadcrumb(args: {
  * 상위 업체명 + 평점을 포함한 자기완결형 요약
  */
 export function generateCategoryDAB(places: Place[], cityName: string, catName: string, metaDescriptor?: string): string {
-  const descriptor = metaDescriptor ?? '전문 분야'
+  // T-102: "단비 등의" (1곳 어색) 해결 — formatDABExampleClause 가 count 별 분기
+  const descriptor = metaDescriptor ?? '전문 분야, 서비스'
 
   if (places.length === 0) {
     return `${cityName} 지역 ${catName} 업체 정보를 준비 중입니다.`
   }
 
-  const top = places.slice(0, 3)
-  const names = top.map(p => p.name).join(', ')
-
+  const names = places.slice(0, 3).map(p => p.name)
+  const clause = formatDABExampleClause(names, descriptor)
   const year = new Date().getFullYear()
-  return `${year}년 기준 ${cityName} ${catName} ${places.length}곳이 등록되어 있습니다. ${names} 등의 ${descriptor}, 위치, 이용 후기를 정리했습니다.`
+  return `${year}년 기준 ${cityName} ${catName} ${places.length}곳이 등록되어 있습니다. ${clause}, 위치, 이용 후기를 정리했습니다.`
 }
