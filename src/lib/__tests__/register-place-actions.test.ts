@@ -7,6 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Mock auth
 vi.mock('@/lib/auth', () => ({
   requireAuth: vi.fn(() => ({ id: 'user-123', email: 'admin@test.com' })),
+  requireAuthForAction: vi.fn(() => ({ id: 'user-123', email: 'admin@test.com' })),
+  requireLoggedInForAction: vi.fn(() => ({ id: 'user-123', email: 'admin@test.com' })),
 }))
 
 // Mock google-places

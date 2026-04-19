@@ -76,9 +76,10 @@ export function buildPlaceMetadata(args: PlaceMetaArgs): Metadata {
   // title: 표시폭 30~70 유지를 위해 "업체" 접미어 고정. "{업체명} — {도시} {업종} 업체".
   const title = composePageTitle(`${place.name} — ${cityName} ${categoryName} 업체`)
   // description: SEO meta 권장 표시폭 80~180. 한글=2폭, ASCII=1폭.
-  // 전략: place.description(40~60자 AEO)에 브랜드 꼬리말 1줄을 더해 폭을 맞추되, 180폭 초과 시 자름.
+  // 전략: place.description(40~60자 AEO)에 평점/브랜드 꼬리말을 더해 폭을 맞추되, 180폭 초과 시 자름.
   const core = place.description?.trim() ?? `${cityName} ${categoryName} ${place.name}`
-  const tail = ` ${cityName} ${categoryName} 업체 · AI Place 프로필.`
+  const ratingBit = place.rating != null ? ` 평점 ${place.rating}점.` : ''
+  const tail = `${ratingBit} ${cityName} ${categoryName} 업체 · AI Place 프로필.`
   const description = clampDisplayWidth(`${core}${tail}`, 80, 180)
 
   const url = `/${citySlug}/${categorySlug}/${place.slug}`

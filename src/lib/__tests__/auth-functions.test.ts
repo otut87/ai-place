@@ -74,4 +74,36 @@ describe('requireAuth', () => {
   })
 })
 
+// ===== requireLoggedInForAction =====
+describe('requireLoggedInForAction', () => {
+  it('로그인 유저면 그대로 반환 (admin 아니어도 OK)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'any@any.com' } } })
+    const { requireLoggedInForAction } = await import('@/lib/auth')
+    const user = await requireLoggedInForAction()
+    expect(user).toEqual({ id: 'u1', email: 'any@any.com' })
+  })
+
+  it('비로그인 시 UNAUTHORIZED throw', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    const { requireLoggedInForAction } = await import('@/lib/auth')
+    await expect(requireLoggedInForAction()).rejects.toThrow('UNAUTHORIZED')
+  })
+})
+
+// ===== requireAuthForAction =====
+describe('requireAuthForAction', () => {
+  it('admin 유저면 반환', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: '1', email: 'methoddesign7@gmail.com' } } })
+    const { requireAuthForAction } = await import('@/lib/auth')
+    const user = await requireAuthForAction()
+    expect(user.id).toBe('1')
+  })
+
+  it('비admin 이면 UNAUTHORIZED', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'stranger@test.com' } } })
+    const { requireAuthForAction } = await import('@/lib/auth')
+    await expect(requireAuthForAction()).rejects.toThrow('UNAUTHORIZED')
+  })
+})
+
 // signIn/signOut는 auth.ts에서 제거됨 — 클라이언트 SDK에서 직접 처리

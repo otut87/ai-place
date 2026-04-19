@@ -5,7 +5,7 @@ const mockSignUp = vi.fn()
 const mockFrom = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: async () => ({
+  createServerClient: async () => ({
     auth: { signUp: (...a: unknown[]) => mockSignUp(...a) },
   }),
 }))

@@ -32,6 +32,19 @@ vi.mock('@/lib/supabase/read-client', () => ({
   })),
 }))
 
+// Admin client mock — updatePlaceReviewSummaries / updatePlaceGoogleData 테스트용.
+const { mockAdminUpdate, mockAdminEq } = vi.hoisted(() => ({
+  mockAdminUpdate: vi.fn(),
+  mockAdminEq: vi.fn().mockResolvedValue({ error: null }),
+}))
+vi.mock('@/lib/supabase/admin-client', () => ({
+  getAdminClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      update: (payload: unknown) => { mockAdminUpdate(payload); return { eq: mockAdminEq } },
+    })),
+  })),
+}))
+
 // ===== 1. 모듈 존재 확인 =====
 describe('data.supabase.ts 모듈', () => {
   it('모듈이 존재하고 export 함수를 가짐', async () => {
@@ -322,5 +335,69 @@ describe('역방향 링크 함수 (시드 폴백)', () => {
     const { getComparisonsForPlace } = await import('@/lib/data.supabase')
     const comps = await getComparisonsForPlace('dr-evers')
     expect(comps.length).toBeGreaterThan(0)
+  })
+})
+
+describe('updatePlaceReviewSummaries / updatePlaceGoogleData', () => {
+  beforeEach(() => {
+    mockAdminUpdate.mockClear()
+    mockAdminEq.mockClear()
+  })
+
+  it('updatePlaceReviewSummaries → places 업데이트 호출', async () => {
+    const { updatePlaceReviewSummaries } = await import('@/lib/data.supabase')
+    await updatePlaceReviewSummaries('my-slug', [])
+    expect(mockAdminUpdate).toHaveBeenCalledWith({ review_summaries: [] })
+    expect(mockAdminEq).toHaveBeenCalledWith('slug', 'my-slug')
+  })
+
+  it('updatePlaceReviewSummaries → admin null 이면 no-op', async () => {
+    const { getAdminClient } = await import('@/lib/supabase/admin-client')
+    vi.mocked(getAdminClient).mockReturnValueOnce(null)
+    mockAdminUpdate.mockClear()
+    const { updatePlaceReviewSummaries } = await import('@/lib/data.supabase')
+    await updatePlaceReviewSummaries('x', [])
+    expect(mockAdminUpdate).not.toHaveBeenCalled()
+  })
+
+  it('updatePlaceGoogleData → rating/review_count 업데이트', async () => {
+    const { updatePlaceGoogleData } = await import('@/lib/data.supabase')
+    await updatePlaceGoogleData('my-slug', { rating: 4.5, reviewCount: 100 })
+    expect(mockAdminUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      rating: 4.5,
+      review_count: 100,
+      google_rating: 4.5,
+      google_review_count: 100,
+    }))
+  })
+
+  it('updatePlaceGoogleData → googleBusinessUrl 포함 시 같이 저장', async () => {
+    const { updatePlaceGoogleData } = await import('@/lib/data.supabase')
+    await updatePlaceGoogleData('my-slug', { rating: 4.5, reviewCount: 100, googleBusinessUrl: 'https://maps.google.com/?cid=1' })
+    expect(mockAdminUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      google_business_url: 'https://maps.google.com/?cid=1',
+    }))
+  })
+
+  it('updatePlaceReviewSummaries → 예외 발생 시 조용히 흡수', async () => {
+    mockAdminEq.mockRejectedValueOnce(new Error('db fail'))
+    const { updatePlaceReviewSummaries } = await import('@/lib/data.supabase')
+    await expect(updatePlaceReviewSummaries('x', [])).resolves.toBeUndefined()
+  })
+
+  it('updatePlaceGoogleData → 예외 발생 시 조용히 흡수', async () => {
+    mockAdminEq.mockRejectedValueOnce(new Error('db fail'))
+    const { updatePlaceGoogleData } = await import('@/lib/data.supabase')
+    await expect(updatePlaceGoogleData('x', { rating: 4, reviewCount: 10 })).resolves.toBeUndefined()
+  })
+})
+
+describe('getSchemaTypeForCategory / getMetaDescriptorForCategory / getSectorForCategory', () => {
+  it('all return non-empty strings (seed passthrough)', async () => {
+    const { getSchemaTypeForCategory, getMetaDescriptorForCategory, getSectorForCategory } = await import('@/lib/data.supabase')
+    expect(await getSchemaTypeForCategory('dermatology')).toBeTruthy()
+    expect(await getMetaDescriptorForCategory('dermatology')).toBeTruthy()
+    const sector = await getSectorForCategory('dermatology')
+    expect(sector).toBeDefined()
   })
 })

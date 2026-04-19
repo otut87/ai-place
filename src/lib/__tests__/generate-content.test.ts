@@ -6,6 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@/lib/auth', () => ({
   requireAuth: vi.fn(() => ({ id: 'user-123' })),
+  requireAuthForAction: vi.fn(() => ({ id: 'user-123' })),
+  requireLoggedInForAction: vi.fn(() => ({ id: 'user-123' })),
 }))
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }))
 vi.mock('@/lib/supabase/server', () => ({
@@ -17,9 +19,7 @@ vi.mock('@/lib/google-places', () => ({
   searchPlaceByText: vi.fn(),
   getPlaceDetails: vi.fn(),
 }))
-vi.mock('@/lib/naver-kakao-search', () => ({
-  searchKakaoPlace: vi.fn(),
-}))
+// @/lib/naver-kakao-search 는 Phase 11 에서 삭제됨 — mock 제거.
 vi.mock('@/lib/ai/telemetry', () => ({
   logAIGeneration: vi.fn(),
 }))

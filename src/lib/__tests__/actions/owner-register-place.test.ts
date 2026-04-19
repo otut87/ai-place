@@ -29,28 +29,36 @@ function mockDbOk(opts: { customerId?: string; existing?: Array<{ id: string; na
   mockFrom.mockImplementation((table: string) => {
     if (table === 'customers') return {
       select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: { id: customerId } }) }) }),
+      insert: vi.fn(() => ({
+        select: () => ({ single: () => Promise.resolve({ data: { id: customerId }, error: null }) }),
+      })),
+      update: vi.fn(() => ({ eq: () => Promise.resolve({ error: null }) })),
     }
-    if (table === 'places') return {
-      select: (cols: string) => ({
-        eq: (_k1: string, _v1: string) => ({
-          eq: (_k2: string, _v2: string) => ({
-            // slug 중복 확인: city+category+slug eq → 3번째 eq
-            eq: (_k3: string, _v3: string) => ({
-              maybeSingle: () => Promise.resolve({ data: null }),
-            }),
-            // city+category만으로 existing 리스트 조회
-            then: (onFulfilled: (x: { data: typeof existing }) => unknown) =>
-              Promise.resolve({ data: existing }).then(onFulfilled),
-          }),
-        }),
-        // Fallback: city+category 로 existing 반환
-        ...(cols.includes('address') && {
+    if (table === 'places') {
+      // googlePlaceId 유니크 조회, slug 중복 조회 — 둘 다 .eq().maybeSingle() 체인.
+      // 좌표 근접 조회 — .gte().lte().gte().lte() 체인으로 배열 반환.
+      // city+category 유사도 조회 — .eq().eq() 체인으로 배열 반환.
+      const maybeNull = () => Promise.resolve({ data: null })
+      const emptyArr = () => Promise.resolve({ data: [] })
+
+      return {
+        select: (_cols: string) => ({
+          // .eq().maybeSingle() — google_place_id 단일 조회
           eq: (_k1: string, _v1: string) => ({
-            eq: (_k2: string, _v2: string) => Promise.resolve({ data: existing }),
+            maybeSingle: maybeNull,
+            // .eq().eq() — city+category 리스트
+            eq: (_k2: string, _v2: string) => ({
+              // .eq().eq().eq() — slug 체크
+              eq: () => ({ maybeSingle: maybeNull }),
+              then: (onFulfilled: (x: unknown) => unknown) =>
+                Promise.resolve({ data: existing }).then(onFulfilled),
+            }),
           }),
+          // 좌표 근접 조회 — .gte().lte().gte().lte()
+          gte: () => ({ lte: () => ({ gte: () => ({ lte: emptyArr }) }) }),
         }),
-      }),
-      insert: insertMock,
+        insert: insertMock,
+      }
     }
     return {}
   })
@@ -72,10 +80,14 @@ describe('registerOwnerPlaceAction', () => {
     if (!r.success) expect(r.error).toMatch(/slug/)
   })
 
-  it('customer 없음 → 실패', async () => {
+  it('customer 없음 + 자동 생성 실패 → 실패', async () => {
+    // email 로도 조회 안 됨 → 자동 생성 시도 → insert 에러 → 에러 반환.
     mockFrom.mockImplementation((table: string) => {
       if (table === 'customers') return {
         select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) }),
+        insert: vi.fn(() => ({
+          select: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'insert failed' } }) }),
+        })),
       }
       return {}
     })

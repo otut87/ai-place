@@ -35,14 +35,29 @@ beforeEach(() => {
   mockUpdateEq.mockResolvedValue({ error: null })
   mockOr.mockResolvedValue({ data: [{ id: 'p-1', slug: 'x', name: 'n', city: 'c', category: 'd', status: 'active', description: '', phone: '', opening_hours: null, tags: [], images: null, updated_at: null }], error: null })
 
-  mockFrom.mockImplementation(() => ({
-    select: vi.fn(() => ({
-      eq: vi.fn(() => ({ single: mockSingle })),
-      or: vi.fn(() => ({ order: vi.fn(() => mockOr()) })),
-    })),
-    update: vi.fn(() => ({ eq: mockUpdateEq })),
-    insert: vi.fn().mockResolvedValue({ error: null }),
-  }))
+  mockFrom.mockImplementation((table: string) => {
+    if (table === 'customers') {
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ maybeSingle: () => Promise.resolve({ data: null }) })),
+        })),
+      }
+    }
+    // places — listOwnerPlaces 는 owner_id / owner_email / customer_id 3경로 조회.
+    // .eq() 는 thenable(배열 리턴) + .single() 체인 둘 다 지원해야 함.
+    const eqReturn = {
+      single: mockSingle,
+      then: (onFulfilled: (v: unknown) => unknown) => mockOr().then(onFulfilled),
+    }
+    return {
+      select: vi.fn(() => ({
+        eq: vi.fn(() => eqReturn),
+        or: vi.fn(() => ({ order: vi.fn(() => mockOr()) })),
+      })),
+      update: vi.fn(() => ({ eq: mockUpdateEq })),
+      insert: vi.fn().mockResolvedValue({ error: null }),
+    }
+  })
 })
 
 describe('listOwnerPlaces', () => {
@@ -60,8 +75,9 @@ describe('listOwnerPlaces', () => {
     expect(rows[0].id).toBe('p-1')
   })
 
-  it('DB 에러 → []', async () => {
-    mockOr.mockResolvedValueOnce({ data: null, error: { message: 'x' } })
+  it('모든 경로에서 DB 에러/빈 결과 → []', async () => {
+    // listOwnerPlaces 는 owner_id / owner_email / customer_id 3경로 조회 — 모두 빈 배열.
+    mockOr.mockResolvedValue({ data: null, error: { message: 'x' } })
     const { listOwnerPlaces } = await import('@/lib/actions/owner-places')
     expect(await listOwnerPlaces()).toEqual([])
   })

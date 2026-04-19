@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/lib/auth', () => ({
   requireAuth: vi.fn().mockResolvedValue({ id: 'u1', email: 'test@test.com' }),
   requireAuthForAction: vi.fn().mockResolvedValue({ id: 'u1' }),
+  requireLoggedInForAction: vi.fn().mockResolvedValue({ id: 'u1', email: 'test@test.com' }),
 }))
 
 const { mockNaverLocalSearch, mockDetectCategory } = vi.hoisted(() => ({
@@ -17,6 +18,32 @@ const { mockNaverLocalSearch, mockDetectCategory } = vi.hoisted(() => ({
 
 vi.mock('@/lib/search/naver-local', () => ({ naverLocalSearch: mockNaverLocalSearch }))
 vi.mock('@/lib/classification/category-detector', () => ({ detectCategory: mockDetectCategory }))
+
+// searchPlaceByNaver 내부에서 DB 좌표 dedup 조회 — 빈 배열 반환.
+vi.mock('@/lib/supabase/server', () => ({
+  createServerClient: async () => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          gte: () => ({
+            lte: () => ({
+              gte: () => ({
+                lte: () => Promise.resolve({ data: [] }),
+              }),
+            }),
+          }),
+        }),
+        gte: () => ({
+          lte: () => ({
+            gte: () => ({
+              lte: () => Promise.resolve({ data: [] }),
+            }),
+          }),
+        }),
+      }),
+    }),
+  }),
+}))
 
 const { mockSearchByText, mockGetPlaceDetails } = vi.hoisted(() => ({
   mockSearchByText: vi.fn(),
