@@ -52,7 +52,12 @@ export default async function OwnerPlaceDashboardPage({ params }: Props) {
 
   // 병렬 로드
   const path = `/${place.city}/${place.category}/${place.slug}`
-  const internalUrl = `https://aiplace.kr${path}`
+  // 환경별 스캔 대상 URL — dev 에선 localhost, prod 에선 aiplace.kr.
+  // 프로덕션 고정이면 방금 등록한 업체가 아직 배포 전이라 404 → 0점이 나옴.
+  const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL
+    ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+    ?? (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://aiplace.kr')
+  const internalUrl = `${siteOrigin}${path}`
 
   const [scan, subActive, rateLimit, recentTest, botVisits] = await Promise.all([
     scanSite(internalUrl),

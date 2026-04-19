@@ -142,9 +142,25 @@ export async function getAllPlaces(): Promise<Place[]> {
   return (await supabaseAllPlaces()) ?? []
 }
 
+/** 업체 ReviewSummary 배열 업서트 — 특정 소스 요약을 새로 갱신. */
+export async function updatePlaceReviewSummaries(
+  slug: string,
+  summaries: import('@/lib/types').ReviewSummary[],
+): Promise<void> {
+  try {
+    const supabase = getAdminClient()
+    if (!supabase) return
+    await supabase
+      .from('places')
+      .update({ review_summaries: summaries })
+      .eq('slug', slug)
+  } catch (err) {
+    console.error('[data.supabase] updatePlaceReviewSummaries failed:', err)
+  }
+}
+
 /** Google Places API 결과를 DB에 저장 — 빌드 시 상세페이지에서 호출.
- *  Phase 11: 기존 rating/review_count 에 더해 google_rating/google_review_count 도 동시 저장.
- *  배지 표시(PlaceReviewBadges)에서 소스별 수치를 분리 노출하기 위함. */
+ *  Phase 11: 기존 rating/review_count 에 더해 google_rating/google_review_count 도 동시 저장. */
 export async function updatePlaceGoogleData(slug: string, data: {
   rating: number
   reviewCount: number

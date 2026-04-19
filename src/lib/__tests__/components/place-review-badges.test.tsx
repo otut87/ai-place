@@ -24,7 +24,7 @@ describe('PlaceReviewBadges', () => {
     expect(html).toContain('23')
   })
 
-  it('Naver 리뷰수만 있으면 Naver 배지만 렌더 (평점 없어도 OK)', () => {
+  it('Naver 리뷰수만 있으면 Naver 배지만 렌더', () => {
     const html = render({ place: { naverReviewCount: 663 } })
     expect(html).toContain('Naver')
     expect(html).toContain('663')
@@ -46,7 +46,7 @@ describe('PlaceReviewBadges', () => {
     expect(html).toContain('76')
   })
 
-  it('1만 이상 리뷰는 k 축약 (10000 → 10k)', () => {
+  it('1만 이상 리뷰는 k 축약 (12500 → 12.5k)', () => {
     const html = render({ place: { naverReviewCount: 12500 } })
     expect(html).toMatch(/12\.5k/)
   })

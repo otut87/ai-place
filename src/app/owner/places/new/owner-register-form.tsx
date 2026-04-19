@@ -1,21 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+// Owner 업체 등록 — admin/register 와 동일한 UX (검색 → 선택 → 자동채움 → 수정 → 저장).
+// 단계별 마법사 제거. 로그인한 사장이 본인 업체를 직접 등록.
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { searchPlaceByNaver, enrichFromGoogle, registerPlace, generatePlaceContent, getAdminOptions, type NaverCandidate } from '@/lib/actions/register-place'
-import { generateContentCandidates } from '@/lib/actions/generate-candidates'
+import {
+  searchPlaceByNaver,
+  enrichFromGoogle,
+  generatePlaceContent,
+  type NaverCandidate,
+} from '@/lib/actions/register-place'
+import { registerOwnerPlaceAction } from '@/lib/actions/owner-register-place'
 import type { PlaceSearchResult } from '@/lib/google-places'
-import { AddressPicker, type AddressResult } from '@/components/admin/address-picker'
-import { validatePlaceDraft, type PlaceDraft } from '@/lib/admin/place-validation'
-import { RegisterValidationPreview } from './register-validation-preview'
-import { CandidatePicker, type PickerSelection } from './candidate-picker'
-import { AutofillEnqueueButton } from './autofill-enqueue-button'
-import type { CandidatePool } from '@/lib/ai/multi-candidates'
+import { ClaimPlaceButton } from '@/components/business/claim-place-button'
 
-
-// 30분 단위 시간 드롭다운
 const TIME_OPTIONS = Array.from({ length: 33 }, (_, i) => {
-  const h = Math.floor(i / 2) + 7 // 07:00 ~ 23:00
+  const h = Math.floor(i / 2) + 7
   const m = i % 2 === 0 ? '00' : '30'
   return `${String(h).padStart(2, '0')}:${m}`
 })
@@ -29,29 +29,20 @@ function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) 
   )
 }
 
-export default function RegisterPage() {
+interface Props {
+  cities: Array<{ slug: string; name: string }>
+  categories: Array<{ slug: string; name: string; sector: string }>
+}
+
+export function OwnerRegisterForm({ cities, categories }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
-  const [candidatesLoading, setCandidatesLoading] = useState(false)
-  const [candidatePool, setCandidatePool] = useState<CandidatePool | null>(null)
-  const [candidateScores, setCandidateScores] = useState<number[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  // 카테고리/도시 옵션
-  const [cities, setCities] = useState<Array<{ slug: string; name: string }>>([{ slug: 'cheonan', name: '천안' }])
-  const [allCategories, setAllCategories] = useState<Array<{ slug: string; name: string; sector: string }>>([])
   const [selectedSector, setSelectedSector] = useState('')
   const [catSearch, setCatSearch] = useState('')
-
-  useEffect(() => {
-    getAdminOptions().then(opts => {
-      setCities(opts.cities)
-      setAllCategories(opts.categories)
-    })
-  }, [])
-
-  const filteredCategories = allCategories.filter(c => {
+  const filteredCategories = categories.filter(c => {
     const matchesSector = selectedSector ? c.sector === selectedSector : true
     const matchesSearch = catSearch
       ? c.name.includes(catSearch) || c.slug.includes(catSearch.toLowerCase())
@@ -59,16 +50,11 @@ export default function RegisterPage() {
     return matchesSector && matchesSearch
   })
 
-  // 검색
-  const [city, setCity] = useState('cheonan')
+  const [city, setCity] = useState(cities[0]?.slug ?? 'cheonan')
   const [category, setCategory] = useState('')
   const [query, setQuery] = useState('')
-  // Phase 11 — 네이버 지역 검색 단일 소스 (한국 소상공인은 네이버 플레이스 등록이 표준).
-  // Google Places 보강은 오너 선택 후 백그라운드에서 이름+주소로 매칭.
   const [naverResults, setNaverResults] = useState<NaverCandidate[]>([])
-  const [manualAddress, setManualAddress] = useState<AddressResult | null>(null)
 
-  // 업체 정보 (검색 선택 후 자동 채우기)
   const [selectedPlace, setSelectedPlace] = useState<PlaceSearchResult | null>(null)
   const [nameEn, setNameEn] = useState('')
   const [slug, setSlug] = useState('')
@@ -88,34 +74,41 @@ export default function RegisterPage() {
   const [enrichedReviews, setEnrichedReviews] = useState<Array<{ text: string; rating: number }>>([])
   const [enrichedData, setEnrichedData] = useState<{ openingHours?: string[]; editorialSummary?: string } | null>(null)
   const [services, setServices] = useState([{ name: '', description: '', priceRange: '' }])
-  const [faqs, setFaqs] = useState([{ question: '', answer: '' }, { question: '', answer: '' }, { question: '', answer: '' }])
+  const [faqs, setFaqs] = useState([
+    { question: '', answer: '' },
+    { question: '', answer: '' },
+    { question: '', answer: '' },
+  ])
   const [tags, setTags] = useState('')
+  // Google Places photoRefs (API 키 없이 /api/places/photo 프록시로 렌더).
+  // 기본으로 전체 선택, 필요시 체크 해제.
+  const [photoRefs, setPhotoRefs] = useState<string[]>([])
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
 
   async function handleSearch() {
     if (!query.trim()) return
     setLoading(true)
     setError(null)
     setNaverResults([])
-
     const result = await searchPlaceByNaver(query)
     setLoading(false)
     if (result.success) setNaverResults(result.data)
     else setError(result.error)
   }
 
-  /** Naver 후보에서 선택 → 폼 자동 채우기 + Google 보강 백그라운드 수행. */
   async function handleSelectNaver(c: NaverCandidate) {
-    // city / category 자동 채우기
     if (c.detectedCitySlug && cities.some(x => x.slug === c.detectedCitySlug)) {
       setCity(c.detectedCitySlug)
     }
-    if (c.detectedCategorySlug && allCategories.some(x => x.slug === c.detectedCategorySlug)) {
+    if (c.detectedCategorySlug && categories.some(x => x.slug === c.detectedCategorySlug)) {
       setCategory(c.detectedCategorySlug)
-      const cat = allCategories.find(x => x.slug === c.detectedCategorySlug)
-      if (cat) setSelectedSector(cat.sector)
+      const cat = categories.find(x => x.slug === c.detectedCategorySlug)
+      if (cat) {
+        setSelectedSector(cat.sector)
+        setCatSearch(cat.name)
+      }
     }
 
-    // Naver 기준 placeholder 로 selectedPlace 세팅 (Google 보강 전)
     const naverBased: PlaceSearchResult = {
       placeId: 'naver',
       name: c.displayName,
@@ -127,21 +120,19 @@ export default function RegisterPage() {
     setNaverResults([])
     if (c.phone) setPhone(c.phone)
     setNaverPlaceUrl(c.naverPlaceUrl)
-    // 카카오맵 딥링크 — 이름 + 좌표로 결정론적 생성 (KAKAO_REST_KEY 불필요).
+    // 카카오맵 딥링크 — 이름 + 좌표로 결정론적 생성 (REST API 불필요).
     if (c.latitude && c.longitude) {
       setKakaoMapUrl(`https://map.kakao.com/link/map/${encodeURIComponent(c.displayName)},${c.latitude},${c.longitude}`)
     } else {
       setKakaoMapUrl(`https://map.kakao.com/link/search/${encodeURIComponent(c.displayName)}`)
     }
 
-    // slug 초안: 상호명 기반
     const slugCandidate = c.displayName
       .replace(/\s+/g, '-').toLowerCase()
       .replace(/[^a-z0-9-가-힣]/g, '')
       .replace(/-+/g, '-').replace(/^-|-$/g, '')
     setSlug(slugCandidate.slice(0, 100) || `${c.detectedCategorySlug ?? 'place'}-${Date.now().toString(36).slice(-4)}`)
 
-    // Google 보강 — 이름 + 주소로 Places Text Search + Details. 매칭 실패해도 등록 진행 가능.
     setLoading(true)
     const enriched = await enrichFromGoogle({
       name: c.displayName,
@@ -184,22 +175,18 @@ export default function RegisterPage() {
     }
     if (d.reviews) setEnrichedReviews(d.reviews)
     setEnrichedData({ openingHours: d.openingHours, editorialSummary: d.editorialSummary })
-  }
-
-  /** 수동 등록: Daum Postcode 로 주소만 받고 폼 열기 */
-  function handleManualEntry(addr: AddressResult) {
-    setSelectedPlace({
-      placeId: 'manual',
-      name: query || '',
-      address: addr.roadAddress,
-    })
-    setNaverResults([])
-    // 도로명 주소 세팅 (추후 handleSubmit 에서 roadAddress/zonecode/sigunguCode 로 전달)
-    setManualAddress(addr)
+    // Google 사진 레퍼런스 — 기본 전체 선택.
+    if (d.photoRefs && d.photoRefs.length > 0) {
+      setPhotoRefs(d.photoRefs)
+      setSelectedPhotos(new Set(d.photoRefs))
+    }
   }
 
   async function handleAiGenerate() {
-    if (!selectedPlace) return
+    if (!selectedPlace || !category) {
+      setError('업종을 먼저 선택해 주세요.')
+      return
+    }
     setAiLoading(true)
     setError(null)
     const result = await generatePlaceContent({
@@ -223,112 +210,63 @@ export default function RegisterPage() {
     }
   }
 
-  // T-052: 3개 후보 병렬 생성 → 큐레이션 패널 오픈
-  async function handleGenerateCandidates(feedback?: string) {
-    if (!selectedPlace) return
-    setCandidatesLoading(true)
-    setError(null)
-    const result = await generateContentCandidates({
-      name: selectedPlace.name,
-      category,
-      address: selectedPlace.address,
-      rating: selectedPlace.rating,
-      reviewCount: selectedPlace.reviewCount,
-      reviews: enrichedReviews,
-      openingHours: enrichedData?.openingHours,
-      editorialSummary: enrichedData?.editorialSummary,
-      variantCount: 3,
-      feedback,
-    })
-    setCandidatesLoading(false)
-    if (result.success) {
-      setCandidatePool(result.data.pool)
-      setCandidateScores(result.data.qualityScores)
-    } else {
-      setError(result.error)
-    }
-  }
-
-  function handleApplyCandidate(selection: PickerSelection) {
-    if (selection.description) setDescription(selection.description)
-    if (selection.services.length > 0) {
-      setServices(selection.services.map(s => ({
-        name: s.name,
-        description: s.description ?? '',
-        priceRange: s.priceRange ?? '',
-      })))
-    }
-    if (selection.faqs.length > 0) setFaqs(selection.faqs)
-    if (selection.tags.length > 0) setTags(selection.tags.join(', '))
-    setCandidatePool(null)
-  }
-
   async function handleSubmit() {
     if (!selectedPlace) return
+    if (!city || !category) {
+      setError('도시와 업종을 선택해 주세요.')
+      return
+    }
     setLoading(true)
     setError(null)
-    // placeId 센티넬: 'manual' = Daum Postcode 수동, 'naver' = Google 매칭 실패
-    const isManual = selectedPlace.placeId === 'manual'
     const isNaverOnly = selectedPlace.placeId === 'naver'
-    const result = await registerPlace({
-      city, category,
-      googlePlaceId: (isManual || isNaverOnly) ? undefined : selectedPlace.placeId,
-      manual: isManual || undefined,
+    const hoursArray = hours.filter(h => !h.closed && h.open && h.close).map(h => `${h.day} ${h.open}-${h.close}`)
+    // Google photoRefs → 프록시 URL 변환. 업체명을 alt 로 사용.
+    const images = [...selectedPhotos]
+      .filter(ref => photoRefs.includes(ref))
+      .map(ref => ({
+        url: `/api/places/photo?ref=${encodeURIComponent(ref)}&w=1200`,
+        alt: selectedPlace.name,
+        type: 'exterior' as const,
+      }))
+    const result = await registerOwnerPlaceAction({
       name: selectedPlace.name,
       nameEn: nameEn || undefined,
-      slug, description,
-      address: selectedPlace.address || manualAddress?.roadAddress || '',
-      phone: phone || undefined,
-      openingHours: hours.filter(h => !h.closed && h.open && h.close).map(h => `${h.day} ${h.open}-${h.close}`) || undefined,
-      rating: selectedPlace.rating,
-      reviewCount: selectedPlace.reviewCount,
-      googleBusinessUrl: undefined,
-      naverPlaceUrl: naverPlaceUrl || undefined,
-      kakaoMapUrl: kakaoMapUrl || undefined,
+      slug: slug || undefined,
+      city,
+      category,
+      address: selectedPlace.address || '',
       latitude: selectedPlace.latitude,
       longitude: selectedPlace.longitude,
-      roadAddress: manualAddress?.roadAddress,
-      jibunAddress: manualAddress?.jibunAddress,
-      sigunguCode: manualAddress?.sigunguCode,
-      zonecode: manualAddress?.zonecode,
+      phone: phone || undefined,
+      openingHours: hoursArray.length > 0 ? hoursArray : undefined,
+      description: description || undefined,
+      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
       services: services.filter(s => s.name.trim()),
       faqs: faqs.filter(f => f.question.trim() && f.answer.trim()),
-      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      images: images.length > 0 ? images : undefined,
+      naverPlaceUrl: naverPlaceUrl || undefined,
+      kakaoMapUrl: kakaoMapUrl || undefined,
+      googlePlaceId: isNaverOnly ? undefined : selectedPlace.placeId,
+      rating: selectedPlace.rating,
+      reviewCount: selectedPlace.reviewCount,
     })
     setLoading(false)
     if (result.success) {
-      router.push('/admin/places')
+      const msg = result.autoApproved
+        ? '등록 완료 — 바로 공개됩니다.'
+        : '등록 완료 — 관리자 검토 후 공개됩니다.'
+      router.push(`/owner?registered=1&msg=${encodeURIComponent(msg)}`)
+      router.refresh()
     } else {
       setError(result.error)
     }
   }
 
-  const draft: PlaceDraft = {
-    name: selectedPlace?.name ?? '',
-    city,
-    category,
-    slug,
-    description,
-    address: selectedPlace?.address || manualAddress?.roadAddress || '',
-    phone,
-    hours,
-    services,
-    faqs,
-    tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
-    sameAs: [naverPlaceUrl, kakaoMapUrl].filter(Boolean) as string[],
-  }
-  const validation = validatePlaceDraft(draft)
-  const hasErrors = Object.keys(validation.errors).length > 0
-  const categoryName = allCategories.find((c) => c.slug === category)?.name
-  const cityName = cities.find((c) => c.slug === city)?.name
-
   return (
-    <div className="max-w-2xl mx-auto px-6 py-12">
-      <h1 className="text-2xl font-bold text-[#222222] mb-8">업체 등록</h1>
-
+    <div>
       {error && <p className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>}
 
-      {/* 검색 영역 — T-018: 단일 입력 + 자동 분류 */}
+      {/* 검색 */}
       <div className="space-y-4 mb-8">
         <div>
           <label className="block text-sm font-medium text-[#484848] mb-1">업체명 + 지역 검색</label>
@@ -342,73 +280,98 @@ export default function RegisterPage() {
               className="flex-1 h-12 px-4 rounded-lg border border-[#dddddd]"
               autoFocus
             />
-            <button onClick={handleSearch} disabled={loading} className="h-12 px-6 rounded-lg bg-[#222222] text-white font-medium disabled:opacity-50">
+            <button onClick={handleSearch} disabled={loading} className="h-12 px-6 rounded-lg bg-[#008060] text-white font-medium disabled:opacity-50">
               {loading ? '검색 중...' : '검색'}
             </button>
           </div>
           <p className="mt-2 text-xs text-[#8a8a8a]">
-            네이버 지역 검색 → 카테고리/도시 자동 분류. 업체 선택 시 Google 평점·리뷰·영업시간이 자동 보강됩니다.
-            네이버에 없는 업체는 &ldquo;주소로 수동 등록&rdquo;.
+            네이버 지역 검색에서 업체를 찾으면 Google 평점·리뷰·영업시간이 자동으로 채워집니다.
+            네이버에 없다면 &ldquo;주소로 직접 등록&rdquo;.
           </p>
         </div>
 
-        {/* 네이버 검색 결과 */}
         {naverResults.length > 0 && (
           <div className="space-y-2">
             <p className="text-sm text-[#6a6a6a]">{naverResults.length}개 후보</p>
-            {naverResults.map((c, idx) => (
-              <button
-                key={`${c.naverPlaceUrl}-${idx}`}
-                onClick={() => handleSelectNaver(c)}
-                className="w-full text-left p-4 rounded-lg border border-[#dddddd] hover:border-[#222222] transition-colors"
-              >
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium text-[#222222]">{c.displayName}</p>
-                  <span className="px-1.5 py-0.5 text-[10px] rounded bg-[#e6f7f2] text-[#008060] font-medium">naver</span>
-                  {c.naverCategory && (
-                    <span className="text-xs text-[#8a8a8a]">{c.naverCategory}</span>
+            {naverResults.map((c, idx) => {
+              const disabled = c.alreadyRegistered != null
+              return (
+                <div
+                  key={`${c.naverPlaceUrl}-${idx}`}
+                  className={`w-full text-left p-4 rounded-lg border transition-colors ${
+                    disabled
+                      ? 'border-[#dddddd] bg-[#fafafa] opacity-80'
+                      : 'border-[#dddddd] hover:border-[#008060] cursor-pointer'
+                  }`}
+                  onClick={() => { if (!disabled) handleSelectNaver(c) }}
+                  role={disabled ? undefined : 'button'}
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className={`font-medium ${disabled ? 'text-[#8a8a8a]' : 'text-[#222222]'}`}>{c.displayName}</p>
+                    {disabled ? (
+                      <span className="px-1.5 py-0.5 text-[10px] rounded bg-[#fee2e2] text-[#991b1b] font-medium">이미 등록됨</span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 text-[10px] rounded bg-[#e6f7f2] text-[#008060] font-medium">naver</span>
+                    )}
+                    {c.naverCategory && (
+                      <span className="text-xs text-[#8a8a8a]">{c.naverCategory}</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-[#6a6a6a] mt-1">{c.roadAddress ?? c.jibunAddress}</p>
+                  {disabled && c.alreadyRegistered ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                      <a
+                        href={`/${c.alreadyRegistered.city}/${c.alreadyRegistered.category}/${c.alreadyRegistered.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#4c1d95] underline"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        → 등록된 업체 보기
+                      </a>
+                      <span className="text-[#9a9a9a]">|</span>
+                      <ClaimPlaceButton
+                        placeId={c.alreadyRegistered.id}
+                        placeName={c.alreadyRegistered.name}
+                      />
+                    </div>
+                  ) : (
+                    <div className="mt-1.5 flex flex-wrap gap-3 text-xs text-[#8a8a8a]">
+                      {c.detectedCategorySlug ? (
+                        <span>
+                          🏷️ <strong className="text-[#1a1a1a]">{categories.find(x => x.slug === c.detectedCategorySlug)?.name ?? c.detectedCategorySlug}</strong>
+                          <span className="opacity-60"> {(c.detectedCategoryConfidence * 100).toFixed(0)}%</span>
+                        </span>
+                      ) : (
+                        <span className="text-[#c2410c]">⚠️ 업종 수동 확인</span>
+                      )}
+                      {c.detectedCitySlug ? (
+                        <span>📍 <strong className="text-[#1a1a1a]">{cities.find(x => x.slug === c.detectedCitySlug)?.name ?? c.detectedCitySlug}</strong></span>
+                      ) : (
+                        <span className="text-[#c2410c]">⚠️ 도시 수동 확인</span>
+                      )}
+                    </div>
                   )}
                 </div>
-                <p className="text-sm text-[#6a6a6a] mt-1">{c.roadAddress ?? c.jibunAddress}</p>
-                <div className="mt-1.5 flex flex-wrap gap-3 text-xs text-[#8a8a8a]">
-                  {c.detectedCategorySlug ? (
-                    <span>
-                      🏷️ <strong className="text-[#1a1a1a]">{allCategories.find(x => x.slug === c.detectedCategorySlug)?.name ?? c.detectedCategorySlug}</strong>
-                      <span className="opacity-60"> Tier {c.detectedCategoryTier} · {(c.detectedCategoryConfidence * 100).toFixed(0)}%</span>
-                    </span>
-                  ) : (
-                    <span className="text-[#c2410c]">⚠️ 카테고리 수동 확인 필요</span>
-                  )}
-                  {c.detectedCitySlug ? (
-                    <span>📍 <strong className="text-[#1a1a1a]">{cities.find(x => x.slug === c.detectedCitySlug)?.name ?? c.detectedCitySlug}</strong></span>
-                  ) : (
-                    <span className="text-[#c2410c]">⚠️ 도시 수동 확인 필요</span>
-                  )}
-                </div>
-              </button>
-            ))}
+              )
+            })}
           </div>
         )}
 
-        {/* 수동 등록 fallback — 검색 했는데 결과 0 */}
         {naverResults.length === 0 && query.length > 0 && !loading && !selectedPlace && (
-          <div className="p-4 rounded-lg border border-dashed border-[#c1c1c1] bg-[#fafafa] flex items-center justify-between">
+          <div className="p-4 rounded-lg border border-dashed border-[#c1c1c1] bg-[#fafafa]">
             <p className="text-sm text-[#666]">
-              네이버 플레이스에 등록되지 않은 업체입니다 — 주소로 직접 등록하시겠어요?
+              네이버 플레이스에 등록되지 않은 업체는 현재 <strong>직접 등록 불가</strong>합니다.
             </p>
-            <AddressPicker onSelect={handleManualEntry} triggerLabel="주소로 수동 등록" />
-          </div>
-        )}
-
-        {manualAddress && (
-          <div className="p-3 rounded-lg bg-[#f0f9ff] text-sm text-[#1a4b7c]">
-            수동 등록: {manualAddress.roadAddress}{manualAddress.buildingName ? ` (${manualAddress.buildingName})` : ''}
-            <span className="ml-2 text-xs opacity-70">우편번호 {manualAddress.zonecode} · 시군구 {manualAddress.sigunguCode}</span>
+            <p className="mt-2 text-xs text-[#8a8a8a]">
+              먼저 <a href="https://smartplace.naver.com" target="_blank" rel="noopener noreferrer" className="underline">네이버 스마트플레이스</a> 또는
+              <a href="https://www.google.com/business" target="_blank" rel="noopener noreferrer" className="underline ml-1">Google Business Profile</a>에 업체를 등록하신 후 다시 검색해 주세요.
+            </p>
           </div>
         )}
       </div>
 
-      {/* 선택 후 도시·카테고리 확인/수정 (자동 채움 + override 가능) */}
+      {/* 선택 후 도시·업종 자동 채움 */}
       {selectedPlace && (
         <div className="mb-6 p-4 rounded-lg bg-[#f9fafb] border border-[#e5e7eb]">
           <p className="text-xs font-medium text-[#6b7280] mb-2">📋 자동 분류 결과 (필요시 수정)</p>
@@ -420,12 +383,12 @@ export default function RegisterPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-[#6a6a6a] mb-1">카테고리</label>
+              <label className="block text-xs text-[#6a6a6a] mb-1">업종</label>
               <input
                 type="text"
                 value={catSearch}
                 onChange={e => { setCatSearch(e.target.value); setCategory('') }}
-                placeholder={category ? (allCategories.find(c => c.slug === category)?.name ?? '') : '검색하여 변경'}
+                placeholder={category ? (categories.find(c => c.slug === category)?.name ?? '') : '검색하여 변경'}
                 className="w-full h-10 px-3 rounded border border-[#dddddd] text-sm"
               />
               {filteredCategories.length > 0 && catSearch && !category && (
@@ -443,14 +406,14 @@ export default function RegisterPage() {
                 </div>
               )}
               {category && (
-                <p className="mt-1 text-xs text-[#008060]">{allCategories.find(c => c.slug === category)?.name} ({category})</p>
+                <p className="mt-1 text-xs text-[#008060]">{categories.find(c => c.slug === category)?.name}</p>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {/* 선택된 업체 — 전체 폼 */}
+      {/* 선택된 업체 — 폼 */}
       {selectedPlace && (
         <div className="space-y-6 border-t border-[#dddddd] pt-8">
           <div className="flex items-center justify-between">
@@ -461,36 +424,14 @@ export default function RegisterPage() {
             <button onClick={() => { setSelectedPlace(null); setQuery('') }} className="text-xs text-red-500">변경</button>
           </div>
 
-          {/* AI 전체 자동 생성 버튼 */}
-          <div className="grid gap-2 md:grid-cols-2">
-            <button
-              onClick={handleAiGenerate}
-              disabled={aiLoading || candidatesLoading}
-              className="h-12 rounded-lg bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {aiLoading ? 'AI 생성 중...' : '단일 결과 자동 생성'}
-            </button>
-            <button
-              onClick={() => handleGenerateCandidates()}
-              disabled={aiLoading || candidatesLoading}
-              className="h-12 rounded-lg border border-[#6366f1] bg-white font-medium text-[#4c1d95] hover:bg-[#f5f3ff] transition-colors disabled:opacity-50"
-            >
-              {candidatesLoading ? '3개 후보 생성 중...' : '다중 후보 생성 (어드민 선택)'}
-            </button>
-          </div>
+          <button
+            onClick={handleAiGenerate}
+            disabled={aiLoading}
+            className="w-full h-12 rounded-lg bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {aiLoading ? 'AI 생성 중...' : '✨ 소개·서비스·FAQ·태그 AI 자동 생성'}
+          </button>
 
-          {candidatePool && (
-            <CandidatePicker
-              pool={candidatePool}
-              qualityScores={candidateScores}
-              onApply={handleApplyCandidate}
-              onRegenerate={fb => handleGenerateCandidates(fb)}
-              regenerating={candidatesLoading}
-              onCancel={() => setCandidatePool(null)}
-            />
-          )}
-
-          {/* 기본 정보 */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#484848] mb-1">
@@ -503,23 +444,23 @@ export default function RegisterPage() {
                 URL 슬러그 <span className="text-xs text-[#6a6a6a]">(자동)</span>
               </label>
               <input type="text" value={slug} onChange={e => setSlug(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
-              <p className="mt-1 text-xs text-[#6a6a6a]">aiplace.kr/{city}/{category}/{slug}</p>
+              <p className="mt-1 text-xs text-[#6a6a6a]">aiplace.kr/{city}/{category}/{slug || '...'}</p>
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-[#484848] mb-1">
-              설명 (Direct Answer Block)
-              <span className={`ml-2 text-xs ${description.length >= 40 && description.length <= 60 ? 'text-green-600' : 'text-red-600'}`}>
-                {description.length}/60자 {description.length < 40 ? '(최소 40자)' : description.length > 60 ? '(60자 초과)' : '✓'}
+              소개 (40~60자 권장)
+              <span className={`ml-2 text-xs ${description.length >= 40 && description.length <= 60 ? 'text-green-600' : 'text-[#6a6a6a]'}`}>
+                {description.length}/60자
               </span>
             </label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={65} rows={2} className="w-full px-4 py-3 rounded-lg border border-[#dddddd] text-sm" />
+            <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={100} rows={2} className="w-full px-4 py-3 rounded-lg border border-[#dddddd] text-sm" />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-[#484848] mb-2">
-              영업시간 <span className="text-xs text-green-600">(Google 자동 입력)</span>
+              영업시간 <span className="text-xs text-green-600">(Google 자동)</span>
             </label>
             <div className="space-y-1">
               {hours.map((h, i) => (
@@ -550,43 +491,27 @@ export default function RegisterPage() {
                   )}
                 </div>
               ))}
-              <p className="text-xs text-[#6a6a6a] mt-1">첫 요일 선택 시 빈 칸에 자동 복사</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#484848] mb-1">전화번호 <span className="text-xs text-[#6a6a6a]">(자동)</span></label>
-              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" placeholder="+82-41-XXX-XXXX" />
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#484848] mb-1">
-                카카오맵 URL <span className="text-xs text-green-600">(자동)</span>
-              </label>
+              <label className="block text-sm font-medium text-[#484848] mb-1">카카오맵 URL</label>
               <input type="url" value={kakaoMapUrl} onChange={e => setKakaoMapUrl(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#484848] mb-1">
-              네이버 플레이스 URL <span className="text-xs text-[#6a6a6a]">(검색 후 복사)</span>
-            </label>
-            <div className="flex gap-2">
-              <input type="url" value={naverPlaceUrl} onChange={e => setNaverPlaceUrl(e.target.value)} className="flex-1 h-10 px-3 rounded-lg border border-[#dddddd] text-sm" placeholder="https://naver.me/..." />
-              <a
-                href={`https://map.naver.com/search/${encodeURIComponent(selectedPlace.name)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="h-10 px-3 inline-flex items-center rounded-lg border border-[#dddddd] text-xs text-[#484848] hover:border-[#222222] whitespace-nowrap"
-              >
-                네이버 검색
-              </a>
-            </div>
+            <label className="block text-sm font-medium text-[#484848] mb-1">네이버 플레이스 URL</label>
+            <input type="url" value={naverPlaceUrl} onChange={e => setNaverPlaceUrl(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
           </div>
 
-          {/* 서비스 */}
           <div>
-            <h2 className="text-base font-semibold text-[#222222] mb-2">서비스 (최소 1개)</h2>
+            <h2 className="text-base font-semibold text-[#222222] mb-2">서비스</h2>
             {services.map((s, i) => (
               <div key={i} className="grid grid-cols-3 gap-2 mb-2">
                 <input placeholder="서비스명" value={s.name} onChange={e => { const next = [...services]; next[i] = { ...next[i], name: e.target.value }; setServices(next) }} className="h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
@@ -594,52 +519,81 @@ export default function RegisterPage() {
                 <input placeholder="가격대" value={s.priceRange} onChange={e => { const next = [...services]; next[i] = { ...next[i], priceRange: e.target.value }; setServices(next) }} className="h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
               </div>
             ))}
-            <button onClick={() => setServices([...services, { name: '', description: '', priceRange: '' }])} className="text-sm text-[#00a67c]">+ 서비스 추가</button>
+            <button onClick={() => setServices([...services, { name: '', description: '', priceRange: '' }])} className="text-sm text-[#008060]">+ 서비스 추가</button>
           </div>
 
-          {/* FAQ */}
           <div>
-            <h2 className="text-base font-semibold text-[#222222] mb-2">FAQ (최소 3개)</h2>
+            <h2 className="text-base font-semibold text-[#222222] mb-2">FAQ</h2>
             {faqs.map((f, i) => (
               <div key={i} className="space-y-1 mb-3">
-                <input placeholder="질문 (물음표로 끝나야 함)" value={f.question} onChange={e => { const next = [...faqs]; next[i] = { ...next[i], question: e.target.value }; setFaqs(next) }} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
+                <input placeholder="질문 (업체명 + ?로 끝나게)" value={f.question} onChange={e => { const next = [...faqs]; next[i] = { ...next[i], question: e.target.value }; setFaqs(next) }} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
                 <input placeholder="답변" value={f.answer} onChange={e => { const next = [...faqs]; next[i] = { ...next[i], answer: e.target.value }; setFaqs(next) }} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
               </div>
             ))}
-            <button onClick={() => setFaqs([...faqs, { question: '', answer: '' }])} className="text-sm text-[#00a67c]">+ FAQ 추가</button>
+            <button onClick={() => setFaqs([...faqs, { question: '', answer: '' }])} className="text-sm text-[#008060]">+ FAQ 추가</button>
           </div>
 
-          {/* 태그 */}
           <div>
             <label className="block text-sm font-medium text-[#484848] mb-1">태그 (쉼표로 구분)</label>
             <input type="text" value={tags} onChange={e => setTags(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" placeholder="여드름, 레이저, 보톡스" />
           </div>
 
-          {/* 실시간 검증 + 미리보기 (T-048) */}
-          <RegisterValidationPreview
-            draft={draft}
-            validation={validation}
-            categoryName={categoryName}
-            cityName={cityName}
-          />
+          <div>
+            <label className="block text-sm font-medium text-[#484848] mb-2">
+              사진 <span className="text-xs text-green-600">(Google Places 자동)</span>
+            </label>
+            {photoRefs.length === 0 ? (
+              <p className="text-xs text-[#9a9a9a] p-3 rounded-lg bg-[#fafafa] border border-dashed border-[#dddddd]">
+                Google Places 에 등록된 사진이 없거나 매칭 실패했습니다. 업체 등록 후 Google Business Profile 에 사진을 추가하면 자동으로 반영됩니다.
+              </p>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {photoRefs.map((ref) => {
+                    const checked = selectedPhotos.has(ref)
+                    return (
+                      <label
+                        key={ref}
+                        className={`relative block aspect-square overflow-hidden rounded-lg border-2 cursor-pointer transition-all ${checked ? 'border-[#008060]' : 'border-[#dddddd] opacity-60'}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={e => {
+                            setSelectedPhotos(prev => {
+                              const next = new Set(prev)
+                              if (e.target.checked) next.add(ref)
+                              else next.delete(ref)
+                              return next
+                            })
+                          }}
+                          className="absolute top-1.5 left-1.5 z-10"
+                        />
+                        { /* eslint-disable-next-line @next/next/no-img-element */ }
+                        <img
+                          src={`/api/places/photo?ref=${encodeURIComponent(ref)}&w=400`}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      </label>
+                    )
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-[#9a9a9a]">
+                  {selectedPhotos.size} / {photoRefs.length} 장 선택됨. 체크 해제하면 페이지에 노출되지 않습니다.
+                </p>
+              </>
+            )}
+          </div>
 
-          {/* 등록 버튼 */}
           <button
             onClick={handleSubmit}
-            disabled={loading || hasErrors}
-            className="w-full h-12 rounded-lg bg-[#222222] text-white font-medium disabled:opacity-50"
-            title={hasErrors ? '필수 항목을 먼저 채우세요.' : undefined}
+            disabled={loading}
+            className="w-full h-12 rounded-lg bg-[#008060] text-white font-medium disabled:opacity-50 hover:bg-[#006e52] transition-colors"
           >
-            {loading ? '등록 중...' : hasErrors ? `필수 항목 ${Object.keys(validation.errors).length}개 남음` : '업체 등록'}
+            {loading ? '등록 중...' : '업체 등록'}
           </button>
-
-          {/* T-080 — AI 자동완성 등록 (파이프라인 트리거) */}
-          <AutofillEnqueueButton
-            placeName={draft.name}
-            city={draft.city}
-            category={draft.category}
-            address={draft.address}
-          />
         </div>
       )}
     </div>

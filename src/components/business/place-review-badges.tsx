@@ -2,7 +2,7 @@ import type { Place } from "@/lib/types"
 
 // Phase 11 — medicalkoreaguide 벤치마크.
 // 업체에 소스별 리뷰수/평점이 있을 때만 배지를 노출.
-// 공식 API 없는 Naver/Kakao 수치는 owner/admin 수동 입력으로만 채워진다.
+// Google 은 Places API 로 자동, Naver/Kakao 는 크롤러로 수집 (수동 입력 금지).
 
 export interface PlaceReviewBadgesSource {
   googleRating?: number

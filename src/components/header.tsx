@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { InquiryButton } from "./inquiry-modal"
+import { HeaderAuthButtons } from "./header-auth-buttons"
 
 export function Header() {
   return (
@@ -18,9 +18,7 @@ export function Header() {
           >
             AI 진단
           </Link>
-          <InquiryButton className="h-10 px-5 inline-flex items-center rounded-lg bg-[#008060] text-white text-sm font-medium hover:bg-[#006b4f] transition-colors">
-            업체 등록
-          </InquiryButton>
+          <HeaderAuthButtons />
         </div>
 
         {/* Mobile hamburger */}

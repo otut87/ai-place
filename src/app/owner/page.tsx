@@ -6,12 +6,22 @@ import { listOwnerPlaces } from '@/lib/actions/owner-places'
 
 export const dynamic = 'force-dynamic'
 
-export default async function OwnerPortalPage() {
+interface Params {
+  searchParams: Promise<{ registered?: string; msg?: string }>
+}
+
+export default async function OwnerPortalPage({ searchParams }: Params) {
   const user = await requireOwnerUser()
   const places = await listOwnerPlaces()
+  const { registered, msg } = await searchParams
 
   return (
     <div className="mx-auto max-w-3xl p-6">
+      {registered && msg && (
+        <div className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
+          ✅ {msg}
+        </div>
+      )}
       <header className="mb-4">
         <h1 className="text-xl font-semibold">내 업체 관리</h1>
         <p className="text-xs text-[#6a6a6a]">로그인: {user.email ?? user.id}</p>
@@ -20,7 +30,7 @@ export default async function OwnerPortalPage() {
       {places.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[#dddddd] bg-white p-8 text-center">
           <p className="text-sm text-[#484848]">아직 등록된 업체가 없습니다.</p>
-          <p className="mt-1 text-xs text-[#6a6a6a]">5단계 마법사로 3분 내 등록할 수 있습니다.</p>
+          <p className="mt-1 text-xs text-[#6a6a6a]">업체명을 검색하면 정보가 자동으로 채워져요 — 30초면 끝.</p>
           <AdminLink
             href="/owner/places/new"
             className="mt-4 inline-flex h-10 items-center rounded-lg bg-[#008060] px-4 text-sm font-medium text-white hover:bg-[#006e52]"

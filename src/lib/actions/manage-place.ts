@@ -58,11 +58,8 @@ export async function updatePlace(placeId: string, data: {
   name?: string; description?: string; phone?: string; opening_hours?: string[];
   services?: unknown[]; faqs?: unknown[]; tags?: string[];
   naver_place_url?: string; kakao_map_url?: string;
-  // Phase 11
+  // Phase 11 — 외부 채널 링크만 수동 입력 허용. 리뷰수·평점 필드는 여기서 받지 않음(크롤러 전용).
   homepage_url?: string; blog_url?: string; instagram_url?: string;
-  naver_review_count?: number | null;
-  kakao_rating?: number | null;
-  kakao_review_count?: number | null;
 }) {
   await requireAuthForAction()
 

@@ -61,6 +61,65 @@ export function jobStatusTone(status: PipelineJobStatus): 'ok' | 'warn' | 'dange
   return 'muted'
 }
 
+/** Phase 11 — 업체 단위 refresh 작업 enqueue.
+ *  - 같은 (job_type, target_id) 로 pending/running 잡이 이미 있으면 중복 enqueue 하지 않음 (dedup).
+ *  - 호출자가 결과를 기다릴 필요 없음. 실패는 조용히 로그만.
+ */
+export type PlaceRefreshJobKind =
+  | 'place.enrich_google'          // Google Places API 로 rating/reviewCount/reviews 재수집
+  | 'place.summarize_google_reviews' // Haiku 로 Google 리뷰 요약 재생성
+
+/** slug 로 id 조회 후 enqueuePlaceRefresh 호출. 페이지 렌더 경로에서 편의용. */
+export async function enqueuePlaceRefreshBySlug(
+  slug: string,
+  kinds: PlaceRefreshJobKind[],
+): Promise<{ enqueued: PlaceRefreshJobKind[]; skipped: PlaceRefreshJobKind[] }> {
+  const admin = getAdminClient()
+  if (!admin) return { enqueued: [], skipped: kinds }
+  const { data } = await admin.from('places').select('id').eq('slug', slug).single()
+  const row = data as { id: string } | null
+  if (!row?.id) return { enqueued: [], skipped: kinds }
+  return enqueuePlaceRefresh(row.id, kinds)
+}
+
+export async function enqueuePlaceRefresh(
+  placeId: string,
+  kinds: PlaceRefreshJobKind[],
+): Promise<{ enqueued: PlaceRefreshJobKind[]; skipped: PlaceRefreshJobKind[] }> {
+  const admin = getAdminClient()
+  if (!admin) return { enqueued: [], skipped: kinds }
+
+  // 이미 대기·실행 중인 동일 잡은 skip
+  const { data: existing } = await admin
+    .from('pipeline_jobs')
+    .select('job_type')
+    .eq('target_type', 'place')
+    .eq('target_id', placeId)
+    .in('status', ['pending', 'running'])
+    .in('job_type', kinds)
+
+  const existingTypes = new Set(((existing ?? []) as Array<{ job_type: string }>).map(r => r.job_type))
+  const toEnqueue = kinds.filter(k => !existingTypes.has(k))
+  const skipped = kinds.filter(k => existingTypes.has(k))
+
+  if (toEnqueue.length === 0) return { enqueued: [], skipped }
+
+  const rows = toEnqueue.map(k => ({
+    job_type: k,
+    target_type: 'place',
+    target_id: placeId,
+    input_payload: { placeId },
+    status: 'pending',
+  }))
+
+  const { error } = await admin.from('pipeline_jobs').insert(rows)
+  if (error) {
+    console.error('[pipeline-jobs] enqueuePlaceRefresh failed:', error)
+    return { enqueued: [], skipped: kinds }
+  }
+  return { enqueued: toEnqueue, skipped }
+}
+
 /** 같은 job_type·target 으로 pending 상태 레코드 복제 (재시도). */
 export async function retryPipelineJob(jobId: string): Promise<{ success: boolean; error?: string }> {
   const admin = getAdminClient()

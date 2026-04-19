@@ -6,12 +6,16 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PhoneButton } from "@/components/phone-button"
 import { Disclaimer } from "@/components/business/disclaimer"
-import { PlaceReviewBadges } from "@/components/business/place-review-badges"
 import { PlaceExternalLinks } from "@/components/business/place-external-links"
+import { PlaceReviewBadges } from "@/components/business/place-review-badges"
+import { PlaceReviewSummary } from "@/components/business/place-review-summary"
+import { ReportPlaceButton } from "@/components/business/report-place-button"
 import { formatRatingLine } from "@/lib/format/rating"
 import { formatHoursKo } from "@/lib/format/hours"
 import { normalizeAddress } from "@/lib/format/address"
-import { getPlaceBySlug, getPlaces, getCities, getCategories, getSchemaTypeForCategory, getSectorForCategory, updatePlaceGoogleData } from "@/lib/data.supabase"
+import { getPlaceBySlug, getPlaces, getCities, getCategories, getSchemaTypeForCategory, getSectorForCategory } from "@/lib/data.supabase"
+import { enqueuePlaceRefreshBySlug } from "@/lib/admin/pipeline-jobs"
+import { isSummaryStale } from "@/lib/ai/summarize-reviews"
 import { getBlogPostsByPlace } from "@/lib/blog/data.supabase"
 import { generateLocalBusiness, generateFAQPage, generateWebPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
@@ -77,12 +81,25 @@ export default async function ProfilePage({ params }: Props) {
   const baseUrl = 'https://aiplace.kr'
   const pageUrl = `${baseUrl}/${city}/${category}/${slug}`
 
-  // Google Places API — 리뷰 가져오기 (빌드 시 호출)
+  // Google Places API — 원문 리뷰 5건 표시용 (ToS §5.2 준수: 캐시 금지, 매 렌더 재-fetch).
+  // Google API 는 ~300ms 로 빠르다. Haiku 요약 등 LLM 호출은 background 워커로 이관 (아래).
   const googleData = place.googlePlaceId
     ? await getPlaceDetails(place.googlePlaceId)
     : null
 
-  // Google 데이터로 rating/reviewCount/googleBusinessUrl 오버라이드 + DB에 저장
+  // Phase 11: Haiku 리뷰 요약과 rating/reviewCount 재수집은 모두 background 워커가 처리.
+  // stale 감지 시 refresh 잡만 enqueue (await X) → 다음 렌더부터 신선한 데이터 반영.
+  const reviewSummaries = place.reviewSummaries ?? []
+  const existingGoogleSummary = reviewSummaries.find(s => s.source.toLowerCase() === 'google')
+  const googleSummaryStale = isSummaryStale(existingGoogleSummary, 7)
+  if (place.googlePlaceId && (place.googleReviewCount == null || googleSummaryStale)) {
+    const kinds: Array<'place.enrich_google' | 'place.summarize_google_reviews'> = []
+    if (place.googleReviewCount == null) kinds.push('place.enrich_google')
+    if (googleSummaryStale) kinds.push('place.summarize_google_reviews')
+    void enqueuePlaceRefreshBySlug(place.slug, kinds).catch(err => {
+      console.error('[place-detail] enqueue refresh failed:', err)
+    })
+  }
   const placeWithGoogleData = googleData
     ? {
         ...place,
@@ -91,15 +108,6 @@ export default async function ProfilePage({ params }: Props) {
         googleBusinessUrl: googleData.googleMapsUri ?? place.googleBusinessUrl,
       }
     : place
-
-  // DB에 Google 데이터 저장 — 카드에서도 동일한 데이터 표시
-  if (googleData) {
-    await updatePlaceGoogleData(place.slug, {
-      rating: googleData.rating,
-      reviewCount: googleData.reviewCount,
-      googleBusinessUrl: googleData.googleMapsUri,
-    })
-  }
 
   // GEO: 역방향 링크 (이 업체를 참조하는 가이드/비교 페이지)
   // 양방향 링크: 이 업체를 related_place_slugs 에 포함한 블로그 글
@@ -179,7 +187,7 @@ export default async function ProfilePage({ params }: Props) {
               </div>
             )}
 
-            {/* Phase 11: 소스별 리뷰 배지 (Google/Naver/Kakao) — 있는 것만 */}
+            {/* Phase 11: 소스별 리뷰 배지 (Google/Naver/Kakao) — 있으면 노출 */}
             <PlaceReviewBadges
               className="mt-2"
               size="md"
@@ -288,8 +296,8 @@ export default async function ProfilePage({ params }: Props) {
             {place.services.length > 0 && (
               <section id="services" className="mt-10">
                 <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">제공 서비스</h2>
-                {/* HIGH 8: Direct Answer Block */}
-                <p className="text-sm text-[#222222] mb-4">{place.name}에서는 {place.services.map(s => s.name).join(', ')} 등 {place.services.length}개 서비스를 제공합니다.</p>
+                {/* HIGH 8: Direct Answer Block — 표시폭 40~120 보장 (AEO Direct Answer) */}
+                <p className="text-sm text-[#222222] mb-4">{place.name}이(가) 제공하는 {place.services.length}개 서비스 목록입니다. 시술별 가격과 소요 시간은 상담 시 확인해 주세요.</p>
                 <div className="space-y-3">
                   {place.services.map((svc) => (
                     <div key={svc.name} className="flex items-center justify-between py-3 border-b border-[#c1c1c1]/50 last:border-0">
@@ -322,12 +330,20 @@ export default async function ProfilePage({ params }: Props) {
               </div>
             )}
 
-            {/* Google Reviews */}
+            {/* Phase 11: 플랫폼별 AI 리뷰 요약 — 긍정/부정 테마 + 패러프레이즈 인용 1건/소스 */}
+            <PlaceReviewSummary
+              summaries={reviewSummaries}
+              businessName={place.name}
+            />
+
+            {/* Google 리뷰 원문 최대 5건 — Places API ToS §5 준수 (30일 캐시 금지, 빌드 시 매번 재-fetch) */}
             {googleData && googleData.reviews.length > 0 && (
-              <section id="reviews" className="mt-12">
-                <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">이용 후기</h2>
+              <section id="google-reviews" className="mt-12">
+                <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">
+                  Google 리뷰 원문
+                </h2>
                 <p className="text-sm text-[#222222] mb-4">
-                  Google 리뷰 기반 평점 {googleData.rating}점 (후기 {googleData.reviewCount}건)
+                  Google 평점 {googleData.rating}점 · 총 후기 {googleData.reviewCount.toLocaleString('ko-KR')}건을 기반으로 최근 대표 리뷰 5건을 원문 그대로 인용했습니다.
                 </p>
                 <div className="space-y-4">
                   {googleData.reviews.slice(0, 5).map((review, i) => (
@@ -342,7 +358,7 @@ export default async function ProfilePage({ params }: Props) {
                     </div>
                   ))}
                 </div>
-                <p className="mt-3 text-xs text-[#6a6a6a]">출처: Google 리뷰 (요약)</p>
+                <p className="mt-3 text-xs text-[#6a6a6a]">출처: Google Places · 원문은 Google 지도에서 확인 가능합니다.</p>
               </section>
             )}
 
@@ -350,7 +366,7 @@ export default async function ProfilePage({ params }: Props) {
             {place.faqs.length > 0 && (
               <section id="faq" className="mt-12">
                 <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">자주 묻는 질문</h2>
-                <p className="text-sm text-[#222222] mb-4">{place.name}에 대해 자주 묻는 질문 {place.faqs.length}개입니다.</p>
+                <p className="text-sm text-[#222222] mb-4">{place.name}에 대해 자주 묻는 질문 {place.faqs.length}개를 정리했습니다. 예약·영업시간·서비스 관련 답변입니다.</p>
                 <div className="divide-y divide-[#c1c1c1]/50">
                   {place.faqs.map((faq) => (
                     <details key={faq.question} className="group py-4">
@@ -391,6 +407,11 @@ export default async function ProfilePage({ params }: Props) {
 
             {/* 업종별 면책 분기 (T-004) */}
             <Disclaimer sector={sector?.slug ?? ''} />
+
+            {/* 신고 — 잘못된 정보, 폐업, 스팸 등 */}
+            <div className="mt-6 text-right">
+              <ReportPlaceButton placeId={place.id} />
+            </div>
           </div>
         </article>
       </main>

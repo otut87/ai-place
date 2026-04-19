@@ -47,7 +47,7 @@ export function PlaceCard({ place }: { place: Place }) {
             </div>
           )}
 
-          {/* Phase 11: 소스별 리뷰 배지 — Naver/Kakao 수치가 있을 때만 (Google 은 상단 평점과 중복이므로 생략) */}
+          {/* Phase 11: Naver/Kakao 리뷰 배지 — 크롤러가 채운 수치만 노출 (Google 은 상단 평점과 중복) */}
           {(place.naverReviewCount || place.kakaoRating != null || place.kakaoReviewCount) && (
             <PlaceReviewBadges
               className="mt-2"

@@ -1,7 +1,7 @@
 'use server'
 
 // T-149 — Owner 셀프 회원가입 + 자동 customers row 생성.
-import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createServerClient } from '@/lib/supabase/server'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 
 export interface SignupInput {
@@ -31,11 +31,15 @@ export async function ownerSignupAction(input: SignupInput): Promise<SignupOutco
   const supabase = await createServerClient()
 
   // 1) Supabase Auth 가입
+  // emailRedirectTo 는 환경별로 다르게 — 로컬 개발 시 프로덕션 URL 로 날아가면 세션이 로컬에 안 붙음.
+  const origin = process.env.NEXT_PUBLIC_SITE_URL
+    ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+    ?? (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://aiplace.kr')
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password: input.password,
     options: {
-      emailRedirectTo: 'https://aiplace.kr/owner',
+      emailRedirectTo: `${origin}/owner`,
     },
   })
   if (authError || !authData.user) {

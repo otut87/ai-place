@@ -81,9 +81,14 @@ describe('register-place Server Action exports', () => {
     expect(typeof mod.searchPlace).toBe('function')
   })
 
-  it('enrichPlace 함수 export', async () => {
+  it('enrichFromGoogle 함수 export (Phase 11 — 이름+주소 매칭 방식)', async () => {
     const mod = await import('@/lib/actions/register-place')
-    expect(typeof mod.enrichPlace).toBe('function')
+    expect(typeof mod.enrichFromGoogle).toBe('function')
+  })
+
+  it('searchPlaceByNaver 함수 export (Phase 11 — 단일 소스 검색)', async () => {
+    const mod = await import('@/lib/actions/register-place')
+    expect(typeof mod.searchPlaceByNaver).toBe('function')
   })
 
   it('registerPlace 함수 export', async () => {

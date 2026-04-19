@@ -18,12 +18,44 @@ vi.mock('@/lib/google-places', () => ({
 }))
 
 // Mock supabase server client
+// insert() 는 체이닝 가능한 builder 를 반환해야 함 — .select('id').single() 으로 id 회수.
 const mockInsert = vi.fn()
 const mockSelect = vi.fn()
+// insert 결과의 편의 설정을 위해 mockInsert 는 { error } 를 리턴하는 Promise.
+// .select('id').single() 체이닝을 지원하려면 Proxy/체이닝 헬퍼 필요.
+function buildInsertChain(insertResult: { error: unknown }) {
+  const single = vi.fn().mockResolvedValue({
+    data: insertResult.error ? null : { id: 'inserted-id' },
+    error: insertResult.error ?? null,
+  })
+  const select = vi.fn().mockReturnValue({ single })
+  // 직접 await 도 지원하려면 then 구현. 테스트는 { error } 만 쓰므로 필수.
+  return {
+    select,
+    then: (resolve: (v: { error: unknown }) => void) => resolve(insertResult),
+  }
+}
 vi.mock('@/lib/supabase/server', () => ({
   createServerClient: vi.fn(() => ({
     from: vi.fn(() => ({
-      insert: mockInsert,
+      insert: (...args: unknown[]) => {
+        const result = mockInsert(...args)
+        // mockInsert 가 Promise 반환 시 이를 resolve 하여 체이닝 builder 생성
+        return {
+          select: (cols: string) => {
+            const single = vi.fn(async () => {
+              const r = await result
+              return {
+                data: r?.error ? null : { id: 'inserted-id' },
+                error: r?.error ?? null,
+              }
+            })
+            return { single }
+          },
+          // await insert(...) 패턴 지원 (레거시 테스트)
+          then: async (resolve: (v: unknown) => void) => resolve(await result),
+        }
+      },
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
           limit: mockSelect,
@@ -73,35 +105,59 @@ describe('searchPlace', () => {
 })
 
 // ===== enrichPlace =====
-describe('enrichPlace', () => {
-  it('성공 시 상세 정보 반환', async () => {
+describe('enrichFromGoogle (Phase 11 — 이름+주소로 매칭)', () => {
+  it('Google Text Search + Details 성공 시 matched=true + 상세 반환', async () => {
+    mockSearchPlaceByText.mockResolvedValue([
+      { placeId: 'ChIJ1', name: '테스트의원', address: '충남 천안시 서북구 테스트로 1' },
+    ])
     mockGetPlaceDetails.mockResolvedValue({
       name: '테스트의원',
       rating: 4.5,
       reviewCount: 100,
       googleMapsUri: 'https://maps.google.com/?cid=123',
-      reviews: [],
+      reviews: [{ text: '좋아요', rating: 5, relativeTime: '1달 전' }],
       photoRefs: [],
     })
 
-    const { enrichPlace } = await import('@/lib/actions/register-place')
-    const result = await enrichPlace('ChIJ1')
+    const { enrichFromGoogle } = await import('@/lib/actions/register-place')
+    const result = await enrichFromGoogle({
+      name: '테스트의원',
+      address: '충남 천안시 서북구 테스트로 1',
+    })
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.name).toBe('테스트의원')
+      expect(result.data.matched).toBe(true)
+      expect(result.data.googlePlaceId).toBe('ChIJ1')
       expect(result.data.rating).toBe(4.5)
       expect(result.data.googleMapsUri).toBe('https://maps.google.com/?cid=123')
     }
   })
 
-  it('실패 시 에러 반환', async () => {
+  it('Google 검색 결과 없음 → matched=false (에러 아님, 진행 가능)', async () => {
+    mockSearchPlaceByText.mockResolvedValue([])
+
+    const { enrichFromGoogle } = await import('@/lib/actions/register-place')
+    const result = await enrichFromGoogle({
+      name: '존재하지않는업체',
+      address: '충남 천안시 테스트',
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.matched).toBe(false)
+  })
+
+  it('Details 조회 실패 시 matched=false', async () => {
+    mockSearchPlaceByText.mockResolvedValue([
+      { placeId: 'ChIJ1', name: 'X', address: 'Y' },
+    ])
     mockGetPlaceDetails.mockResolvedValue(null)
 
-    const { enrichPlace } = await import('@/lib/actions/register-place')
-    const result = await enrichPlace('bad-id')
+    const { enrichFromGoogle } = await import('@/lib/actions/register-place')
+    const result = await enrichFromGoogle({ name: 'X', address: 'Y' })
 
-    expect(result.success).toBe(false)
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.matched).toBe(false)
   })
 })
 

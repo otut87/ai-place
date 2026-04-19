@@ -3,7 +3,6 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PlaceCard } from "@/components/place-card"
 import { StatisticsBox } from "@/components/statistics-box"
-import { InquiryButton } from "@/components/inquiry-modal"
 import { getCities, getCategories, getPlaces, getAllPlaces } from "@/lib/data.supabase"
 import { getRecentBlogPosts } from "@/lib/blog/data.supabase"
 import { getSiteStats } from "@/lib/site-stats"
@@ -205,10 +204,19 @@ export default async function HomePage() {
                 <p className="text-sm text-[#6a6a6a]">ChatGPT, Claude, Gemini가 당신의 업체를 추천합니다.</p>
               </div>
             </div>
-            <div className="mt-8 text-center">
-              <InquiryButton className="inline-flex h-12 px-6 items-center rounded-lg bg-[#008060] text-white font-medium hover:bg-[#006b4f] transition-colors">
-                업체 등록 문의
-              </InquiryButton>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/signup"
+                className="inline-flex h-12 px-6 items-center rounded-lg bg-[#008060] text-white font-medium hover:bg-[#006b4f] transition-colors"
+              >
+                업체 직접 등록 (파일럿 30일 무료)
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex h-12 px-6 items-center rounded-lg border border-[#c1c1c1] text-[#222222] font-medium hover:bg-[#f2f2f2] transition-colors"
+              >
+                로그인
+              </Link>
             </div>
           </div>
         </section>

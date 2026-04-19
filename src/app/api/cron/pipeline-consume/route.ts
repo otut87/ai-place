@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { generateBlogDraftAction } from '@/lib/actions/generate-blog-draft'
+import { runPlaceEnrichGoogle, runPlaceSummarizeGoogleReviews } from '@/lib/pipeline/place-refresh'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -34,6 +35,25 @@ async function handleBlogDraftGenerate(
   }
 }
 
+/** Phase 11 — place.enrich_google · place.summarize_google_reviews 공통 dispatcher. */
+async function handlePlaceJob(
+  kind: 'enrich_google' | 'summarize_google_reviews',
+  input: Record<string, unknown>,
+): Promise<{ success: true; result: Record<string, unknown> } | { success: false; error: string }> {
+  const placeId = typeof input.placeId === 'string' ? input.placeId : ''
+  if (!placeId) return { success: false, error: 'placeId 필수' }
+
+  try {
+    const result = kind === 'enrich_google'
+      ? await runPlaceEnrichGoogle(placeId)
+      : await runPlaceSummarizeGoogleReviews(placeId)
+    return { success: true, result: result as unknown as Record<string, unknown> }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: msg }
+  }
+}
+
 async function dispatchJob(
   jobType: string,
   input: Record<string, unknown>,
@@ -41,6 +61,10 @@ async function dispatchJob(
   switch (jobType) {
     case 'blog_draft_generate':
       return handleBlogDraftGenerate(input)
+    case 'place.enrich_google':
+      return handlePlaceJob('enrich_google', input)
+    case 'place.summarize_google_reviews':
+      return handlePlaceJob('summarize_google_reviews', input)
     default:
       return { success: false, error: `unknown job_type: ${jobType}` }
   }

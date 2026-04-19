@@ -18,6 +18,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Sparkles,
+  Flag,
+  KeyRound,
 } from 'lucide-react'
 import { AdminLink } from './admin-link'
 
@@ -31,6 +33,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/admin', label: '대시보드', icon: LayoutDashboard, group: 'main' },
   { href: '/admin/review', label: '검수 큐', icon: ListChecks, group: 'main' },
+  { href: '/admin/reports', label: '신고', icon: Flag, group: 'main' },
+  { href: '/admin/claims', label: '소유권 문의', icon: KeyRound, group: 'main' },
   { href: '/admin/places', label: '업체', icon: Building2, group: 'content' },
   { href: '/admin/register', label: '신규 등록', icon: Sparkles, group: 'content' },
   { href: '/admin/blog', label: '블로그', icon: Notebook, group: 'content' },

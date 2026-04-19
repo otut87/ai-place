@@ -36,5 +36,15 @@ export async function requireAuthForAction() {
   return user
 }
 
+/** 로그인된 모든 사용자 허용 (admin + owner).
+ *  읽기 전용 외부 API 래퍼(네이버 검색, Google Places 보강, 옵션 조회 등)에서 사용. */
+export async function requireLoggedInForAction() {
+  const user = await getUser()
+  if (!user) {
+    throw new Error('UNAUTHORIZED')
+  }
+  return user
+}
+
 // signIn/signOut는 클라이언트 SDK에서 직접 처리.
 // admin/login/page.tsx, admin/logout-button.tsx 참조.

@@ -6,10 +6,10 @@
 // Step 3: 서비스/FAQ/설명 입력 → DB 저장 (status: pending)
 
 import type { z as zType } from 'zod'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, requireLoggedInForAction } from '@/lib/auth'
 import { searchPlaceByText, getPlaceDetails } from '@/lib/google-places'
 import type { PlaceSearchResult } from '@/lib/google-places'
-import { searchKakaoPlace } from '@/lib/naver-kakao-search'
+import { naverLocalSearch } from '@/lib/search/naver-local'
 import { createServerClient } from '@/lib/supabase/server'
 
 export interface RegisterPlaceInput {
@@ -35,15 +35,13 @@ export interface RegisterPlaceInput {
   googleBusinessUrl?: string
   naverPlaceUrl?: string
   kakaoMapUrl?: string
-  // Phase 11 — medicalkoreaguide 벤치마크
+  // Phase 11 — 업체 공식 채널 링크 (수동 입력 허용 — 조작 동기 없음)
   homepageUrl?: string
   blogUrl?: string
   instagramUrl?: string
+  // Google 평점만 API 자동 수집. Naver/Kakao 리뷰수·평점은 수동 입력 금지 — 크롤러가 요약으로 수집.
   googleRating?: number
   googleReviewCount?: number
-  naverReviewCount?: number
-  kakaoRating?: number
-  kakaoReviewCount?: number
   latitude?: number
   longitude?: number
   // 3-Source / Daum Postcode (T-019/T-020)
@@ -72,100 +70,195 @@ export async function searchPlace(query: string, city: string): Promise<ActionRe
   return { success: true, data: results }
 }
 
-/**
- * 3-Source 통합 검색 — Kakao + Google + Naver 병렬 + Dedup/Merge + 카테고리/도시 자동 추정.
- * 각 후보에 detectedCategory/detectedCity 가 동봉되어 UI 가 바로 채울 수 있음.
- * (T-018)
- */
-export async function searchPlaceUnified(
-  query: string,
-): Promise<ActionResult<Array<{
-  kakaoPlaceId?: string
-  googlePlaceId?: string
-  naverLink?: string
+/** 업체 선정용 네이버 지역 검색 결과 (단일 소스). */
+export interface NaverCandidate {
   displayName: string
-  roadAddress?: string | null
-  jibunAddress?: string | null
+  naverCategory: string
+  roadAddress: string | null
+  jibunAddress: string
+  naverPlaceUrl: string
   latitude: number
   longitude: number
-  phone?: string | null
-  rating?: number
-  reviewCount?: number
-  sources: string[]
-  sameAs: string[]
-  kakaoCategory?: string
-  naverCategory?: string
+  phone: string | null
   detectedCategorySlug: string | null
   detectedCategoryTier: number | null
   detectedCategoryConfidence: number
   detectedCitySlug: string | null
-}>>> {
-  await requireAuth()
+  /** DB 에 이미 등록된 업체면 그 정보 반환. UI 에서 "이미 등록됨" 표시용. */
+  alreadyRegistered: {
+    id: string
+    slug: string
+    city: string
+    category: string
+    name: string
+  } | null
+}
 
-  const { unifiedSearch } = await import('@/lib/search/unified')
+/**
+ * Step 1: Naver 지역 검색으로 업체 후보 조회 (단일 소스).
+ * Kakao/Google 통합 매칭은 제거 — 한국 로컬 비즈니스는 Naver Place 등록이 사실상 표준.
+ * Naver 에 없는 업체는 UI 의 "수동 등록" 으로 진입.
+ *
+ * 각 후보에 detectedCategory/detectedCity 자동 판별 결과가 동봉되어 UI 자동 채움.
+ * Google Places API 호출은 enrichFromGoogle 에서 별도 수행.
+ */
+export async function searchPlaceByNaver(
+  query: string,
+): Promise<ActionResult<NaverCandidate[]>> {
+  await requireLoggedInForAction()
+
   const { detectCategory } = await import('@/lib/classification/category-detector')
   const { cityFromAddress } = await import('@/lib/address/sigungu-to-city')
   const { getCategories } = await import('@/lib/data')
 
-  const candidates = await unifiedSearch(query)
-  if (candidates.length === 0) return { success: true, data: [] }
+  const naverResults = await naverLocalSearch(query.trim())
+  if (naverResults.length === 0) return { success: true, data: [] }
 
   const allCategories = await getCategories()
   const availableSlugs = allCategories.map(c => c.slug)
 
-  // 카테고리 자동 판별 (병렬) — Tier 1/2 는 즉시 반환, Tier 3 만 LLM 호출
-  const enriched = await Promise.all(
-    candidates.map(async c => {
+  // 좌표 기반 DB 중복 조회 — 모든 후보 좌표 bounding box 를 OR 로 조합해 1쿼리로 처리.
+  // ±0.0001도 ≈ 약 10m. 대한민국 수평 10m 오차 내 업체는 동일 업체로 간주.
+  const { createServerClient: createSb } = await import('@/lib/supabase/server')
+  const supabase = await createSb()
+  const COORD_DELTA = 0.0001
+  const minLat = Math.min(...naverResults.map(n => n.latitude)) - COORD_DELTA
+  const maxLat = Math.max(...naverResults.map(n => n.latitude)) + COORD_DELTA
+  const minLng = Math.min(...naverResults.map(n => n.longitude)) - COORD_DELTA
+  const maxLng = Math.max(...naverResults.map(n => n.longitude)) + COORD_DELTA
+  const { data: existing } = await supabase
+    .from('places')
+    .select('id, slug, city, category, name, latitude, longitude')
+    .eq('status', 'active')
+    .gte('latitude', minLat).lte('latitude', maxLat)
+    .gte('longitude', minLng).lte('longitude', maxLng)
+  const existingList = (existing ?? []) as Array<{
+    id: string; slug: string; city: string; category: string; name: string
+    latitude: number | null; longitude: number | null
+  }>
+  // pending 도 중복 차단 대상에 포함 — 별도 쿼리 (status 필터 제거 버전)
+  const { data: allExisting } = await supabase
+    .from('places')
+    .select('id, slug, city, category, name, latitude, longitude, status')
+    .gte('latitude', minLat).lte('latitude', maxLat)
+    .gte('longitude', minLng).lte('longitude', maxLng)
+  const allExistingList = (allExisting ?? []) as Array<{
+    id: string; slug: string; city: string; category: string; name: string
+    latitude: number | null; longitude: number | null; status: string
+  }>
+
+  const candidates = await Promise.all(
+    naverResults.map(async n => {
       const detection = await detectCategory({
-        kakaoCategory: c.kakaoCategory,
+        kakaoCategory: null,
         googleTypes: [],
-        name: c.displayName,
-        naverCategory: c.naverCategory,
+        naverCategory: n.category,
+        name: n.title,
         availableSlugs,
       })
-      const addressForCity = c.roadAddress ?? c.jibunAddress
+      const addressForCity = n.roadAddress ?? n.address
+      // Naver API 의 link 필드는 업체 홈페이지(대부분 빈 값) 이므로,
+      // 상호명 기반 네이버 플레이스 검색 URL 을 생성한다.
+      const naverPlaceUrl = `https://m.place.naver.com/place/search/${encodeURIComponent(n.title)}`
+
+      // 좌표 10m 이내 + 이름 유사도 > 0.5 인 기존 업체를 "이미 등록됨" 으로 annotate.
+      const match = allExistingList.find(p => {
+        if (p.latitude == null || p.longitude == null) return false
+        const nearLat = Math.abs(p.latitude - n.latitude) < COORD_DELTA
+        const nearLng = Math.abs(p.longitude - n.longitude) < COORD_DELTA
+        if (!nearLat || !nearLng) return false
+        // 이름도 비슷하게 일치해야 동일 업체 — 좌표만으론 같은 빌딩 다른 업체 헷갈림 방지.
+        return quickNameMatch(p.name, n.title)
+      })
+
       return {
-        ...c,
+        displayName: n.title,
+        naverCategory: n.category,
+        roadAddress: n.roadAddress,
+        jibunAddress: n.address,
+        naverPlaceUrl,
+        latitude: n.latitude,
+        longitude: n.longitude,
+        phone: n.telephone,
         detectedCategorySlug: detection.category,
         detectedCategoryTier: detection.tier,
         detectedCategoryConfidence: detection.confidence,
         detectedCitySlug: cityFromAddress(addressForCity),
-      }
+        alreadyRegistered: match ? {
+          id: match.id,
+          slug: match.slug,
+          city: match.city,
+          category: match.category,
+          name: match.name,
+        } : null,
+      } satisfies NaverCandidate
     }),
   )
 
-  return { success: true, data: enriched }
+  // existingList 는 status='active' 리스트 — 현재 사용 안함. 향후 UI 에서 "공개 중" 뱃지에 사용 가능.
+  void existingList
+
+  return { success: true, data: candidates }
 }
 
-/** Step 2: Place ID로 상세 정보 가져오기 (자동 보강) — Google + 네이버 + 카카오 병렬 조회 */
-export async function enrichPlace(placeId: string, placeName?: string): Promise<ActionResult<{
+/** 간이 이름 매칭 — 공백/기호 제거 후 한쪽이 다른 쪽을 포함하거나 80% 이상 일치. */
+function quickNameMatch(a: string, b: string): boolean {
+  const norm = (s: string) => s.replace(/\s|[^\p{L}\p{N}]/gu, '').toLowerCase()
+  const na = norm(a), nb = norm(b)
+  if (!na || !nb) return false
+  if (na === nb) return true
+  if (na.includes(nb) || nb.includes(na)) return true
+  return false
+}
+
+/**
+ * Step 2: Naver 에서 선택된 업체 정보(이름 + 주소) 로 Google Places Text Search.
+ * Google 에 매칭되면 placeId 회수 → Details 조회 → rating/reviews/영업시간 확보.
+ * 매칭 실패 시 `matched: false` 반환 — UI 는 Naver 데이터만으로 진행 가능.
+ */
+export async function enrichFromGoogle(input: {
   name: string
+  address: string
+}): Promise<ActionResult<{
+  matched: boolean
+  googlePlaceId?: string
+  name?: string
   nameEn?: string
-  rating: number
-  reviewCount: number
+  rating?: number
+  reviewCount?: number
   phone?: string
   websiteUri?: string
   openingHours?: string[]
   editorialSummary?: string
   googleMapsUri?: string
-  kakaoMapUrl?: string
   reviews?: Array<{ text: string; rating: number }>
+  photoRefs?: string[]
 }>> {
-  await requireAuth()
+  await requireLoggedInForAction()
 
-  // Google + 카카오 병렬 조회 (네이버는 고유 URL API 미제공)
-  const [details, kakao] = await Promise.all([
-    getPlaceDetails(placeId),
-    placeName ? searchKakaoPlace(placeName) : Promise.resolve(null),
-  ])
+  // Google Text Search — "상호명 주소" 형태로 정밀도↑
+  const textQuery = `${input.name} ${input.address}`.trim()
+  const searchResults = await searchPlaceByText(textQuery)
+  if (!searchResults || searchResults.length === 0) {
+    return { success: true, data: { matched: false } }
+  }
 
+  // 첫 번째 결과 채택 (Google 이 relevance 기준 정렬)
+  const top = searchResults[0]
+  if (!top?.placeId) {
+    return { success: true, data: { matched: false } }
+  }
+
+  const details = await getPlaceDetails(top.placeId)
   if (!details) {
-    return { success: false, error: 'Google Places 상세 정보를 가져올 수 없습니다.' }
+    return { success: true, data: { matched: false } }
   }
 
   return {
     success: true,
     data: {
+      matched: true,
+      googlePlaceId: top.placeId,
       name: details.name,
       nameEn: details.nameEn,
       rating: details.rating,
@@ -175,8 +268,8 @@ export async function enrichPlace(placeId: string, placeName?: string): Promise<
       openingHours: details.openingHours,
       editorialSummary: details.editorialSummary,
       googleMapsUri: details.googleMapsUri,
-      kakaoMapUrl: kakao?.placeUrl || undefined,
       reviews: details.reviews.slice(0, 5).map(r => ({ text: r.text, rating: r.rating })),
+      photoRefs: details.photoRefs.filter(Boolean).slice(0, 10),
     },
   }
 }
@@ -262,7 +355,7 @@ export async function generatePlaceContent(input: {
   tags: string[]
   qualityScore: number
 }>> {
-  await requireAuth()
+  await requireLoggedInForAction()
 
   const { z } = await import('zod')
   const Anthropic = (await import('@anthropic-ai/sdk')).default
@@ -572,15 +665,17 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
   if (input.services.length < 1) {
     return { success: false, error: '서비스는 최소 1개 필요합니다.' }
   }
-  // T-020: 외부 ID(Google/Kakao/Naver) 중 하나 또는 수동 등록 플래그 필수
+  // T-020 + Phase 11: 외부 ID / Naver 플레이스 URL / 수동 등록 플래그 중 하나 필수.
+  // Phase 11 — 검색은 Naver 단일 소스. Naver 결과 선택하면 naverPlaceUrl 이 생기므로 검증 통과.
   const hasExternalId =
     Boolean(input.googlePlaceId) ||
     Boolean(input.kakaoPlaceId) ||
-    Boolean(input.naverPlaceId)
+    Boolean(input.naverPlaceId) ||
+    Boolean(input.naverPlaceUrl)
   if (!hasExternalId && !input.manual) {
     return {
       success: false,
-      error: '외부 ID(Google/Kakao/Naver) 중 하나 또는 수동 등록 플래그가 필요합니다.',
+      error: '외부 ID(Google/Kakao/Naver URL) 중 하나 또는 수동 등록 플래그가 필요합니다.',
     }
   }
   if (!/^[a-z0-9-]+$/.test(input.slug) || input.slug.length > 100) {
@@ -636,9 +731,10 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
     instagram_url: input.instagramUrl ?? null,
     google_rating: input.googleRating ?? input.rating ?? null,
     google_review_count: input.googleReviewCount ?? input.reviewCount ?? null,
-    naver_review_count: input.naverReviewCount ?? null,
-    kakao_rating: input.kakaoRating ?? null,
-    kakao_review_count: input.kakaoReviewCount ?? null,
+    // Naver/Kakao 리뷰수·평점은 수동 입력 불가 — 크롤러가 review_summaries 에 요약으로 저장
+    naver_review_count: null,
+    kakao_rating: null,
+    kakao_review_count: null,
     kakao_place_id: input.kakaoPlaceId ?? null,
     naver_place_id: input.naverPlaceId ?? null,
     road_address: input.roadAddress ?? null,
@@ -652,12 +748,31 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
     owner_email: user.email ?? null,
     status: 'pending' as const,
   }
-  // Supabase generic 타입 추론 한계로 타입 단언 사용
-  const { error } = await (supabase.from('places') as ReturnType<typeof supabase.from>).insert(insertData as never)
+  // Supabase generic 타입 추론 한계로 타입 단언 사용 — insert 후 id 회수
+  const { data: insertedRow, error } = await (supabase.from('places') as ReturnType<typeof supabase.from>)
+    .insert(insertData as never)
+    .select('id')
+    .single()
 
   if (error) {
     console.error('[register-place] Insert failed:', error)
     return { success: false, error: '업체 등록에 실패했습니다.' }
+  }
+
+  const insertedId = (insertedRow as { id?: string } | null)?.id
+
+  // Phase 11: 무거운 작업은 background 워커로 이관 — 등록 요청은 DB insert 만으로 완료.
+  // Google Places 재수집 + Haiku 리뷰 요약은 pipeline-consume 크론이 처리.
+  if (insertedId && input.googlePlaceId) {
+    try {
+      const { enqueuePlaceRefresh } = await import('@/lib/admin/pipeline-jobs')
+      await enqueuePlaceRefresh(insertedId, [
+        'place.enrich_google',
+        'place.summarize_google_reviews',
+      ])
+    } catch (e) {
+      console.error('[register-place] enqueue refresh failed:', e)
+    }
   }
 
   // T-057: 어드민 알림 — pending 업체가 생성되었음을 이메일/슬랙으로 공지

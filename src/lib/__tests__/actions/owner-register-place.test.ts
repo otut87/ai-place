@@ -85,7 +85,7 @@ describe('registerOwnerPlaceAction', () => {
     if (!r.success) expect(r.error).toMatch(/customer/)
   })
 
-  it('필수필드만 (이미지 없음) → draft 상태', async () => {
+  it('수동 등록 (Naver/Google 매칭 없음) → pending', async () => {
     mockDbOk()
     const { registerOwnerPlaceAction } = await import('@/lib/actions/owner-register-place')
     const r = await registerOwnerPlaceAction({
@@ -93,18 +93,33 @@ describe('registerOwnerPlaceAction', () => {
     })
     expect(r.success).toBe(true)
     if (r.success) {
-      expect(r.status).toBe('draft')
+      expect(r.status).toBe('pending')
       expect(r.autoApproved).toBe(false)
     }
   })
 
-  it('이미지 + 전화번호 포함 → auto active', async () => {
+  it('naverPlaceUrl 매칭 → auto active', async () => {
     mockDbOk()
     const { registerOwnerPlaceAction } = await import('@/lib/actions/owner-register-place')
     const r = await registerOwnerPlaceAction({
       name: 'Good Place', city: 'cheonan', category: 'restaurant',
       address: '천안시 동남구', phone: '010-1234-5678',
-      images: ['https://example.com/1.jpg'],
+      naverPlaceUrl: 'https://m.place.naver.com/place/search/Good%20Place',
+    })
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.status).toBe('active')
+      expect(r.autoApproved).toBe(true)
+    }
+  })
+
+  it('googlePlaceId 매칭 → auto active', async () => {
+    mockDbOk()
+    const { registerOwnerPlaceAction } = await import('@/lib/actions/owner-register-place')
+    const r = await registerOwnerPlaceAction({
+      name: 'Good Place', city: 'cheonan', category: 'restaurant',
+      address: '천안시 동남구',
+      googlePlaceId: 'ChIJtest123',
     })
     expect(r.success).toBe(true)
     if (r.success) {

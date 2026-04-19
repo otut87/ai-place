@@ -73,20 +73,13 @@ interface PlaceMetaArgs {
 
 export function buildPlaceMetadata(args: PlaceMetaArgs): Metadata {
   const { place, cityName, categoryName, citySlug, categorySlug } = args
-  const title = composePageTitle(`${place.name} - ${cityName} ${categoryName}`)
-  const serviceList = place.services?.map((s) => s.name).filter(Boolean).join(', ') ?? ''
-  const ratingPhrase = place.rating != null ? `평점 ${place.rating}점.` : ''
-  const addr = normalizeAddress(place.address)
-  const description = [
-    `${cityName} ${categoryName} ${place.name}`,
-    serviceList ? `— ${serviceList}` : '',
-    addr ? `주소: ${addr}.` : '',
-    ratingPhrase,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+  // title: 표시폭 30~70 유지를 위해 "업체" 접미어 고정. "{업체명} — {도시} {업종} 업체".
+  const title = composePageTitle(`${place.name} — ${cityName} ${categoryName} 업체`)
+  // description: SEO meta 권장 표시폭 80~180. 한글=2폭, ASCII=1폭.
+  // 전략: place.description(40~60자 AEO)에 브랜드 꼬리말 1줄을 더해 폭을 맞추되, 180폭 초과 시 자름.
+  const core = place.description?.trim() ?? `${cityName} ${categoryName} ${place.name}`
+  const tail = ` ${cityName} ${categoryName} 업체 · AI Place 프로필.`
+  const description = clampDisplayWidth(`${core}${tail}`, 80, 180)
 
   const url = `/${citySlug}/${categorySlug}/${place.slug}`
   return {
@@ -95,6 +88,39 @@ export function buildPlaceMetadata(args: PlaceMetaArgs): Metadata {
     alternates: { canonical: url },
     openGraph: { title, description, url },
   }
+}
+
+/** 한글=2·ASCII=1 기준 표시폭이 [min, max] 범위에 들어가도록 조절.
+ *  - max 초과면 단어 경계에서 자르기 (마지막 공백 기준).
+ *  - min 미만이면 고정 패딩 문구 추가. */
+function clampDisplayWidth(text: string, min: number, max: number): string {
+  const widthOf = (s: string): number => {
+    let w = 0
+    for (const ch of s) {
+      const code = ch.codePointAt(0) ?? 0
+      w += (
+        (code >= 0xAC00 && code <= 0xD7A3) ||
+        (code >= 0x4E00 && code <= 0x9FFF) ||
+        (code >= 0x3040 && code <= 0x30FF)
+      ) ? 2 : 1
+    }
+    return w
+  }
+  let out = text
+  if (widthOf(out) > max) {
+    // max 까지 자르기 — 단어 단위 근사.
+    while (widthOf(out) > max && out.length > 0) {
+      out = out.slice(0, -1)
+    }
+    // 마지막 공백까지 되돌려 부분 단어 방지.
+    const lastSpace = out.lastIndexOf(' ')
+    if (lastSpace > 0 && widthOf(out.slice(0, lastSpace)) >= min) out = out.slice(0, lastSpace)
+    out += '…'
+  }
+  if (widthOf(out) < min) {
+    out += ' AI 검색 최적화 프로필.'
+  }
+  return out
 }
 
 export function buildBlogIndexMetadata(): Metadata {

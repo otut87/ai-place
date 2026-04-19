@@ -35,17 +35,32 @@ export async function listOwnerPlaces(): Promise<OwnerPlaceRow[]> {
   const supabase = getAdminClient()
   if (!supabase) return []
 
-  // owner_id = uid OR owner_email = email (email 없는 계정도 있을 수 있음)
-  const filters: string[] = [`owner_id.eq.${user.id}`]
-  if (user.email) filters.push(`owner_email.eq.${user.email}`)
+  // 매칭 우선순위: owner_id → owner_email → customer_id (회원가입 시 연결된 customers row 기준).
+  const results = new Map<string, OwnerPlaceRow>()
+  const cols = 'id, slug, name, city, category, status, description, phone, opening_hours, tags, images, updated_at'
 
-  const { data, error } = await supabase
-    .from('places')
-    .select('id, slug, name, city, category, status, description, phone, opening_hours, tags, images, updated_at')
-    .or(filters.join(','))
-    .order('updated_at', { ascending: false })
-  if (error || !data) return []
-  return data as unknown as OwnerPlaceRow[]
+  const byOwnerId = await supabase.from('places').select(cols).eq('owner_id', user.id)
+  if (byOwnerId.error) console.error('[listOwnerPlaces] owner_id 조회 실패:', byOwnerId.error)
+  for (const row of (byOwnerId.data ?? []) as unknown as OwnerPlaceRow[]) results.set(row.id, row)
+
+  if (user.email) {
+    const byEmail = await supabase.from('places').select(cols).eq('owner_email', user.email)
+    if (byEmail.error) console.error('[listOwnerPlaces] owner_email 조회 실패:', byEmail.error)
+    for (const row of (byEmail.data ?? []) as unknown as OwnerPlaceRow[]) results.set(row.id, row)
+  }
+
+  // customer_id 경로 — 과거 owner_id/owner_email 이 비어있는 케이스 대비.
+  const { data: customer } = await supabase.from('customers').select('id').eq('user_id', user.id).maybeSingle()
+  const cid = (customer as { id: string } | null)?.id
+  if (cid) {
+    const byCustomer = await supabase.from('places').select(cols).eq('customer_id', cid)
+    if (byCustomer.error) console.error('[listOwnerPlaces] customer_id 조회 실패:', byCustomer.error)
+    for (const row of (byCustomer.data ?? []) as unknown as OwnerPlaceRow[]) results.set(row.id, row)
+  }
+
+  const out = [...results.values()].sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? ''))
+  console.log(`[listOwnerPlaces] user=${user.id} email=${user.email} found=${out.length}`)
+  return out
 }
 
 export interface UpdateOwnerResponse {

@@ -9,25 +9,35 @@ import { revalidatePath } from 'next/cache'
 
 export interface OwnerPlaceDraft {
   name: string
+  nameEn?: string
+  slug?: string         // 미지정 시 자동 생성
   city: string          // slug
   category: string      // slug
   address: string
+  roadAddress?: string
+  jibunAddress?: string
+  latitude?: number
+  longitude?: number
   phone?: string
   website?: string
-  openingHours?: string
+  openingHours?: string | string[]   // 문자열(기존) 또는 admin 포맷 배열(["Mo 09:00-18:00", ...])
   description?: string
   tags?: string[]
   services?: Array<{ name: string; description?: string; priceRange?: string }>
+  faqs?: Array<{ question: string; answer: string }>
   recommendedFor?: string[]
   strengths?: string[]
-  images?: string[]
+  images?: Array<{ url: string; alt: string; type: 'exterior' | 'interior' | 'treatment' | 'staff' | 'equipment' }>
   naverPlaceUrl?: string
   kakaoMapUrl?: string
   googleBusinessUrl?: string
+  googlePlaceId?: string
+  rating?: number
+  reviewCount?: number
 }
 
 export type RegisterOutcome =
-  | { success: true; placeId: string; slug: string; status: 'draft' | 'active'; autoApproved: boolean }
+  | { success: true; placeId: string; slug: string; status: 'pending' | 'active'; autoApproved: boolean }
   | { success: false; error: string; duplicatePlaceId?: string }
 
 const SLUG_PATTERN = /^[a-z0-9-]+$/
@@ -96,16 +106,95 @@ export async function registerOwnerPlaceAction(draft: OwnerPlaceDraft): Promise<
   const admin = getAdminClient()
   if (!admin) return { success: false, error: 'admin_unavailable' }
 
-  // 2) customer 조회
-  const { data: customer } = await admin
+  // 2) customer 조회 + 자동 복구
+  // 과거 버그로 auth user 는 생성됐지만 customers row 가 없는 케이스 대응.
+  // 또는 email 로만 등록된 기존 고객의 user_id 연결.
+  let customerId: string | null = null
+  const { data: customerByUser } = await admin
     .from('customers')
     .select('id')
     .eq('user_id', user.id)
     .maybeSingle()
-  if (!customer) return { success: false, error: 'customer 레코드 없음 — 회원가입을 다시 완료해 주세요' }
-  const customerId = (customer as { id: string }).id
+  if (customerByUser) {
+    customerId = (customerByUser as { id: string }).id
+  } else if (user.email) {
+    // 이메일로 찾고 user_id 연결
+    const { data: customerByEmail } = await admin
+      .from('customers')
+      .select('id, user_id')
+      .eq('email', user.email)
+      .maybeSingle()
+    const byEmail = customerByEmail as { id: string; user_id: string | null } | null
+    if (byEmail) {
+      if (!byEmail.user_id) {
+        await admin.from('customers').update({ user_id: user.id }).eq('id', byEmail.id)
+      }
+      customerId = byEmail.id
+    }
+  }
+  if (!customerId) {
+    // 완전 신규: 파일럿 30일로 customers row 생성
+    const now = new Date()
+    const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const { data: created, error: createErr } = await admin
+      .from('customers')
+      .insert({
+        email: user.email ?? `${user.id}@placeholder.local`,
+        user_id: user.id,
+        trial_started_at: now.toISOString(),
+        trial_ends_at: trialEnd.toISOString(),
+      })
+      .select('id')
+      .single()
+    if (createErr || !created) {
+      return { success: false, error: `customer 자동 생성 실패: ${createErr?.message ?? 'unknown'}` }
+    }
+    customerId = (created as { id: string }).id
+  }
 
-  // 3) 중복 검사 — 같은 city+category 내 이름 유사도 0.8+
+  // 3) 중복 검사 — 3단계 방어 (googlePlaceId → 좌표 근접 → 이름+주소 유사도)
+  // 3-a) googlePlaceId 유니크: 같은 Google 업체 ID 는 절대 중복 불가.
+  if (draft.googlePlaceId) {
+    const { data: byGoogle } = await admin
+      .from('places')
+      .select('id, slug, city, category, name')
+      .eq('google_place_id', draft.googlePlaceId)
+      .maybeSingle()
+    const match = byGoogle as { id: string; slug: string; city: string; category: string; name: string } | null
+    if (match) {
+      return {
+        success: false,
+        error: `이미 등록된 업체입니다: "${match.name}" (/${match.city}/${match.category}/${match.slug})`,
+        duplicatePlaceId: match.id,
+      }
+    }
+  }
+  // 3-b) 좌표 근접성: ±0.0001도 (~10m) + 이름 약간 일치 → 동일 업체로 간주.
+  if (draft.latitude != null && draft.longitude != null) {
+    const COORD_DELTA = 0.0001
+    const { data: nearby } = await admin
+      .from('places')
+      .select('id, slug, city, category, name, latitude, longitude')
+      .gte('latitude', draft.latitude - COORD_DELTA)
+      .lte('latitude', draft.latitude + COORD_DELTA)
+      .gte('longitude', draft.longitude - COORD_DELTA)
+      .lte('longitude', draft.longitude + COORD_DELTA)
+    const nearbyList = (nearby ?? []) as Array<{ id: string; slug: string; city: string; category: string; name: string; latitude: number | null; longitude: number | null }>
+    const normalize = (s: string) => s.replace(/\s|[^\p{L}\p{N}]/gu, '').toLowerCase()
+    const draftNorm = normalize(draft.name)
+    const nameMatch = nearbyList.find(p => {
+      const n = normalize(p.name)
+      return n === draftNorm || n.includes(draftNorm) || draftNorm.includes(n)
+    })
+    if (nameMatch) {
+      return {
+        success: false,
+        error: `같은 위치에 이미 등록된 업체가 있습니다: "${nameMatch.name}" (/${nameMatch.city}/${nameMatch.category}/${nameMatch.slug})`,
+        duplicatePlaceId: nameMatch.id,
+      }
+    }
+  }
+  // 3-c) 기존 이름+주소 유사도 검사 (fallback — 좌표 없는 케이스)
   const { data: existing } = await admin
     .from('places')
     .select('id, name, address, slug')
@@ -125,8 +214,11 @@ export async function registerOwnerPlaceAction(draft: OwnerPlaceDraft): Promise<
     }
   }
 
-  // 4) slug 생성 (중복 회피)
-  let slug = generateSlug(draft.name)
+  // 4) slug 생성 (owner override > 자동 생성, 중복 회피)
+  const initialSlug = (draft.slug && SLUG_PATTERN.test(draft.slug))
+    ? draft.slug
+    : generateSlug(draft.name)
+  let slug = initialSlug
   let attempts = 0
   while (attempts < 5) {
     const { data: dup } = await admin
@@ -141,33 +233,56 @@ export async function registerOwnerPlaceAction(draft: OwnerPlaceDraft): Promise<
     attempts += 1
   }
 
-  // 5) 자동 승인 조건: 필수 + 이미지 1장 이상 + (전화번호 or 영업시간)
-  const imagesOk = Array.isArray(draft.images) && draft.images.length >= 1
-  const contactOk = Boolean(draft.phone?.trim() || draft.openingHours?.trim())
-  const autoApproved = imagesOk && contactOk
-  const status = autoApproved ? 'active' : 'draft'
+  // 5) opening_hours 정규화 — 문자열 → string[] 로 저장 (줄바꿈 또는 쉼표 기준).
+  const hoursArray: string[] | null = Array.isArray(draft.openingHours)
+    ? (draft.openingHours.filter(Boolean).length > 0 ? draft.openingHours.filter(Boolean) : null)
+    : (draft.openingHours?.trim()
+      ? draft.openingHours.split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
+      : null)
 
-  // 6) insert
+  // 6) 자동 승인 — "업체 실재" 신호 기반 (소유권 검증이 아닌 실재 검증)
+  //   - Naver Local Search 결과 = 네이버 플레이스 등록 = 실재 영업중인 업체
+  //   - googlePlaceId = Google 이 독립 확인한 업체 = 이중 검증
+  //   - 둘 다 없으면 (순수 수동 등록) = admin 눈 한번 거침
+  // 파일럿 구간 리스크: 경쟁사 악의 등록은 좌표 유니크 + googlePlaceId 유니크로 사전 차단됨 (위 3-a/3-b).
+  const hasNaverMatch = Boolean(draft.naverPlaceUrl?.trim())
+  const hasGoogleMatch = Boolean(draft.googlePlaceId?.trim())
+  const autoApproved = hasNaverMatch || hasGoogleMatch
+  // places.status 체크 제약: 'active' | 'pending' | 'rejected'. 실재 증거 없으면 pending.
+  const status: 'active' | 'pending' = autoApproved ? 'active' : 'pending'
+
+  // 7) insert
+  // description/address 는 DB NOT NULL — 빈 문자열로 폴백.
+  const descriptionSafe = draft.description?.trim() || `${draft.name.trim()} — ${draft.address.trim()}`
   const { data: inserted, error: insertError } = await admin
     .from('places')
     .insert({
       name: draft.name.trim(),
+      name_en: draft.nameEn?.trim() || null,
       slug,
       city: draft.city,
       category: draft.category,
       address: draft.address.trim(),
+      road_address: draft.roadAddress?.trim() || null,
+      jibun_address: draft.jibunAddress?.trim() || null,
+      latitude: draft.latitude ?? null,
+      longitude: draft.longitude ?? null,
       phone: draft.phone ? normalizePhone(draft.phone) : null,
-      website: draft.website?.trim() || null,
-      opening_hours: draft.openingHours?.trim() || null,
-      description: draft.description?.trim() || null,
+      homepage_url: draft.website?.trim() || null,
+      opening_hours: hoursArray,
+      description: descriptionSafe,
       tags: draft.tags ?? [],
       services: draft.services ?? [],
+      faqs: draft.faqs ?? [],
       recommended_for: draft.recommendedFor ?? [],
       strengths: draft.strengths ?? [],
       images: draft.images ?? [],
       naver_place_url: draft.naverPlaceUrl ?? null,
       kakao_map_url: draft.kakaoMapUrl ?? null,
       google_business_url: draft.googleBusinessUrl ?? null,
+      google_place_id: draft.googlePlaceId ?? null,
+      rating: draft.rating ?? null,
+      review_count: draft.reviewCount ?? 0,
       customer_id: customerId,
       status,
       owner_id: user.id,
@@ -176,10 +291,26 @@ export async function registerOwnerPlaceAction(draft: OwnerPlaceDraft): Promise<
     .select('id')
     .single()
   if (insertError || !inserted) {
+    console.error('[registerOwnerPlaceAction] places insert 실패:', insertError, { slug, city: draft.city, category: draft.category })
     return { success: false, error: insertError?.message ?? 'places insert 실패' }
   }
 
   const placeId = (inserted as { id: string }).id
+
+  // Phase 11 — googlePlaceId 가 있으면 Google 재수집 + Haiku 리뷰 요약을 백그라운드 큐잉.
+  // 프로덕션 Vercel Cron 5분 주기로 pipeline-consume 가 처리.
+  if (draft.googlePlaceId) {
+    try {
+      const { enqueuePlaceRefresh } = await import('@/lib/admin/pipeline-jobs')
+      await enqueuePlaceRefresh(placeId, [
+        'place.enrich_google',
+        'place.summarize_google_reviews',
+      ])
+    } catch (e) {
+      console.error('[registerOwnerPlaceAction] enqueue refresh failed:', e)
+    }
+  }
+
   revalidatePath('/owner')
   if (status === 'active') {
     revalidatePath(`/${draft.city}/${draft.category}`)
