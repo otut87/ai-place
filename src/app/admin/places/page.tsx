@@ -28,43 +28,62 @@ export default async function AdminPlacesPage({
 
   const supabase = await createServerClient()
 
+  // 마이그레이션 020(billing) 적용 전인 DB 도 지원. 핵심 places 쿼리를 먼저 시도해 컬럼 존재 여부 감지.
+  const BILLING_COLUMNS = 'customer_id'
+  const CORE_COLUMNS = 'id, slug, name, city, category, status, rating, review_count, phone, tags, quality_score, created_at'
+
+  function buildFilteredQuery(cols: string, customerFilter: string[] | null) {
+    let q = supabase
+      .from('places')
+      .select(cols, { count: 'exact' })
+      .order('created_at', { ascending: false })
+    if (params.q) q = q.ilike('name', `%${params.q}%`)
+    if (params.city) q = q.eq('city', params.city)
+    if (params.category) q = q.eq('category', params.category)
+    else if (categorySlugsForSector && categorySlugsForSector.length > 0) {
+      q = q.in('category', categorySlugsForSector)
+    }
+    if (params.status) q = q.eq('status', params.status)
+    if (params.minQualityScore !== null) q = q.gte('quality_score', params.minQualityScore)
+    if (customerFilter) q = q.in('customer_id', customerFilter)
+    return q
+  }
+
   // T-065: subscription 필터가 걸리면 해당 상태의 customer_ids 를 먼저 확보.
   let customerIdsFilter: string[] | null = null
+  let billingSchemaPresent = true
   if (params.subscription) {
     const subStatus = params.subscription === 'paid' ? 'active' : params.subscription
-    const { data: subRows } = await supabase
+    const { data: subRows, error: subErr } = await supabase
       .from('subscriptions')
       .select('customer_id')
       .eq('status', subStatus)
-    customerIdsFilter = (subRows ?? []).map((r) => (r as { customer_id: string }).customer_id)
-    // 매칭 구독이 0건이면 결과도 0건
-    if (customerIdsFilter.length === 0) customerIdsFilter = ['00000000-0000-0000-0000-000000000000']
+    if (subErr && (subErr.code === '42P01' || subErr.code === '42703')) {
+      billingSchemaPresent = false
+    } else {
+      customerIdsFilter = (subRows ?? []).map((r) => (r as { customer_id: string }).customer_id)
+      if (customerIdsFilter.length === 0) customerIdsFilter = ['00000000-0000-0000-0000-000000000000']
+    }
   }
 
-  let query = supabase
-    .from('places')
-    .select(
-      'id, slug, name, city, category, status, rating, review_count, phone, tags, quality_score, customer_id, created_at',
-      { count: 'exact' },
-    )
-    .order('created_at', { ascending: false })
-
-  if (params.q) query = query.ilike('name', `%${params.q}%`)
-  if (params.city) query = query.eq('city', params.city)
-  if (params.category) query = query.eq('category', params.category)
-  else if (categorySlugsForSector && categorySlugsForSector.length > 0) {
-    query = query.in('category', categorySlugsForSector)
-  }
-  if (params.status) query = query.eq('status', params.status)
-  if (params.minQualityScore !== null) query = query.gte('quality_score', params.minQualityScore)
-  if (customerIdsFilter) query = query.in('customer_id', customerIdsFilter)
-
-  // 서버에서 count를 먼저 얻기 위해 range는 호출 후 결과의 count로 총 페이지 계산 → 재요청 필요 시 clamp
   const pageSize = params.pageSize
   const { from, to } = buildRange(params.page, pageSize)
-  const { data, count, error } = await query.range(from, to)
 
-  if (error) {
+  // 1차 시도: customer_id 포함
+  let { data, count, error } = await buildFilteredQuery(
+    `${CORE_COLUMNS}, ${BILLING_COLUMNS}`,
+    customerIdsFilter,
+  ).range(from, to)
+
+  // customer_id 컬럼이 없다면 (마이그레이션 020 미적용) core 컬럼만으로 재시도
+  if (error && error.code === '42703' && /customer_id/.test(error.message ?? '')) {
+    billingSchemaPresent = false
+    logSupabaseError('admin/places', error)
+    const retry = await buildFilteredQuery(CORE_COLUMNS, null).range(from, to)
+    data = retry.data
+    count = retry.count
+    error = retry.error
+  } else if (error) {
     logSupabaseError('admin/places', error)
   }
 
@@ -72,23 +91,32 @@ export default async function AdminPlacesPage({
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const safePage = clampPage(params.page, totalPages)
 
-  const placesRaw = (data ?? []) as Array<TableRow & { customer_id: string | null }>
+  const placesRaw = (data ?? []) as Array<TableRow & { customer_id?: string | null }>
 
-  // T-065: 현재 페이지 업체들의 구독 상태를 일괄 조회해 각 행에 주입
-  const customerIds = Array.from(new Set(placesRaw.map((p) => p.customer_id).filter((x): x is string => !!x)))
+  // T-065: 현재 페이지 업체들의 구독 상태를 일괄 조회해 각 행에 주입.
+  //        마이그레이션 020 미적용 DB 는 billingSchemaPresent=false 로 건너뛴다.
   const subByCustomer = new Map<string, string>()
-  if (customerIds.length > 0) {
-    const { data: subs } = await supabase
-      .from('subscriptions')
-      .select('customer_id, status')
-      .in('customer_id', customerIds)
-    for (const s of (subs ?? []) as Array<{ customer_id: string; status: string }>) {
-      subByCustomer.set(s.customer_id, s.status)
+  if (billingSchemaPresent) {
+    const customerIds = Array.from(
+      new Set(placesRaw.map((p) => p.customer_id).filter((x): x is string => !!x)),
+    )
+    if (customerIds.length > 0) {
+      const { data: subs, error: subsErr } = await supabase
+        .from('subscriptions')
+        .select('customer_id, status')
+        .in('customer_id', customerIds)
+      if (subsErr && (subsErr.code === '42P01' || subsErr.code === '42703')) {
+        billingSchemaPresent = false
+      } else {
+        for (const s of (subs ?? []) as Array<{ customer_id: string; status: string }>) {
+          subByCustomer.set(s.customer_id, s.status)
+        }
+      }
     }
   }
   const places: TableRow[] = placesRaw.map((p) => ({
     ...p,
-    subscription_status: p.customer_id ? subByCustomer.get(p.customer_id) ?? null : null,
+    subscription_status: billingSchemaPresent && p.customer_id ? subByCustomer.get(p.customer_id) ?? null : null,
   }))
 
   // Pagination 컴포에 넘길 기본 쿼리 (page 제외)
