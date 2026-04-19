@@ -50,3 +50,52 @@ export async function aggregateBotVisits(days = 30): Promise<BotAggregate[]> {
     .map(([botId, v]) => ({ botId, visits: v.visits, lastVisitAt: v.lastVisitAt }))
     .sort((a, b) => b.visits - a.visits)
 }
+
+export interface BotStatusAggregate {
+  total: number
+  status200: number
+  status404: number
+  statusOther: number
+  rate404: number              // 0~1
+}
+
+export async function aggregateBotStatus(days = 30): Promise<BotStatusAggregate> {
+  const admin = getAdminClient()
+  if (!admin) return empty()
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+  const { data } = await admin
+    .from('bot_visits')
+    .select('status')
+    .gte('visited_at', since)
+  if (!data) return empty()
+  const rows = data as Array<{ status: number | null }>
+  const total = rows.length
+  const s200 = rows.filter(r => r.status === 200).length
+  const s404 = rows.filter(r => r.status === 404).length
+  const other = total - s200 - s404
+  return { total, status200: s200, status404: s404, statusOther: other, rate404: total === 0 ? 0 : s404 / total }
+}
+
+/** 404 를 가장 많이 맞은 경로 Top N. */
+export async function topBot404Paths(days = 30, limit = 10): Promise<Array<{ path: string; count: number }>> {
+  const admin = getAdminClient()
+  if (!admin) return []
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+  const { data } = await admin
+    .from('bot_visits')
+    .select('path')
+    .eq('status', 404)
+    .gte('visited_at', since)
+  if (!data) return []
+  const rows = data as Array<{ path: string }>
+  const counts = new Map<string, number>()
+  for (const r of rows) counts.set(r.path, (counts.get(r.path) ?? 0) + 1)
+  return Array.from(counts.entries())
+    .map(([path, count]) => ({ path, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+}
+
+function empty(): BotStatusAggregate {
+  return { total: 0, status200: 0, status404: 0, statusOther: 0, rate404: 0 }
+}

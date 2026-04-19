@@ -77,6 +77,48 @@ describe('listExpiringCards', () => {
   })
 })
 
+describe('listPendingCancellations', () => {
+  beforeEach(() => {
+    mockFrom.mockImplementationOnce((table: string) => {
+      if (table === 'subscriptions') {
+        const chain: Record<string, unknown> = {}
+        chain.not = vi.fn(() => chain)
+        chain.gte = vi.fn(() => chain)
+        chain.lt = vi.fn(() => chain)
+        chain.order = vi.fn(() => chain)
+        chain.then = (cb: (v: unknown) => unknown) => Promise.resolve({
+          data: [
+            {
+              id: 's1', customer_id: 'c1', canceled_at: '2026-04-25T00:00:00Z',
+              cancel_reason: '가격', next_charge_at: '2026-05-01T00:00:00Z',
+              customers: { name: '홍', email: 'h@x.com' },
+            },
+          ],
+          error: null,
+        }).then(cb)
+        return { select: vi.fn(() => chain) }
+      }
+      return {}
+    })
+  })
+
+  it('admin null → []', async () => {
+    const { getAdminClient } = await import('@/lib/supabase/admin-client')
+    vi.mocked(getAdminClient).mockReturnValueOnce(null)
+    const { listPendingCancellations } = await import('@/lib/admin/billing-queries')
+    expect(await listPendingCancellations()).toEqual([])
+  })
+
+  it('해지 예정 매핑 (effectiveDate = next_charge_at)', async () => {
+    const { listPendingCancellations } = await import('@/lib/admin/billing-queries')
+    const r = await listPendingCancellations({ thisMonthOnly: true })
+    expect(r).toHaveLength(1)
+    expect(r[0].customerEmail).toBe('h@x.com')
+    expect(r[0].effectiveDate).toBe('2026-05-01T00:00:00Z')
+    expect(r[0].cancelReason).toBe('가격')
+  })
+})
+
 describe('listPaymentHistory', () => {
   it('admin null → []', async () => {
     const { getAdminClient } = await import('@/lib/supabase/admin-client')

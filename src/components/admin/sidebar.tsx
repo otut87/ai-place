@@ -41,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/admin/billing/failures', label: '결제 실패', icon: CreditCard, group: 'crm' },
   { href: '/admin/billing/expiring', label: '만료 임박', icon: CreditCard, group: 'crm' },
   { href: '/admin/billing/history', label: '결제 이력', icon: CreditCard, group: 'crm' },
+  { href: '/admin/billing/cancellations', label: '해지 예정', icon: CreditCard, group: 'crm' },
   { href: '/admin/settings', label: '설정', icon: Settings, group: 'settings' },
 ]
 

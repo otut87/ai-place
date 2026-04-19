@@ -1,7 +1,12 @@
 // T-081 — /admin/seo — AI 봇 방문 로그.
 
 import { requireAuth } from '@/lib/auth'
-import { aggregateBotVisits, listRecentBotVisits } from '@/lib/admin/bot-visits'
+import {
+  aggregateBotVisits,
+  listRecentBotVisits,
+  aggregateBotStatus,
+  topBot404Paths,
+} from '@/lib/admin/bot-visits'
 import { AI_BOT_PATTERNS } from '@/lib/seo/bot-detection'
 
 export const dynamic = 'force-dynamic'
@@ -9,9 +14,11 @@ export const runtime = 'nodejs'
 
 export default async function AdminSeoPage() {
   await requireAuth()
-  const [agg, recent] = await Promise.all([
+  const [agg, recent, status, top404] = await Promise.all([
     aggregateBotVisits(30),
     listRecentBotVisits(30),
+    aggregateBotStatus(30),
+    topBot404Paths(30, 10),
   ])
 
   const labelById = new Map(AI_BOT_PATTERNS.map((p) => [p.id, p.label]))
@@ -24,6 +31,27 @@ export default async function AdminSeoPage() {
           GPTBot, ClaudeBot, PerplexityBot 등 AI 크롤러의 실제 방문 이력. 월간 리포트의 근거.
         </p>
       </header>
+
+      <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatusCard label="총 방문 (30d)" value={status.total.toLocaleString('ko-KR')} />
+        <StatusCard label="200 OK" value={status.status200.toLocaleString('ko-KR')} tone="ok" />
+        <StatusCard label="404" value={status.status404.toLocaleString('ko-KR')} tone={status.status404 > 0 ? 'danger' : 'muted'} />
+        <StatusCard label="404 비율" value={`${(status.rate404 * 100).toFixed(1)}%`} tone={status.rate404 > 0.05 ? 'danger' : 'muted'} />
+      </section>
+
+      {top404.length > 0 && (
+        <section className="mb-6 rounded-xl border border-[#e7e7e7] bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold">404 Top 10 경로 (봇)</h2>
+          <ul className="space-y-1 text-sm">
+            {top404.map(p => (
+              <li key={p.path} className="flex items-center justify-between text-[#6b6b6b]">
+                <span className="font-mono text-xs">{p.path}</span>
+                <span className="text-red-600">{p.count}회</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="mb-6">
         <h2 className="mb-3 text-sm font-medium text-[#191919]">최근 30일 봇별 합계</h2>
@@ -77,6 +105,19 @@ export default async function AdminSeoPage() {
           </div>
         )}
       </section>
+    </div>
+  )
+}
+
+function StatusCard({ label, value, tone = 'muted' }: { label: string; value: string; tone?: 'ok' | 'danger' | 'muted' }) {
+  const cls =
+    tone === 'ok' ? 'text-emerald-700' :
+    tone === 'danger' ? 'text-red-700' :
+    'text-[#191919]'
+  return (
+    <div className="rounded-xl border border-[#e7e7e7] bg-white p-4">
+      <div className="text-xs text-[#6b6b6b]">{label}</div>
+      <div className={`mt-1 text-2xl font-semibold ${cls}`}>{value}</div>
     </div>
   )
 }

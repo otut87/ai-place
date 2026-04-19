@@ -59,18 +59,21 @@ export default async function AdminDashboard() {
           href="/admin/billing/failures"
           icon={<CreditCardIcon className="h-5 w-5" />}
           label="결제 이슈"
-          count={metrics.billingFailures + metrics.billingExpiringSoon}
+          count={metrics.billingFailures + metrics.billingExpiringSoon + metrics.pendingCancellationsThisMonth}
           tone="red"
-          detail="실패·카드 만료임박 (T-073 예정)"
+          detail={`실패 ${metrics.billingFailures} · 만료 ${metrics.billingExpiringSoon} · 해지 ${metrics.pendingCancellationsThisMonth}`}
         />
       </section>
 
-      {/* 중단 지표 요약 */}
-      <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+      {/* 중단 지표 요약 — 7개 */}
+      <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
         <Stat label="활성 업체" value={metrics.activePlaces} />
         <Stat label="Pending" value={metrics.pendingPlaces} />
         <Stat label="Rejected" value={metrics.rejectedPlaces} />
-        <Stat label="MRR (₩)" value={0} placeholder="결제 데이터 축적 전" />
+        <StatCurrency label="MRR (₩/월)" value={metrics.mrrKrw} />
+        <Stat label="봇 방문 (7d)" value={metrics.botVisits7d} />
+        <StatPercent label="봇 404 (7d)" value={metrics.bot404Rate7d} tone={metrics.bot404Rate7d > 0.05 ? 'danger' : 'muted'} />
+        <Stat label="해지 예정 (이번달)" value={metrics.pendingCancellationsThisMonth} />
       </section>
 
       {/* AI 크롤러 방문 추이 (7/30일) */}
@@ -175,6 +178,25 @@ function BotColumn({
           ))}
         </ul>
       )}
+    </div>
+  )
+}
+
+function StatCurrency({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-[#e5e7eb] bg-white p-3">
+      <p className="text-[10px] uppercase text-[#6a6a6a]">{label}</p>
+      <p className="mt-1 text-xl font-semibold text-[#222222]">{value.toLocaleString('ko-KR')}</p>
+    </div>
+  )
+}
+
+function StatPercent({ label, value, tone }: { label: string; value: number; tone: 'danger' | 'muted' }) {
+  const cls = tone === 'danger' ? 'text-red-600' : 'text-[#222222]'
+  return (
+    <div className="rounded-lg border border-[#e5e7eb] bg-white p-3">
+      <p className="text-[10px] uppercase text-[#6a6a6a]">{label}</p>
+      <p className={`mt-1 text-xl font-semibold ${cls}`}>{Math.round(value * 1000) / 10}%</p>
     </div>
   )
 }

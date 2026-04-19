@@ -67,9 +67,18 @@ export default async function AdminSettingsPage() {
           href="/admin/billing/history"
           status="활성"
         />
-        <SettingsCard title="카테고리 · 지역 마스터" desc="업종 83종 · 도시 seed 기반. 편집 UI 준비 중." status="준비 중" />
-        <SettingsCard title="디자인 토큰" desc="OKLch 변수. JSON 업/다운로드 준비 중." status="준비 중" />
-        <SettingsCard title="API 키 관리" desc=".env.local 로 관리 중. UI 준비 중." status="준비 중" />
+        <SettingsCard
+          title="카테고리 · 지역 마스터"
+          desc="도시·업종 CRUD. 사용 중 slug 는 삭제 불가."
+          href="/admin/settings/master"
+          status="활성"
+        />
+        <SettingsCard
+          title="API 키 관리"
+          desc="환경변수 존재·마스킹 상태 (편집은 .env.local 에서)."
+          href="/admin/settings/api-keys"
+          status="활성"
+        />
         <SettingsCard title="팀 · 권한" desc="현재 이메일 화이트리스트. 역할 기반은 미정." status="계획" />
       </section>
     </div>

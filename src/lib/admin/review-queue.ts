@@ -1,13 +1,22 @@
 // T-062 — 검수 큐 순수 로직.
 // 반려 사유 enum + 쿼리 파라미터 파서.
+// T-093 — 검수 타입 (place | blog) 분기.
 
 export const REJECT_REASONS = ['fact_error', 'tone', 'seo', 'duplicate', 'other'] as const
 export type RejectReason = (typeof REJECT_REASONS)[number]
 
+export const REVIEW_TYPES = ['place', 'blog'] as const
+export type ReviewType = (typeof REVIEW_TYPES)[number]
+
 const REJECT_REASON_SET: ReadonlySet<string> = new Set(REJECT_REASONS)
+const REVIEW_TYPE_SET: ReadonlySet<string> = new Set(REVIEW_TYPES)
 
 export function isRejectReason(value: unknown): value is RejectReason {
   return typeof value === 'string' && REJECT_REASON_SET.has(value)
+}
+
+export function isReviewType(value: unknown): value is ReviewType {
+  return typeof value === 'string' && REVIEW_TYPE_SET.has(value)
 }
 
 export function rejectReasonLabel(reason: RejectReason): string {
@@ -20,15 +29,29 @@ export function rejectReasonLabel(reason: RejectReason): string {
   }
 }
 
+export function reviewTypeLabel(type: ReviewType): string {
+  return type === 'place' ? '업체' : '블로그'
+}
+
 /**
- * 검수 큐 URL 쿼리 파서 — 현재 pending 업체 ID 위치 지정 등에 사용.
- * ?place=<id> 로 특정 업체를 선택한 상태로 진입.
+ * 검수 큐 URL 쿼리 파서.
+ *   ?type=place|blog   검수 타입 탭
+ *   ?place=<id>        선택된 업체
+ *   ?blog=<slug>       선택된 블로그
  */
-export function parseReviewParams(raw: Record<string, string | string[] | undefined>): { placeId?: string } {
-  const p = raw.place
-  const id = Array.isArray(p) ? p[0] : p
-  if (!id) return {}
-  // placeId 는 uuid 또는 short-id 허용. 경로 이탈 방지.
-  if (/[\\/..]/.test(id)) return {}
-  return { placeId: id }
+export function parseReviewParams(raw: Record<string, string | string[] | undefined>): {
+  type: ReviewType
+  placeId?: string
+  blogSlug?: string
+} {
+  const rawType = Array.isArray(raw.type) ? raw.type[0] : raw.type
+  const type: ReviewType = isReviewType(rawType) ? rawType : 'place'
+
+  const p = Array.isArray(raw.place) ? raw.place[0] : raw.place
+  const b = Array.isArray(raw.blog) ? raw.blog[0] : raw.blog
+
+  const placeId = p && !/[\\/..]/.test(p) ? p : undefined
+  const blogSlug = b && !/[\\/..]/.test(b) ? b : undefined
+
+  return { type, placeId, blogSlug }
 }

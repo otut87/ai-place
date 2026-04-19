@@ -53,6 +53,69 @@ describe('listRecentBotVisits', () => {
   })
 })
 
+describe('aggregateBotStatus', () => {
+  beforeEach(() => {
+    mockGte.mockResolvedValue({
+      data: [{ status: 200 }, { status: 200 }, { status: 404 }, { status: 500 }],
+      error: null,
+    })
+  })
+
+  it('admin null → 0', async () => {
+    const { getAdminClient } = await import('@/lib/supabase/admin-client')
+    vi.mocked(getAdminClient).mockReturnValueOnce(null)
+    const { aggregateBotStatus } = await import('@/lib/admin/bot-visits')
+    const r = await aggregateBotStatus()
+    expect(r.total).toBe(0)
+    expect(r.rate404).toBe(0)
+  })
+
+  it('200/404/기타 분류 + 404 비율', async () => {
+    const { aggregateBotStatus } = await import('@/lib/admin/bot-visits')
+    const r = await aggregateBotStatus(7)
+    expect(r.total).toBe(4)
+    expect(r.status200).toBe(2)
+    expect(r.status404).toBe(1)
+    expect(r.statusOther).toBe(1)
+    expect(r.rate404).toBeCloseTo(0.25, 2)
+  })
+})
+
+describe('topBot404Paths', () => {
+  beforeEach(() => {
+    mockGte.mockResolvedValue({
+      data: [
+        { path: '/missing' }, { path: '/missing' }, { path: '/missing' },
+        { path: '/gone' }, { path: '/other' },
+      ],
+      error: null,
+    })
+  })
+
+  it('admin null → []', async () => {
+    const { getAdminClient } = await import('@/lib/supabase/admin-client')
+    vi.mocked(getAdminClient).mockReturnValueOnce(null)
+    const { topBot404Paths } = await import('@/lib/admin/bot-visits')
+    expect(await topBot404Paths()).toEqual([])
+  })
+
+  it('경로별 집계 + 정렬', async () => {
+    // 이 경로는 .eq().gte() 체인 — 별도 mock 필요
+    mockFrom.mockImplementation(() => ({
+      select: vi.fn(() => ({
+        order: vi.fn(() => ({ limit: mockLimit })),
+        gte: mockGte,
+        eq: vi.fn(() => ({ gte: mockGte })),
+      })),
+    }))
+
+    const { topBot404Paths } = await import('@/lib/admin/bot-visits')
+    const r = await topBot404Paths(7, 5)
+    expect(r[0]).toEqual({ path: '/missing', count: 3 })
+    expect(r).toHaveLength(3)
+  })
+})
+
 describe('aggregateBotVisits', () => {
   it('admin null → []', async () => {
     const { getAdminClient } = await import('@/lib/supabase/admin-client')

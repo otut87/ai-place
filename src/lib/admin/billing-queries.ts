@@ -61,6 +61,59 @@ export async function listExpiringCards(withinDays = 60): Promise<ExpiringCardRo
     .sort((a, b) => a.daysLeft - b.daysLeft)
 }
 
+export interface PendingCancellationRow {
+  subscriptionId: string
+  customerId: string
+  customerName: string | null
+  customerEmail: string | null
+  canceledAt: string          // 요청일
+  effectiveDate: string       // 실제 종료일 (next_charge_at 까지)
+  cancelReason: string | null
+}
+
+export async function listPendingCancellations(params: {
+  thisMonthOnly?: boolean
+} = {}): Promise<PendingCancellationRow[]> {
+  const admin = getAdminClient()
+  if (!admin) return []
+
+  let query = admin
+    .from('subscriptions')
+    .select(`
+      id, customer_id, canceled_at, cancel_reason, next_charge_at,
+      customers:customer_id ( name, email )
+    `)
+    .not('canceled_at', 'is', null)
+    .gte('canceled_at', new Date().toISOString())
+    .order('canceled_at', { ascending: true })
+
+  if (params.thisMonthOnly) {
+    const now = new Date()
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString()
+    query = query.lt('canceled_at', end)
+  }
+
+  const { data } = await query
+  if (!data) return []
+
+  return (data as unknown as Array<{
+    id: string
+    customer_id: string
+    canceled_at: string
+    cancel_reason: string | null
+    next_charge_at: string | null
+    customers: { name: string | null; email: string | null } | null
+  }>).map<PendingCancellationRow>((r) => ({
+    subscriptionId: r.id,
+    customerId: r.customer_id,
+    customerName: r.customers?.name ?? null,
+    customerEmail: r.customers?.email ?? null,
+    canceledAt: r.canceled_at,
+    effectiveDate: r.next_charge_at ?? r.canceled_at,
+    cancelReason: r.cancel_reason,
+  }))
+}
+
 export interface PaymentHistoryRow {
   id: string
   subscriptionId: string

@@ -2,6 +2,7 @@
 
 import { requireAuth } from '@/lib/auth'
 import { listPipelineJobs, JOB_STATUS_LABEL, jobStatusTone } from '@/lib/admin/pipeline-jobs'
+import { getLlmUsage, API_QUOTAS } from '@/lib/admin/pipeline-metrics'
 import { RetryJobButton } from './retry-button'
 
 export const dynamic = 'force-dynamic'
@@ -17,11 +18,14 @@ export default async function AdminPipelinesPage({
   const statusParam = asSingle(raw.status) ?? 'all'
   const jobTypeParam = asSingle(raw.job_type) ?? null
 
-  const rows = await listPipelineJobs({
-    status: isStatus(statusParam) ? statusParam : 'all',
-    jobType: jobTypeParam,
-    limit: 100,
-  })
+  const [rows, llm] = await Promise.all([
+    listPipelineJobs({
+      status: isStatus(statusParam) ? statusParam : 'all',
+      jobType: jobTypeParam,
+      limit: 100,
+    }),
+    getLlmUsage(7),
+  ])
 
   return (
     <div className="px-6 py-5">
@@ -31,6 +35,48 @@ export default async function AdminPipelinesPage({
           수집·생성·발행 작업의 상태. 실패 항목은 한 번에 재시도할 수 있습니다.
         </p>
       </header>
+
+      {/* LLM 토큰·비용 (최근 7일) */}
+      <section className="mb-6 rounded-xl border border-[#e7e7e7] bg-white p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">LLM 사용량 (최근 7일)</h2>
+          <span className="text-xs text-[#6b6b6b]">ai_generations 기반 · 단가는 참고용</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <MiniStat label="호출" value={llm.total.calls.toLocaleString('ko-KR')} />
+          <MiniStat label="입력 토큰" value={(llm.total.inputTokens / 1_000).toFixed(1) + 'K'} />
+          <MiniStat label="출력 토큰" value={(llm.total.outputTokens / 1_000).toFixed(1) + 'K'} />
+          <MiniStat label="예상 비용" value={'$' + llm.total.usdCost.toFixed(2)} />
+        </div>
+        {llm.daily.length > 0 && (
+          <ul className="mt-3 space-y-1 border-t border-[#f0f0f0] pt-3 text-xs">
+            {llm.daily.map(d => (
+              <li key={d.date} className="flex items-center justify-between text-[#6b6b6b]">
+                <span>{d.date}</span>
+                <span>{d.calls}회 · {(d.inputTokens + d.outputTokens).toLocaleString('ko-KR')} 토큰 · ${d.usdCost.toFixed(2)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* 수집 API 쿼터 (상한은 레퍼런스) */}
+      <section className="mb-6 rounded-xl border border-[#e7e7e7] bg-white p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">수집 API 쿼터</h2>
+          <span className="text-xs text-[#6b6b6b]">일일 상한 (레퍼런스)</span>
+        </div>
+        <ul className="grid gap-2 md:grid-cols-2">
+          {API_QUOTAS.map(q => (
+            <li key={q.name} className="flex items-center justify-between rounded-md border border-[#f0f0f0] px-3 py-2 text-sm">
+              <span className="text-[#191919]">{q.name}</span>
+              <span className="text-xs text-[#6b6b6b]">
+                {q.dailyLimit.toLocaleString('ko-KR')}/일 · {process.env[q.envVar] ? '키 설정됨' : '키 없음'}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <form className="mb-4 flex items-center gap-2 text-sm" method="get">
         <select name="status" defaultValue={statusParam} className="h-9 rounded-md border border-[#e7e7e7] bg-white px-2">
@@ -98,6 +144,15 @@ export default async function AdminPipelinesPage({
           </table>
         </div>
       )}
+    </div>
+  )
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-[#f0f0f0] p-3">
+      <div className="text-[10px] uppercase text-[#6b6b6b]">{label}</div>
+      <div className="mt-1 text-lg font-semibold text-[#191919]">{value}</div>
     </div>
   )
 }

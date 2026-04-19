@@ -2,6 +2,7 @@
 
 import { requireAuth } from '@/lib/auth'
 import { listBlogPostsForMonth, buildCalendarGrid, parseMonthParam } from '@/lib/admin/blog-calendar'
+import { listDraftTopics } from '@/lib/admin/blog-editor'
 import { AdminLink } from '@/components/admin/admin-link'
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +20,10 @@ export default async function AdminBlogPage({
   const monthRaw = Array.isArray(raw.m) ? raw.m[0] : raw.m
   const { year, month } = parseMonthParam(monthRaw)
 
-  const posts = await listBlogPostsForMonth(year, month)
+  const [posts, drafts] = await Promise.all([
+    listBlogPostsForMonth(year, month),
+    listDraftTopics(20),
+  ])
   const grid = buildCalendarGrid(year, month, posts)
 
   const prev = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 }
@@ -39,38 +43,64 @@ export default async function AdminBlogPage({
         </div>
       </header>
 
-      <div className="overflow-hidden rounded-xl border border-[#e7e7e7] bg-white">
-        <div className="grid grid-cols-7 border-b border-[#f0f0f0] bg-[#fafafa] text-xs font-medium text-[#6b6b6b]">
-          {WEEKDAYS.map((w) => (
-            <div key={w} className="px-3 py-2 text-center">{w}</div>
-          ))}
+      <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
+        <div className="overflow-hidden rounded-xl border border-[#e7e7e7] bg-white">
+          <div className="grid grid-cols-7 border-b border-[#f0f0f0] bg-[#fafafa] text-xs font-medium text-[#6b6b6b]">
+            {WEEKDAYS.map((w) => (
+              <div key={w} className="px-3 py-2 text-center">{w}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {grid.map((day) => (
+              <div
+                key={day.date}
+                className={`min-h-24 border-b border-r border-[#f0f0f0] p-2 text-xs ${
+                  day.inCurrentMonth ? 'bg-white' : 'bg-[#fafafa] text-[#bdbdbd]'
+                }`}
+              >
+                <div className="mb-1 font-medium">{day.dayOfMonth}</div>
+                <ul className="space-y-0.5">
+                  {day.posts.map((p) => (
+                    <li key={p.id}>
+                      <AdminLink
+                        href={`/admin/blog/${p.slug}/edit`}
+                        className="block truncate rounded-sm px-1 text-[11px] hover:bg-[#f3f4f6]"
+                        title={p.title}
+                      >
+                        <StatusDot status={p.status} />
+                        {p.title}
+                      </AdminLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-7">
-          {grid.map((day) => (
-            <div
-              key={day.date}
-              className={`min-h-24 border-b border-r border-[#f0f0f0] p-2 text-xs ${
-                day.inCurrentMonth ? 'bg-white' : 'bg-[#fafafa] text-[#bdbdbd]'
-              }`}
-            >
-              <div className="mb-1 font-medium">{day.dayOfMonth}</div>
-              <ul className="space-y-0.5">
-                {day.posts.map((p) => (
-                  <li key={p.id}>
-                    <AdminLink
-                      href={`/blog/${p.slug}`}
-                      className="block truncate rounded-sm px-1 text-[11px] hover:bg-[#f3f4f6]"
-                      title={p.title}
-                    >
-                      <StatusDot status={p.status} />
-                      {p.title}
-                    </AdminLink>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+
+        {/* 토픽 큐 (초안) */}
+        <aside className="rounded-xl border border-[#e7e7e7] bg-white">
+          <div className="border-b border-[#f0f0f0] px-4 py-2 text-xs font-semibold text-[#191919]">
+            토픽 큐 ({drafts.length})
+          </div>
+          {drafts.length === 0 ? (
+            <p className="p-4 text-xs text-[#9a9a9a]">초안이 없습니다.</p>
+          ) : (
+            <ul className="max-h-[500px] overflow-y-auto p-2">
+              {drafts.map(d => (
+                <li key={d.id}>
+                  <AdminLink
+                    href={`/admin/blog/${d.slug}/edit`}
+                    className="block rounded-md px-2 py-1.5 text-xs hover:bg-[#fafafa]"
+                  >
+                    <div className="font-medium text-[#191919]">{d.title}</div>
+                    <div className="mt-0.5 text-[10px] text-[#6b6b6b]">{d.category ?? '—'} · {d.post_type}</div>
+                  </AdminLink>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
       </div>
 
       <p className="mt-4 text-xs text-[#6b6b6b]">

@@ -40,18 +40,24 @@ describe('rejectReasonLabel', () => {
 })
 
 describe('parseReviewParams', () => {
-  it('place 파라미터 없으면 빈 객체', () => {
-    expect(parseReviewParams({})).toEqual({})
+  it('파라미터 없으면 기본 type=place', () => {
+    expect(parseReviewParams({})).toEqual({ type: 'place' })
   })
   it('place=<id> 정상 파싱', () => {
-    expect(parseReviewParams({ place: 'abc-123' })).toEqual({ placeId: 'abc-123' })
+    expect(parseReviewParams({ place: 'abc-123' })).toEqual({ type: 'place', placeId: 'abc-123' })
+  })
+  it('type=blog 파싱', () => {
+    expect(parseReviewParams({ type: 'blog', blog: 'my-post' })).toEqual({ type: 'blog', blogSlug: 'my-post' })
+  })
+  it('잘못된 type → place 기본', () => {
+    expect(parseReviewParams({ type: 'weird' }).type).toBe('place')
   })
   it('배열 파라미터 첫번째만 사용', () => {
-    expect(parseReviewParams({ place: ['a', 'b'] })).toEqual({ placeId: 'a' })
+    expect(parseReviewParams({ place: ['a', 'b'] })).toEqual({ type: 'place', placeId: 'a' })
   })
   it('경로 이탈 시도는 거부', () => {
-    expect(parseReviewParams({ place: '../etc' })).toEqual({})
-    expect(parseReviewParams({ place: 'a/b' })).toEqual({})
-    expect(parseReviewParams({ place: 'a\\b' })).toEqual({})
+    expect(parseReviewParams({ place: '../etc' })).toEqual({ type: 'place' })
+    expect(parseReviewParams({ place: 'a/b' })).toEqual({ type: 'place' })
+    expect(parseReviewParams({ blog: 'a\\b' })).toEqual({ type: 'place' })
   })
 })
