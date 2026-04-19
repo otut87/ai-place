@@ -286,6 +286,44 @@ describe('T-137 v3 scanSite (멀티 페이지)', () => {
     expect(deepSampled).toBe(true)
   })
 
+  it('AggregateRating 단독 → pass 80% (개별 Review 복제 방지 정책 대응)', async () => {
+    const homeWithAggOnly = `
+<!DOCTYPE html><html><head><title>Test Title 30자 이상 충분한 길이</title>
+<meta name="description" content="메타 설명 기본 80자 이상 채워넣습니다 네이버 카카오 구글 연결 모두 완비된 업체 디렉토리 홈페이지">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org", "@type": "LocalBusiness",
+  "name": "X", "address": "Y", "telephone": "1", "openingHours": "Mo-Fr 09-18",
+  "aggregateRating": {"@type":"AggregateRating","ratingValue":4.5,"reviewCount":100}
+}
+</script>
+</head><body></body></html>`
+    mockFetch({ home: homeWithAggOnly, robots: 'User-agent: *\nAllow: /\n', sitemap: '<?xml version="1.0"?><urlset></urlset>' })
+    const r = await scanSite('https://example.com')
+    const rev = r.checks.find(c => c.id === 'review_schema')!
+    expect(rev.status).toBe('pass')
+    expect(rev.points).toBe(4)  // 5 × 0.8 = 4
+    expect(rev.detail).toContain('AggregateRating')
+  })
+
+  it('sameAs: naver.me / business.google / goo.gl 인식', async () => {
+    const homeWithAltUrls = `
+<!DOCTYPE html><html><head><title>Test Title 30자 이상 충분한 길이</title>
+<meta name="description" content="메타 설명 기본 80자 이상 채워넣습니다 네이버 카카오 구글 연결 모두 완비된 업체 디렉토리 홈페이지">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org", "@type": "LocalBusiness",
+  "name": "X", "address": "Y", "telephone": "1", "openingHours": "Mo-Fr 09-18",
+  "sameAs": ["https://naver.me/abc123", "https://kakaomap.com/place/1", "https://business.google.com/abc"]
+}
+</script>
+</head><body></body></html>`
+    mockFetch({ home: homeWithAltUrls, robots: 'User-agent: *\nAllow: /\n', sitemap: '<?xml version="1.0"?><urlset></urlset>' })
+    const r = await scanSite('https://example.com')
+    const sa = r.checks.find(c => c.id === 'sameas_entity_linking')!
+    expect(sa.status).toBe('pass')
+  })
+
   it('sampledPages 경로 배열 포함', async () => {
     mockFetch({
       home: MOCK_HOME_EXCELLENT,

@@ -423,10 +423,18 @@ function checkReviewSchema(allNodes: NodeWithSource[]): CheckResult {
     detail: `평점 ${ratingValue ?? '?'}/5 · 리뷰 ${reviewCount ?? '?'}개 — ChatGPT 리뷰 선호 신호`,
     reference: '§3.1', foundOn,
   }
-  if (hasAggregate || hasReview) return {
+  // AggregateRating 은 AI가 인용할 때 핵심 수치 신호이므로 단독이어도 대부분 OK (80%).
+  // 개별 Review 는 타 플랫폼 복제 위험이 있어 저장하지 않는 사이트도 많음.
+  if (hasAggregate) return {
+    id: 'review_schema', label: 'Review · AggregateRating schema', category: 'geo',
+    status: 'pass', points: Math.round(WEIGHTS.review_schema * 0.8), maxPoints: WEIGHTS.review_schema,
+    detail: `평점 ${ratingValue ?? '?'}/5 · 리뷰 ${reviewCount ?? '?'}개 (AggregateRating) — 개별 Review 추가 시 만점`,
+    reference: '§3.1', foundOn,
+  }
+  if (hasReview) return {
     id: 'review_schema', label: 'Review · AggregateRating schema', category: 'geo',
     status: 'warn', points: Math.round(WEIGHTS.review_schema * 0.5), maxPoints: WEIGHTS.review_schema,
-    detail: hasAggregate ? 'AggregateRating만 있음 — 개별 Review도 권장' : 'Review만 있음 — AggregateRating도 권장',
+    detail: 'Review만 있음 — AggregateRating (집계 평점) 도 권장',
     reference: '§3.1', foundOn,
   }
   return {
@@ -491,10 +499,11 @@ function checkSameAs(allNodes: NodeWithSource[]): CheckResult {
     const list = Array.isArray(sa) ? sa : [sa]
     for (const u of list) if (typeof u === 'string') urls.add(u)
   }
-  const hasNaver = [...urls].some(u => /naver\.com|map\.naver|place\.map\.naver/i.test(u))
-  const hasKakao = [...urls].some(u => /kakao|place\.map\.kakao/i.test(u))
-  const hasGoogle = [...urls].some(u => /google\.com\/(maps|search)|g\.page/i.test(u))
-  const hasOther = [...urls].some(u => !/naver|kakao|google|g\.page/i.test(u))
+  // 브랜드 도메인 광범위 매칭 (단축 URL·하위 도메인 포함).
+  const hasNaver = [...urls].some(u => /\bnaver\.com|\bnaver\.me|\bnate\.com/i.test(u))
+  const hasKakao = [...urls].some(u => /\bkakao\.com|\bkakao\.map|kakaomap|\bdaum\.net/i.test(u))
+  const hasGoogle = [...urls].some(u => /google\.com|goo\.gl|\bg\.page|maps\.google|business\.google/i.test(u))
+  const hasOther = [...urls].some(u => !/naver|kakao|google|g\.page|goo\.gl|nate|daum/i.test(u))
   const score = [hasNaver, hasKakao, hasGoogle, hasOther].filter(Boolean).length
 
   if (urls.size === 0) return {
