@@ -27,7 +27,9 @@ import { safeJsonLd } from '@/lib/utils'
 import type { Place, BlogPostSummary } from '@/lib/types'
 
 const BASE_URL = 'https://aiplace.kr'
-const SLUG_PATTERN = /^[a-z0-9-]+$/
+// city·sector 는 ASCII 고정, slug 는 한글 슬러그 허용 (레거시 글 하위 호환).
+const ASCII_SLUG_PATTERN = /^[a-z0-9-]+$/
+const POST_SLUG_PATTERN = /^[a-z0-9가-힣-]+$/
 
 interface Props {
   params: Promise<{ city: string; sector: string; slug: string }>
@@ -61,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostPage({ params }: Props) {
   const { city, sector, slug } = await params
-  if (!SLUG_PATTERN.test(city) || !SLUG_PATTERN.test(sector) || !SLUG_PATTERN.test(slug)) notFound()
+  if (!ASCII_SLUG_PATTERN.test(city) || !ASCII_SLUG_PATTERN.test(sector) || !POST_SLUG_PATTERN.test(slug)) notFound()
 
   const post = await getBlogPost(city, sector, slug)
   if (!post) notFound()

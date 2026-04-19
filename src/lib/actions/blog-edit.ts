@@ -76,15 +76,24 @@ export async function createBlogTopic(
   if (!title) return { success: false, error: '제목 필수' }
   if (!input.city.trim() || !input.sector.trim()) return { success: false, error: 'city·sector 필수' }
 
-  // slug 생성: 영숫자·한글 간략화 + 3글자 랜덤 접미 (유일성 확보)
-  const base = title
+  // slug 생성 — ASCII only (공개 라우트의 SLUG_PATTERN=/^[a-z0-9-]+$/ 통과 필수).
+  // city + sector + postType + 3글자 랜덤을 기본값으로 하되,
+  // 제목에 영숫자 단어가 있으면 일부 반영.
+  const cityPart = input.city.trim().toLowerCase().replace(/[^a-z0-9]/g, '') || 'post'
+  const sectorPart = input.sector.trim().toLowerCase().replace(/[^a-z0-9]/g, '') || input.postType
+  const asciiFromTitle = title
     .toLowerCase()
-    .replace(/[^a-z0-9가-힣\s-]/g, '')
+    .replace(/[^a-z0-9\s-]/g, ' ')
     .trim()
     .replace(/\s+/g, '-')
-    .slice(0, 40)
-  const suffix = Math.random().toString(36).slice(2, 5)
-  const slug = (base || 'draft') + '-' + suffix
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 30)
+  const suffix = Math.random().toString(36).slice(2, 6).replace(/[^a-z0-9]/g, '').padEnd(4, 'x')
+  const slug = [cityPart, sectorPart, asciiFromTitle || undefined, suffix]
+    .filter(Boolean)
+    .join('-')
+    .replace(/-+/g, '-')
 
   // DB check 제약: status in ('draft', 'active', 'archived')
   // 'scheduled' 은 draft + published_at(미래 날짜) 로 표현.
