@@ -37,9 +37,12 @@ export type CheckId =
   | 'robots_ai_allow'
   | 'faq_schema'
   | 'review_schema'
+  | 'breadcrumb_schema'       // T-146 신규
   | 'direct_answer_block'
   | 'sameas_entity_linking'
   | 'last_updated'
+  | 'time_markup'             // T-146 신규
+  | 'author_person_schema'    // T-146 신규
   | 'title'
   | 'meta_description'
   | 'sitemap'
@@ -47,20 +50,28 @@ export type CheckId =
   | 'https'
   | 'viewport'
 
+// T-146: 신규 체크 3종 추가에 따른 가중치 재조정 (총 100).
+//   - breadcrumb_schema (4) — Google Rich Results · AI 경로 파악
+//   - time_markup (2) — Freshness 보완
+//   - author_person_schema (4) — E-E-A-T §4.1 (+40% 인용률)
+// 기존에서 회수: jsonld 20→18, faq 15→12, direct 10→9, sitemap 8→7, llms 2→1, viewport 2→1
 const WEIGHTS: Record<CheckId, number> = {
-  jsonld_localbusiness: 20,
+  jsonld_localbusiness: 18,
   robots_ai_allow: 15,
-  faq_schema: 15,
+  faq_schema: 12,
   review_schema: 5,
-  direct_answer_block: 10,
+  breadcrumb_schema: 4,
+  direct_answer_block: 9,
   sameas_entity_linking: 5,
   last_updated: 5,
+  time_markup: 2,
+  author_person_schema: 4,
   title: 5,
   meta_description: 5,
-  sitemap: 8,          // v3: 5 → 8 (게이트키퍼 역할 반영)
-  llms_txt: 2,
-  https: 3,
-  viewport: 2,
+  sitemap: 7,
+  llms_txt: 1,
+  https: 2,
+  viewport: 1,
 }
 
 const FETCH_TIMEOUT_MS = 10_000
@@ -93,6 +104,25 @@ async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Respon
     })
   } finally {
     clearTimeout(timer)
+  }
+}
+
+// T-143: 재현성 보장용 1회 재시도 (5xx·네트워크 에러만).
+// 재진단 시 일시적 서버 오류로 점수가 흔들리는 것 방지.
+async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    const res = await fetchWithTimeout(url, init)
+    if (res.status >= 500 && res.status < 600) {
+      return await fetchWithTimeout(url, init)
+    }
+    return res
+  } catch (err) {
+    // 네트워크 에러 1회 재시도 후 원본 에러 throw
+    try {
+      return await fetchWithTimeout(url, init)
+    } catch {
+      throw err
+    }
   }
 }
 
@@ -154,7 +184,7 @@ function typesOf(node: Record<string, unknown>): string[] {
 
 async function scanPage(url: string): Promise<PageScan | null> {
   try {
-    const res = await fetchWithTimeout(url)
+    const res = await fetchWithRetry(url)
     if (!res.ok) return null
     const html = await res.text()
     return { url, path: urlPath(url), html, nodes: collectJsonLdNodes(html, url) }
@@ -439,6 +469,83 @@ function checkReviewSchema(allNodes: NodeWithSource[]): CheckResult {
   }
 }
 
+// T-146: BreadcrumbList schema — Google Rich Results + AI 경로 파악용.
+function checkBreadcrumbSchema(allNodes: NodeWithSource[]): CheckResult {
+  let bc: NodeWithSource | null = null
+  for (const ns of allNodes) {
+    if (typesOf(ns.node).some(t => /BreadcrumbList/i.test(t))) { bc = ns; break }
+  }
+  if (!bc) return {
+    id: 'breadcrumb_schema', label: 'BreadcrumbList schema', category: 'geo',
+    status: 'fail', points: 0, maxPoints: WEIGHTS.breadcrumb_schema,
+    detail: 'BreadcrumbList schema 없음 — 페이지 계층 AI 인식 저하', reference: '§5.3',
+  }
+  const items = bc.node.itemListElement
+  const count = Array.isArray(items) ? items.length : 0
+  if (count >= 2) return {
+    id: 'breadcrumb_schema', label: 'BreadcrumbList schema', category: 'geo',
+    status: 'pass', points: WEIGHTS.breadcrumb_schema, maxPoints: WEIGHTS.breadcrumb_schema,
+    detail: `${count}단계 경로`, reference: '§5.3', foundOn: bc.pagePath,
+  }
+  return {
+    id: 'breadcrumb_schema', label: 'BreadcrumbList schema', category: 'geo',
+    status: 'warn', points: Math.round(WEIGHTS.breadcrumb_schema * 0.5), maxPoints: WEIGHTS.breadcrumb_schema,
+    detail: `itemListElement ${count}개 — 2단계 이상 권장`, reference: '§5.3', foundOn: bc.pagePath,
+  }
+}
+
+// T-146: <time datetime="..."> 마크업 — Freshness 구조적 시그널 (§4.2 보완).
+function checkTimeMarkup(homeHtml: string, detailHtml?: string): CheckResult {
+  const scan = (html: string) => /<time[^>]+datetime=["'][^"']+["']/i.test(html)
+  const homeHas = scan(homeHtml)
+  const detailHas = detailHtml ? scan(detailHtml) : false
+  if (homeHas || detailHas) return {
+    id: 'time_markup', label: '<time datetime> 마크업', category: 'aeo',
+    status: 'pass', points: WEIGHTS.time_markup, maxPoints: WEIGHTS.time_markup,
+    detail: `${homeHas ? '홈' : '상세'} 페이지에서 발견`, reference: '§4.2',
+  }
+  return {
+    id: 'time_markup', label: '<time datetime> 마크업', category: 'aeo',
+    status: 'fail', points: 0, maxPoints: WEIGHTS.time_markup,
+    detail: '<time datetime="..."> 태그 없음 — Freshness 구조 시그널 부재', reference: '§4.2',
+  }
+}
+
+// T-146: Author/Person schema — E-E-A-T §4.1 (+40% 인용률).
+function checkAuthorPersonSchema(allNodes: NodeWithSource[]): CheckResult {
+  let found: NodeWithSource | null = null
+  let hasCredentials = false
+  for (const ns of allNodes) {
+    const ts = typesOf(ns.node)
+    if (ts.some(t => /^Person$/i.test(t))) { found = ns; break }
+    // Article.author / WebPage.author 중 Person 타입인 경우
+    const author = ns.node.author as Record<string, unknown> | undefined
+    if (author && typeof author === 'object') {
+      const aTypes = typesOf(author)
+      if (aTypes.some(t => /Person/i.test(t)) && author.name) {
+        found = { node: author, pageUrl: ns.pageUrl, pagePath: ns.pagePath }
+        if (author.jobTitle || author.alumniOf || author.description || author.url) hasCredentials = true
+        break
+      }
+    }
+  }
+  if (!found) return {
+    id: 'author_person_schema', label: 'Author · Person schema (E-E-A-T)', category: 'aeo',
+    status: 'fail', points: 0, maxPoints: WEIGHTS.author_person_schema,
+    detail: '저자 Person schema 없음 — E-E-A-T 신호 부재 (§4.1)', reference: '§4.1',
+  }
+  if (hasCredentials) return {
+    id: 'author_person_schema', label: 'Author · Person schema (E-E-A-T)', category: 'aeo',
+    status: 'pass', points: WEIGHTS.author_person_schema, maxPoints: WEIGHTS.author_person_schema,
+    detail: `저자 ${String(found.node.name ?? '')} · 자격 정보 포함`, reference: '§4.1', foundOn: found.pagePath,
+  }
+  return {
+    id: 'author_person_schema', label: 'Author · Person schema (E-E-A-T)', category: 'aeo',
+    status: 'warn', points: Math.round(WEIGHTS.author_person_schema * 0.6), maxPoints: WEIGHTS.author_person_schema,
+    detail: '저자 이름은 있으나 jobTitle/url/description 중 하나도 없음 — 자격 정보 보강 필요', reference: '§4.1', foundOn: found.pagePath,
+  }
+}
+
 function analyzeDirectAnswer(html: string, tagLabel: string): { good: number; warn: number; total: number; tag: string } {
   const h2Matches = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>([\s\S]*?)(?=<h2|<h1|<\/body>|$)/gi)]
   const total = Math.min(h2Matches.length, 5)
@@ -647,13 +754,19 @@ export async function scanSite(rawUrl: string): Promise<ScanResult> {
       }
 
   const checks: CheckResult[] = [
+    // GEO 핵심 스키마
     checkJsonLdLocalBusiness(allNodes),
     robotsCheck,
     checkFaqSchema(allNodes),
     checkReviewSchema(allNodes),
+    checkBreadcrumbSchema(allNodes),            // T-146
+    // AEO
     checkDirectAnswerBlock(homeScan.html, detailHtml),
     checkSameAs(allNodes),
     checkLastUpdated(homeScan.html, allNodes),
+    checkTimeMarkup(homeScan.html, detailHtml), // T-146
+    checkAuthorPersonSchema(allNodes),          // T-146
+    // SEO 기초
     checkTitle(homeScan.html),
     checkMetaDescription(homeScan.html),
     sitemapCheck,

@@ -180,24 +180,63 @@ describe('T-137 v3 scanSite (멀티 페이지)', () => {
     expect(rb.points).toBe(0)
   })
 
-  it('13개 체크 항목 반환', async () => {
+  it('16개 체크 항목 반환 (T-146 신규 3종 포함)', async () => {
     mockFetch({ home: MOCK_HOME_EXCELLENT })
     const r = await scanSite('https://example.com')
-    expect(r.checks).toHaveLength(13)
+    expect(r.checks).toHaveLength(16)
     const ids = r.checks.map(c => c.id).sort()
-    expect(ids).toEqual([
-      'direct_answer_block', 'faq_schema', 'https', 'jsonld_localbusiness',
-      'last_updated', 'llms_txt', 'meta_description', 'review_schema',
-      'robots_ai_allow', 'sameas_entity_linking', 'sitemap', 'title', 'viewport',
-    ])
+    expect(ids).toContain('breadcrumb_schema')
+    expect(ids).toContain('time_markup')
+    expect(ids).toContain('author_person_schema')
   })
 
-  it('카테고리 분포 geo4 + aeo3 + seo6', async () => {
+  it('카테고리 분포 geo5 + aeo5 + seo6 (T-146 재분류)', async () => {
     mockFetch({ home: MOCK_HOME_EXCELLENT })
     const r = await scanSite('https://example.com')
-    expect(r.checks.filter(c => c.category === 'geo')).toHaveLength(4)
-    expect(r.checks.filter(c => c.category === 'aeo')).toHaveLength(3)
+    expect(r.checks.filter(c => c.category === 'geo')).toHaveLength(5)
+    expect(r.checks.filter(c => c.category === 'aeo')).toHaveLength(5)
     expect(r.checks.filter(c => c.category === 'seo')).toHaveLength(6)
+  })
+
+  it('T-146 BreadcrumbList: 2단계 이상 → pass', async () => {
+    const bcHtml = `<!DOCTYPE html><html><head><title>T</title>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList",
+ "itemListElement":[{"position":1,"name":"홈"},{"position":2,"name":"업체"}]}
+</script></head><body></body></html>`
+    mockFetch({ home: bcHtml, robots: 'User-agent: *\nAllow: /\n' })
+    const r = await scanSite('https://example.com')
+    const bc = r.checks.find(c => c.id === 'breadcrumb_schema')!
+    expect(bc.status).toBe('pass')
+  })
+
+  it('T-146 <time datetime>: 존재 시 pass', async () => {
+    const timeHtml = `<!DOCTYPE html><html><head><title>T</title></head>
+<body><time datetime="2026-04-19">2026년 4월 19일</time></body></html>`
+    mockFetch({ home: timeHtml, robots: 'User-agent: *\nAllow: /\n' })
+    const r = await scanSite('https://example.com')
+    const tm = r.checks.find(c => c.id === 'time_markup')!
+    expect(tm.status).toBe('pass')
+  })
+
+  it('T-146 Author/Person: jobTitle 있으면 pass', async () => {
+    const personHtml = `<!DOCTYPE html><html><head><title>T</title>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Article",
+ "author":{"@type":"Person","name":"이지수","jobTitle":"큐레이터"}}
+</script></head><body></body></html>`
+    mockFetch({ home: personHtml, robots: 'User-agent: *\nAllow: /\n' })
+    const r = await scanSite('https://example.com')
+    const au = r.checks.find(c => c.id === 'author_person_schema')!
+    expect(au.status).toBe('pass')
+  })
+
+  it('T-146 Author/Person 부재 → fail', async () => {
+    mockFetch({ home: '<!DOCTYPE html><html><head><title>T</title></head><body></body></html>' })
+    const r = await scanSite('https://example.com')
+    expect(r.checks.find(c => c.id === 'author_person_schema')?.status).toBe('fail')
+    expect(r.checks.find(c => c.id === 'breadcrumb_schema')?.status).toBe('fail')
+    expect(r.checks.find(c => c.id === 'time_markup')?.status).toBe('fail')
   })
 
   it('LocalBusiness 일반 타입 → warn + foundOn 표기', async () => {
@@ -322,6 +361,43 @@ describe('T-137 v3 scanSite (멀티 페이지)', () => {
     const r = await scanSite('https://example.com')
     const sa = r.checks.find(c => c.id === 'sameas_entity_linking')!
     expect(sa.status).toBe('pass')
+  })
+
+  it('T-143 재현성: 같은 입력 3회 → 동일 점수·체크 결과', async () => {
+    const sitemap = `<?xml version="1.0"?>
+    <urlset>
+      <url><loc>https://example.com/faq</loc></url>
+      <url><loc>https://example.com/cheonan/dermatology/dr-skin</loc></url>
+    </urlset>`
+    mockFetch({
+      home: MOCK_HOME_EXCELLENT, faq: MOCK_FAQ_PAGE, detail: MOCK_DETAIL_PAGE,
+      robots: 'User-agent: *\nAllow: /\n', sitemap, llmsOk: true,
+    })
+    const r1 = await scanSite('https://example.com')
+    const r2 = await scanSite('https://example.com')
+    const r3 = await scanSite('https://example.com')
+    expect(r1.score).toBe(r2.score)
+    expect(r2.score).toBe(r3.score)
+    const ids = (r: typeof r1) => r.checks.map(c => `${c.id}:${c.status}:${c.points}`).join('|')
+    expect(ids(r1)).toBe(ids(r2))
+    expect(ids(r2)).toBe(ids(r3))
+  })
+
+  it('T-143 5xx 재시도: 첫 시도 500, 두 번째 200 → 성공', async () => {
+    let homeHitCount = 0
+    vi.stubGlobal('fetch', vi.fn(async (url: string | URL) => {
+      const u = url.toString()
+      if (u.endsWith('/robots.txt')) return new Response('', { status: 404 }) as unknown as Response
+      if (u.endsWith('/sitemap.xml')) return new Response('', { status: 404 }) as unknown as Response
+      if (u.endsWith('/llms.txt')) return new Response('', { status: 404 }) as unknown as Response
+      // 첫 번째 요청 500, 두 번째 200
+      homeHitCount += 1
+      if (homeHitCount === 1) return new Response('', { status: 500 }) as unknown as Response
+      return new Response(MOCK_HOME_EXCELLENT, { status: 200 }) as unknown as Response
+    }))
+    const r = await scanSite('https://example.com')
+    expect(r.error).toBeUndefined()
+    expect(homeHitCount).toBe(2)
   })
 
   it('sampledPages 경로 배열 포함', async () => {
