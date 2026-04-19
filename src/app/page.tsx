@@ -12,6 +12,7 @@ import { safeJsonLd } from "@/lib/utils"
 import type { Metadata } from "next"
 import type { FAQ, StatisticItem, Source } from "@/lib/types"
 import { buildHomeMetadata } from "@/lib/seo/page-meta"
+import { latestUpdatedAt, toIsoDate } from "@/lib/format/time"
 
 export const metadata: Metadata = buildHomeMetadata()
 
@@ -44,6 +45,12 @@ export default async function HomePage() {
     { name: 'AI플레이스 자체 조사', year: 2026 },
     { name: '네이버 플레이스', year: 2026 },
   ]
+
+  // T-122: 모든 업체의 updated_at 중 가장 최신 = 홈 "최종 업데이트"
+  const homeLastUpdated =
+    latestUpdatedAt(allPlaces.map(p => p.lastUpdated ?? null)) ??
+    toIsoDate(new Date().toISOString()) ??
+    ''
 
   // GEO: FAQ (§4.3 — 2.7-3.2x 인용률)
   const homeFaqs: FAQ[] = [
@@ -89,7 +96,7 @@ export default async function HomePage() {
         {/* Statistics (§2.2 Princeton GEO lever) */}
         <section className="py-12 px-6">
           <div className="mx-auto max-w-[1200px]">
-            <StatisticsBox statistics={homeStats} sources={homeSources} lastUpdated="2026-04-14" />
+            <StatisticsBox statistics={homeStats} sources={homeSources} lastUpdated={homeLastUpdated} />
           </div>
         </section>
 

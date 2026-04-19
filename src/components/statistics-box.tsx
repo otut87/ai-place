@@ -34,7 +34,9 @@ export function StatisticsBox({ statistics, sources, lastUpdated }: StatisticsBo
           ))}
         </p>
         {lastUpdated && (
-          <p className="text-xs text-[#6a6a6a] mt-1">최종 업데이트: {lastUpdated}</p>
+          <p className="text-xs text-[#6a6a6a] mt-1">
+            최종 업데이트: <time dateTime={lastUpdated}>{lastUpdated}</time>
+          </p>
         )}
       </div>
     </div>

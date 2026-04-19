@@ -14,6 +14,7 @@ import { getBlogPostsBySector } from "@/lib/blog/data.supabase"
 import { generateItemList } from "@/lib/jsonld"
 import { generateBreadcrumbList, generateCategoryDAB } from "@/lib/seo"
 import { buildCategoryMetadata } from "@/lib/seo/page-meta"
+import { latestUpdatedAt, toIsoDate } from "@/lib/format/time"
 
 interface Props {
   params: Promise<{ city: string; category: string }>
@@ -106,6 +107,12 @@ export default async function ListingPage({ params }: Props) {
     ? (await getBlogPostsBySector(city, sectorSlug)).filter(p => p.category === category).slice(0, 5)
     : []
 
+  // T-122: 빌드 시각 대신 실제 업체 lastUpdated 중 가장 최신을 단일 소스로.
+  const lastUpdated =
+    latestUpdatedAt(places.map(p => p.lastUpdated ?? null)) ??
+    toIsoDate(new Date().toISOString()) ??
+    ''
+
   return (
     <>
       <Header />
@@ -133,11 +140,11 @@ export default async function ListingPage({ params }: Props) {
             <p className="mt-3 text-base text-[#6a6a6a]">
               {generateCategoryDAB(places, cityObj.name, catObj.name, descriptor)}
             </p>
-            <time dateTime={new Date().toISOString().slice(0, 10)} className="mt-1 block text-xs text-[#6a6a6a]">최종 업데이트: {new Date().toISOString().slice(0, 10)}</time>
+            <time dateTime={lastUpdated} className="mt-1 block text-xs text-[#6a6a6a]">최종 업데이트: {lastUpdated}</time>
 
             {/* GEO: Statistics + Sources */}
             <div className="mt-6">
-              <StatisticsBox statistics={categoryStats} sources={categorySources} lastUpdated={new Date().toISOString().slice(0, 10)} />
+              <StatisticsBox statistics={categoryStats} sources={categorySources} lastUpdated={lastUpdated} />
             </div>
 
             {/* Listing Grid */}

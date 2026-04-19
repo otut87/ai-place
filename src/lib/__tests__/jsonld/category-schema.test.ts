@@ -143,14 +143,57 @@ describe('getSchemaTypeExtras — 타입별 필수 추가 필드', () => {
   it('Restaurant/Cafe/Bakery/BarOrPub 는 servesCuisine 권장', () => {
     expect(getSchemaTypeExtras('restaurant').recommendedFields).toContain('servesCuisine')
     expect(getSchemaTypeExtras('cafe').recommendedFields).toContain('servesCuisine')
+    expect(getSchemaTypeExtras('bakery').recommendedFields).toContain('servesCuisine')
+    expect(getSchemaTypeExtras('bar').recommendedFields).toContain('servesCuisine')
   })
 
   it('EducationalOrganization 은 teaches 권장', () => {
     expect(getSchemaTypeExtras('academy').recommendedFields).toContain('teaches')
+    expect(getSchemaTypeExtras('language').recommendedFields).toContain('teaches')
+    expect(getSchemaTypeExtras('kindergarten').recommendedFields).toContain('teaches')
   })
 
   it('MedicalClinic 류는 medicalSpecialty 필수', () => {
     expect(getSchemaTypeExtras('dermatology').requiredFields).toContain('medicalSpecialty')
     expect(getSchemaTypeExtras('dental').requiredFields).toContain('medicalSpecialty')
+    expect(getSchemaTypeExtras('pharmacy').requiredFields).toContain('medicalSpecialty')
+  })
+
+  it('AutoRepair/AutoDealer 는 brand 권장', () => {
+    expect(getSchemaTypeExtras('auto-repair').recommendedFields).toContain('brand')
+    expect(getSchemaTypeExtras('used-car').recommendedFields).toContain('brand')
+    expect(getSchemaTypeExtras('tire').recommendedFields).toContain('brand')
+  })
+
+  it('LegalService/AccountingService 는 knowsAbout 권장', () => {
+    expect(getSchemaTypeExtras('legal').recommendedFields).toContain('knowsAbout')
+    expect(getSchemaTypeExtras('tax').recommendedFields).toContain('knowsAbout')
+    expect(getSchemaTypeExtras('realestate').recommendedFields).toContain('knowsAbout')
+    expect(getSchemaTypeExtras('insurance').recommendedFields).toContain('knowsAbout')
+  })
+
+  it('HairSalon/BeautySalon 은 priceRange 권장', () => {
+    expect(getSchemaTypeExtras('hairsalon').recommendedFields).toContain('priceRange')
+    expect(getSchemaTypeExtras('nail').recommendedFields).toContain('priceRange')
+    expect(getSchemaTypeExtras('skincare').recommendedFields).toContain('priceRange')
+  })
+
+  it('기타 타입은 aggregateRating 권장 (default)', () => {
+    expect(getSchemaTypeExtras('flower').recommendedFields).toContain('aggregateRating')
+    expect(getSchemaTypeExtras('bowling').recommendedFields).toContain('aggregateRating')
+  })
+})
+
+describe('getCategorySchemaType - fallback warning path', () => {
+  it('알 수 없는 slug 에 대한 fallback 과 warning 호출 검증', () => {
+    // production 이 아닌 경우 console.warn 호출
+    const originalWarn = console.warn
+    const warnSpy: string[] = []
+    console.warn = (...args: unknown[]) => warnSpy.push(args.join(' '))
+    try {
+      expect(getCategorySchemaType('unknown-foo')).toBe('LocalBusiness')
+    } finally {
+      console.warn = originalWarn
+    }
   })
 })

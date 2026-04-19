@@ -98,11 +98,11 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
     }
   }
 
-  // 업체 프로필 페이지
+  // 업체 프로필 페이지 (T-122: lastModified 를 실제 updated_at 으로)
   for (const place of places) {
     entries.push({
       url: `${baseUrl}/${place.city}/${place.category}/${place.slug}`,
-      lastModified: now,
+      lastModified: place.lastUpdated ?? now,
       changeFrequency: 'monthly',
       priority: 0.8,
     })
@@ -117,6 +117,7 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
   })
 
   // 블로그 글 (T-010g 마이그레이션 후 통합 — keyword/compare/guide 12개)
+  // T-122: 개별 updatedAt 노출 원하면 getAllActiveBlogPosts 반환 타입 확장 필요 (현재 최소).
   const blogPosts = blogAll
   for (const p of blogPosts) {
     entries.push({
