@@ -22,6 +22,14 @@ interface PostData {
   target_query: string | null
   tags: string[]
   published_at: string | null
+  related_place_slugs: string[]
+}
+
+interface PlaceCandidate {
+  slug: string
+  name: string
+  rating: number | null
+  reviewCount: number | null
 }
 
 interface SuggestionRow {
@@ -34,9 +42,11 @@ interface SuggestionRow {
 export function BlogEditorClient({
   post,
   suggestions,
+  placeCandidates,
 }: {
   post: PostData
   suggestions: SuggestionRow[]
+  placeCandidates: PlaceCandidate[]
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -49,6 +59,11 @@ export function BlogEditorClient({
   const [targetQuery, setTargetQuery] = useState(post.target_query ?? '')
   const [status, setStatus] = useState<SaveBlogInput['status']>(post.status as SaveBlogInput['status'])
   const [publishedAt, setPublishedAt] = useState('')
+  const [relatedPlaces, setRelatedPlaces] = useState<string[]>(post.related_place_slugs ?? [])
+
+  function togglePlace(slug: string) {
+    setRelatedPlaces(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug])
+  }
 
   function save() {
     start(async () => {
@@ -60,6 +75,7 @@ export function BlogEditorClient({
         tags: tags.split(',').map(t => t.trim()).filter(Boolean),
         targetQuery: targetQuery.trim() || null,
         publishedAt: publishedAt ? new Date(publishedAt).toISOString() : null,
+        relatedPlaceSlugs: relatedPlaces,
       })
       if (r.success) { toast.success('저장됨'); router.refresh() }
       else toast.error(r.error ?? '저장 실패')
@@ -210,6 +226,41 @@ export function BlogEditorClient({
           </div>
           <div className="flex-1 overflow-y-auto p-5">
             <article className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }} />
+          </div>
+
+          {/* T-131: 관련 업체 체크박스 */}
+          <div className="border-t border-[#e7e7e7] bg-[#fafafa] p-4">
+            <div className="mb-2 flex items-center gap-1 text-xs font-medium text-[#6b6b6b]">
+              관련 업체 ({relatedPlaces.length}/{placeCandidates.length})
+            </div>
+            {placeCandidates.length === 0 ? (
+              <p className="text-[11px] text-[#9a9a9a]">이 카테고리의 등록 업체가 없습니다.</p>
+            ) : (
+              <ul className="max-h-48 space-y-0.5 overflow-y-auto">
+                {placeCandidates.map(p => {
+                  const checked = relatedPlaces.includes(p.slug)
+                  return (
+                    <li key={p.slug}>
+                      <label className="flex cursor-pointer items-start gap-1.5 rounded px-1 py-0.5 text-xs hover:bg-white">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => togglePlace(p.slug)}
+                          className="mt-0.5"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium text-[#191919]">{p.name}</span>
+                          <span className="text-[10px] text-[#6b6b6b]">
+                            {p.rating ? `★ ${p.rating.toFixed(1)}` : '평점 없음'}
+                            {p.reviewCount != null && ` · ${p.reviewCount}건`}
+                          </span>
+                        </span>
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
           </div>
 
           {/* T-111: 7블록 체크리스트 */}

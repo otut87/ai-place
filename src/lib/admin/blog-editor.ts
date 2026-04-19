@@ -40,6 +40,7 @@ export interface BlogPostLoaded {
   target_query: string | null
   tags: string[]
   published_at: string | null
+  related_place_slugs: string[]
 }
 
 export async function loadBlogPostForEdit(slug: string): Promise<BlogPostLoaded | null> {
@@ -47,10 +48,34 @@ export async function loadBlogPostForEdit(slug: string): Promise<BlogPostLoaded 
   if (!admin) return null
   const { data } = await admin
     .from('blog_posts')
-    .select('id, slug, title, summary, content, city, sector, category, status, post_type, target_query, tags, published_at')
+    .select('id, slug, title, summary, content, city, sector, category, status, post_type, target_query, tags, published_at, related_place_slugs')
     .eq('slug', slug)
     .maybeSingle()
-  return data as BlogPostLoaded | null
+  if (!data) return null
+  // related_place_slugs null 방어
+  const row = data as BlogPostLoaded
+  return { ...row, related_place_slugs: row.related_place_slugs ?? [] }
+}
+
+/** 같은 city+category 의 active 업체를 체크박스 후보로 반환. */
+export async function listPlacesForBlog(city: string, category: string | null): Promise<Array<{ slug: string; name: string; rating: number | null; reviewCount: number | null }>> {
+  const admin = getAdminClient()
+  if (!admin || !category) return []
+  const { data } = await admin
+    .from('places')
+    .select('slug, name, rating, review_count')
+    .eq('city', city)
+    .eq('category', category)
+    .eq('status', 'active')
+    .order('rating', { ascending: false, nullsFirst: false })
+    .order('review_count', { ascending: false, nullsFirst: false })
+    .limit(20)
+  return ((data ?? []) as Array<{ slug: string; name: string; rating: number | null; review_count: number | null }>).map(p => ({
+    slug: p.slug,
+    name: p.name,
+    rating: p.rating,
+    reviewCount: p.review_count,
+  }))
 }
 
 /**

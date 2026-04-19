@@ -2,7 +2,7 @@
 
 import { notFound } from 'next/navigation'
 import { requireAuth } from '@/lib/auth'
-import { loadBlogPostForEdit, suggestInternalLinks } from '@/lib/admin/blog-editor'
+import { loadBlogPostForEdit, suggestInternalLinks, listPlacesForBlog } from '@/lib/admin/blog-editor'
 import { BlogEditorClient } from './editor-client'
 
 export const dynamic = 'force-dynamic'
@@ -18,12 +18,16 @@ export default async function BlogEditPage({
   const post = await loadBlogPostForEdit(slug)
   if (!post) return notFound()
 
-  const linkSuggestions = await suggestInternalLinks(post.category, post.content, 10)
+  const [linkSuggestions, placeCandidates] = await Promise.all([
+    suggestInternalLinks(post.category, post.content, 10),
+    listPlacesForBlog(post.city, post.category),
+  ])
 
   return (
     <BlogEditorClient
       post={post}
       suggestions={linkSuggestions}
+      placeCandidates={placeCandidates}
     />
   )
 }

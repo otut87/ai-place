@@ -6,6 +6,7 @@ import { listDraftTopics } from '@/lib/admin/blog-editor'
 import { AdminLink } from '@/components/admin/admin-link'
 import { cachedCities, cachedCategories, cachedSectors } from '@/lib/admin/cached-data'
 import { CreateTopicButton } from './create-topic-button'
+import { GenerateDraftButton } from './generate-draft-button'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -49,6 +50,7 @@ export default async function AdminBlogPage({
           <span className="min-w-24 text-center font-medium">{year}년 {month}월</span>
           <AdminLink href={`/admin/blog?m=${next.y}-${String(next.m).padStart(2, '0')}`} className="rounded-md border border-[#e7e7e7] bg-white px-3 py-1.5">다음</AdminLink>
           <CreateTopicButton cities={cityOpts} sectors={sectorOpts} categories={categoryOpts} />
+          <GenerateDraftButton cities={cityOpts} sectors={sectorOpts} categories={categoryOpts} />
         </div>
       </header>
 

@@ -16,6 +16,7 @@ export interface SaveBlogInput {
   tags?: string[]
   publishedAt?: string | null
   targetQuery?: string | null
+  relatedPlaceSlugs?: string[]
 }
 
 export async function saveBlogPost(input: SaveBlogInput): Promise<{ success: boolean; error?: string }> {
@@ -35,6 +36,7 @@ export async function saveBlogPost(input: SaveBlogInput): Promise<{ success: boo
     status: dbStatus,
     tags: input.tags ?? [],
     target_query: input.targetQuery ?? null,
+    related_place_slugs: input.relatedPlaceSlugs ?? [],
     updated_at: new Date().toISOString(),
   }
   if (input.status === 'active' && input.publishedAt) {
