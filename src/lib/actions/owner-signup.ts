@@ -69,6 +69,10 @@ export async function ownerSignupAction(input: SignupInput): Promise<SignupOutco
     }
   }
 
+  // T-171: 파일럿 30일 자동 적용
+  const trialStart = new Date()
+  const trialEnd = new Date(trialStart.getTime() + 30 * 24 * 60 * 60 * 1000)
+
   const { data: newCustomer, error: custError } = await admin
     .from('customers')
     .insert({
@@ -76,6 +80,8 @@ export async function ownerSignupAction(input: SignupInput): Promise<SignupOutco
       name: input.name?.trim() || null,
       phone: input.phone?.trim() || null,
       user_id: userId,
+      trial_started_at: trialStart.toISOString(),
+      trial_ends_at: trialEnd.toISOString(),
     })
     .select('id')
     .single()
