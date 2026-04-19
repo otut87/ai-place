@@ -68,6 +68,55 @@ export default function MethodologyPage() {
               공식 기관·지도 API·공개 리뷰·AI 인용 테스트 4대 소스로 업체 정보를 수집하고, 주 1회부터 분기 1회까지 갱신합니다.
             </p>
 
+            {/* T-175: 진단 도구 섹션 */}
+            <section className="mt-10 rounded-2xl border border-[#e7e7e7] bg-[#fafafa] p-6">
+              <h2 className="text-lg font-bold text-[#222222]">AI 가독성 진단 도구 (/check)</h2>
+              <p className="mt-2 text-sm text-[#484848]">
+                <Link href="/check" className="text-[#008060] underline">/check</Link> 는 입력된 URL의 사이트맵을 기반으로 고유 경로를 병렬 스캔하여
+                16개 항목(GEO 5 · AEO 5 · SEO 6)을 점수화합니다. 총 100점.
+              </p>
+
+              <h3 className="mt-5 text-sm font-semibold text-[#222222]">가중치 근거</h3>
+              <div className="mt-2 overflow-hidden rounded-lg border border-[#e5e7eb] bg-white">
+                <table className="w-full text-xs">
+                  <thead className="bg-[#f0f0f0] text-[#484848]">
+                    <tr>
+                      <th className="p-2 text-left">항목</th>
+                      <th className="p-2 text-right">가중치</th>
+                      <th className="p-2 text-left">근거</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#f0f0f0] text-[#484848]">
+                    <tr><td className="p-2">JSON-LD LocalBusiness</td><td className="p-2 text-right">18</td><td className="p-2">AI 인용 전제조건 (GEO §5.3)</td></tr>
+                    <tr><td className="p-2">robots.txt AI 크롤러 허용</td><td className="p-2 text-right">15</td><td className="p-2">차단 시 인용 풀 제외 (§5.1)</td></tr>
+                    <tr><td className="p-2">FAQPage schema</td><td className="p-2 text-right">12</td><td className="p-2">인용률 2.7~3.2배 (§4.3)</td></tr>
+                    <tr><td className="p-2">Direct Answer Block</td><td className="p-2 text-right">9</td><td className="p-2">AEO 단일 최대 기여 (§4.4)</td></tr>
+                    <tr><td className="p-2">sitemap.xml</td><td className="p-2 text-right">7</td><td className="p-2">크롤러 발견 필수</td></tr>
+                    <tr><td className="p-2">AggregateRating</td><td className="p-2 text-right">5</td><td className="p-2">AI 수치 신호 (§3.1)</td></tr>
+                    <tr><td className="p-2">sameAs 엔티티 링크</td><td className="p-2 text-right">5</td><td className="p-2">Knowledge Graph 연결 (§5.3)</td></tr>
+                    <tr><td className="p-2">Last Updated Freshness</td><td className="p-2 text-right">5</td><td className="p-2">ChatGPT 2.3배 가중 (§4.2)</td></tr>
+                    <tr><td className="p-2">BreadcrumbList</td><td className="p-2 text-right">4</td><td className="p-2">페이지 계층 인식</td></tr>
+                    <tr><td className="p-2">Author/Person (E-E-A-T)</td><td className="p-2 text-right">4</td><td className="p-2">인용률 +40% (§4.1)</td></tr>
+                    <tr><td className="p-2">title · description · HTTPS · time · llms · viewport</td><td className="p-2 text-right">16</td><td className="p-2">기초 SEO 패키지</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <h3 className="mt-5 text-sm font-semibold text-[#222222]">재현성</h3>
+              <ul className="mt-2 space-y-1 text-xs text-[#484848]">
+                <li>• 같은 URL 3회 연속 실행 시 편차 ≤ 1점 (동일 HTML 입력 기준)</li>
+                <li>• 5xx·네트워크 에러 1회 자동 재시도로 transient failure 배제</li>
+                <li>• User-Agent 고정: AIPlaceDiagnostic/3.1</li>
+                <li>• 동시성 8 배치 fetch — 서버 부담 완화</li>
+              </ul>
+
+              <h3 className="mt-5 text-sm font-semibold text-[#222222]">근거 문서</h3>
+              <p className="mt-2 text-xs text-[#484848]">
+                본 진단의 가중치·체크 로직은 내부 문서 <code className="rounded bg-[#eaeaea] px-1 py-0.5">docs/GEO-SEO-AEO-딥리서치.md</code>
+                (Princeton GEO 논문 + BrightEdge·SeoClarity·Otterly 외 25+ 출처) 에 근거합니다.
+              </p>
+            </section>
+
             <p className="mt-4 text-sm text-[#6a6a6a]">
               마지막 업데이트: <time dateTime={LAST_UPDATED}>{LAST_UPDATED}</time> · 작성:{' '}
               <Link href="/about" className="text-[#008060] hover:text-[#006b4f]">이지수 큐레이터</Link>

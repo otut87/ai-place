@@ -8,6 +8,8 @@ import { getAdminClient } from '@/lib/supabase/admin-client'
 import { scanSite } from '@/lib/diagnostic/scan-site'
 import { scoreBucket, getBenchmark } from '@/lib/diagnostic/benchmark'
 import { checkCitationTestRateLimit, hasActiveSubscription } from '@/lib/diagnostic/citation-test'
+import { listRecentRuns, saveDiagnosticRun } from '@/lib/diagnostic/history'
+import { ScoreTrendChart } from '@/components/diagnostic/score-trend-chart'
 import { CitationTestButton } from './citation-test-button'
 
 export const dynamic = 'force-dynamic'
@@ -78,6 +80,15 @@ export default async function OwnerPlaceDashboardPage({ params }: Props) {
     uniqueBots: new Set(botRows.map(r => r.bot_id)).size,
   }
 
+  // T-162: 점수 추이 — 최근 10개 + 오늘 실행 결과 저장
+  if (!scan.error) {
+    await saveDiagnosticRun({ result: scan, triggeredBy: 'owner', customerId: place.customer_id })
+  }
+  const historyRows = await listRecentRuns(`https://aiplace.kr`, 30)
+  const placeHistory = historyRows
+    .filter(r => r.url.includes(`/${place.city}/${place.category}/${place.slug}`))
+    .slice(0, 15)
+
   return (
     <div className="mx-auto max-w-4xl p-6">
       <header className="mb-6">
@@ -100,6 +111,15 @@ export default async function OwnerPlaceDashboardPage({ params }: Props) {
             {scan.score}<span className="text-sm text-[#9a9a9a]">/100</span>
           </p>
           <p className="mt-1 text-xs text-[#6a6a6a]">{bucket.label} · 등록 평균 {bench.registered}점</p>
+          {placeHistory.length > 0 && (
+            <div className="mt-3">
+              <ScoreTrendChart
+                points={placeHistory.map(h => ({ score: h.score, date: h.created_at }))}
+                benchmarkScore={bench.registered}
+                height={100}
+              />
+            </div>
+          )}
           <details className="mt-3">
             <summary className="cursor-pointer text-xs text-[#008060]">세부 항목 보기</summary>
             <ul className="mt-2 space-y-1 text-[11px]">

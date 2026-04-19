@@ -57,7 +57,10 @@ export default async function ReportSharePage({ params }: Props) {
     <main className="mx-auto max-w-3xl px-6 py-12">
       <div className="mb-4 flex items-center justify-between text-xs text-[#6a6a6a]">
         <span>🔗 공유 링크 · 만료 {new Date(share.expiresAt).toLocaleDateString('ko-KR')} · 조회 {share.views}회</span>
-        <a href="/check" className="text-[#008060] underline">내 사이트 진단하기</a>
+        <div className="flex gap-3">
+          <a href={`/reports/${hash}/print`} className="text-[#008060] underline">📄 인쇄/PDF</a>
+          <a href="/check" className="text-[#008060] underline">내 사이트 진단하기</a>
+        </div>
       </div>
       <article className="prose prose-sm max-w-none rounded-2xl border border-[#e7e7e7] bg-white p-8">
         <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{markdown}</pre>

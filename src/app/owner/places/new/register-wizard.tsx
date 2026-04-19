@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { registerOwnerPlaceAction, type OwnerPlaceDraft } from '@/lib/actions/owner-register-place'
+import { AiGenerateButton } from '@/components/owner/ai-generate-button'
 
 type StepName = 'basic' | 'contact' | 'services' | 'images' | 'sameas' | 'review'
 const STEPS: StepName[] = ['basic', 'contact', 'services', 'images', 'sameas', 'review']
@@ -149,9 +150,25 @@ export function RegisterWizard({ cities, categories }: Props) {
               onChange={e => update('recommendedFor', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
               className="h-10 w-full rounded-lg border border-[#dddddd] px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#008060]" />
           </Field>
-          <p className="rounded-lg bg-[#fef3c7] p-2 text-[11px] text-[#92400e]">
-            💡 다음 단계에서 AI 자동 입력으로 위 필드를 한 번에 생성할 수 있습니다.
-          </p>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+            <p className="mb-2 text-[11px] font-medium text-emerald-900">
+              💡 입력이 번거로우면 AI로 자동 채우기 (월 5회 무료)
+            </p>
+            <AiGenerateButton
+              name={draft.name}
+              city={draft.city}
+              category={draft.category}
+              websiteUrl={draft.website}
+              mode="initial"
+              onAccept={out => {
+                update('description', out.description)
+                update('tags', out.tags)
+                update('services', out.services)
+                update('recommendedFor', out.recommendedFor)
+                update('strengths', out.strengths)
+              }}
+            />
+          </div>
         </div>
       )}
 

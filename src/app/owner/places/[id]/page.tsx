@@ -7,13 +7,15 @@ import { OwnerEditForm } from './owner-edit-form'
 
 interface Params {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ registered?: string; msg?: string }>
 }
 
 export const dynamic = 'force-dynamic'
 
-export default async function OwnerPlaceEditPage({ params }: Params) {
+export default async function OwnerPlaceEditPage({ params, searchParams }: Params) {
   const user = await requireOwnerUser()
   const { id } = await params
+  const { registered, msg } = await searchParams
 
   const supabase = getAdminClient()
   if (!supabase) return <div className="p-6 text-sm text-red-600">DB 연결 실패</div>
@@ -38,6 +40,11 @@ export default async function OwnerPlaceEditPage({ params }: Params) {
 
   return (
     <div className="mx-auto max-w-2xl p-6">
+      {registered && msg && (
+        <div className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
+          ✅ {msg}
+        </div>
+      )}
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">{row.name} 편집</h1>
         <div className="flex items-center gap-3 text-xs">
