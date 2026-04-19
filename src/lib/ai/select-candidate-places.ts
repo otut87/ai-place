@@ -13,6 +13,8 @@ export interface SelectionInput {
   minRating?: number             // 기본 4.0
   minReviewCount?: number        // 기본 10
   requireComplianceMetadata?: boolean  // 의료·법률·세무 카테고리 전용
+  /** 수동 선택: 이 slug 들만 후보로 쓰고 자동 필터 생략 (city/category 일치는 유지). */
+  manualSlugs?: string[]
 }
 
 export interface SelectionResult {
@@ -48,10 +50,25 @@ export function selectCandidatePlaces(input: SelectionInput): SelectionResult {
     minRating = 4.0,
     minReviewCount = 10,
     requireComplianceMetadata = false,
+    manualSlugs,
   } = input
 
+  // 수동 모드: 지정된 slug 만 쓰고 필터 생략.
+  if (manualSlugs && manualSlugs.length > 0) {
+    const manualSet = new Set(manualSlugs)
+    const matched = places.filter(p =>
+      manualSet.has(p.slug) && p.city === city && p.category === category,
+    )
+    return {
+      places: matched.slice(0, Math.max(maxCount, manualSlugs.length)),
+      reasoning: `관리자 수동 선택 ${matched.length}곳 (${city}/${category})`,
+      warning: matched.length === 0
+        ? `수동 선택한 업체가 ${city}/${category} 에서 찾을 수 없습니다.`
+        : undefined,
+    }
+  }
+
   // compliance 필터는 명시적 요청 시만 엄격 적용.
-  // 카테고리 정보는 reasoning 에만 표시.
   const filtered = places.filter(p => {
     if (p.city !== city) return false
     if (p.category !== category) return false

@@ -1,7 +1,9 @@
 'use server'
 
-// T-129 / T-130 — 블로그 초안 자동 생성 서버 액션.
+// T-129 / T-130 / T-135 — 블로그 초안 자동 생성 서버 액션.
 // /admin/blog 캘린더 "+ AI 초안 생성" 버튼에서 호출.
+//
+// T-135: 임계값 override + 수동 업체 선택 모드 지원.
 
 import { requireAuthForAction } from '@/lib/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
@@ -10,12 +12,46 @@ import { selectCandidatePlaces } from '@/lib/ai/select-candidate-places'
 import { generateBlogDraft } from '@/lib/ai/generate-blog-draft'
 import { revalidatePath } from 'next/cache'
 
+// T-135: 초안 생성 모달에서 카테고리가 바뀔 때마다 업체 목록 조회.
+export interface PlaceCandidateListing {
+  slug: string
+  name: string
+  rating: number | null
+  reviewCount: number | null
+}
+
+export async function listPlacesForCategoryAction(
+  city: string,
+  category: string,
+): Promise<PlaceCandidateListing[]> {
+  await requireAuthForAction()
+  const admin = getAdminClient()
+  if (!admin) return []
+  const { data } = await admin
+    .from('places')
+    .select('slug, name, rating, review_count')
+    .eq('city', city)
+    .eq('category', category)
+    .eq('status', 'active')
+    .order('rating', { ascending: false, nullsFirst: false })
+    .order('review_count', { ascending: false, nullsFirst: false })
+    .limit(50)
+  return ((data ?? []) as Array<{ slug: string; name: string; rating: number | null; review_count: number | null }>)
+    .map(p => ({ slug: p.slug, name: p.name, rating: p.rating, reviewCount: p.review_count }))
+}
+
 export interface GenerateBlogDraftActionInput {
   city: string
   sector: string
   category?: string | null
   postType: 'keyword' | 'compare' | 'guide' | 'general'
   scheduledDate?: string | null
+  /** 자동 선정 임계값 override. 미지정 시 기본(평점 4+, 리뷰 10+). */
+  minRating?: number
+  minReviewCount?: number
+  maxCount?: number
+  /** 수동 모드: 이 slug 들만 사용 (자동 필터 생략). */
+  manualPlaceSlugs?: string[]
 }
 
 export type GenerateBlogDraftActionResult =
@@ -47,14 +83,15 @@ export async function generateBlogDraftAction(
   const categoryObj = categories.find(c => c.slug === categorySlug)
   if (!categoryObj) return { success: false, error: `category not found: ${categorySlug}` }
 
-  // 2. T-130: 후보 업체 선정
+  // 2. T-130: 후보 업체 선정 (수동 모드 우선, 없으면 자동 + 임계값 override 적용)
   const selection = selectCandidatePlaces({
     city: input.city,
     category: categorySlug,
     places,
-    maxCount: 5,
-    minRating: 4.0,
-    minReviewCount: 10,
+    maxCount: input.maxCount ?? 5,
+    minRating: input.minRating ?? 4.0,
+    minReviewCount: input.minReviewCount ?? 10,
+    manualSlugs: input.manualPlaceSlugs,
   })
   if (selection.places.length === 0) {
     return { success: false, error: selection.warning ?? '조건을 만족하는 후보 업체가 없습니다' }
