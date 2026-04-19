@@ -3,23 +3,14 @@
 
 import type { Place, FAQ, BlogPostSummary } from './types'
 import { toSchemaOrgHours } from './format/hours'
+import { getCategorySchemaType, getMedicalSpecialty } from './jsonld/category-schema'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type JsonLd = Record<string, any>
 
-// DEPRECATED: 레거시 폴백용. 새 카테고리는 Sector.schemaType으로 결정.
-// getSchemaTypeForCategory()를 사용하고, 이 맵은 직접 호출 시 폴백으로만 사용.
-const CATEGORY_SCHEMA_MAP: Record<string, string> = {
-  dermatology: 'MedicalClinic',
-  dental: 'MedicalClinic',
-  hairsalon: 'BeautySalon',
-  interior: 'HomeAndConstructionBusiness',
-  webagency: 'ProfessionalService',
-  'auto-repair': 'AutoRepair',
-}
-
 export function generateLocalBusiness(place: Place, pageUrl?: string, schemaType?: string): JsonLd {
-  const resolvedType = schemaType ?? CATEGORY_SCHEMA_MAP[place.category] ?? 'LocalBusiness'
+  // T-121: 83 카테고리 매핑 테이블 (SCHEMA_DATA_DICTIONARY.md §1) 을 단일 소스로.
+  const resolvedType = schemaType ?? getCategorySchemaType(place.category)
 
   const jsonld: JsonLd = {
     '@context': 'https://schema.org',
@@ -32,6 +23,12 @@ export function generateLocalBusiness(place: Place, pageUrl?: string, schemaType
       addressLocality: place.city,
       addressCountry: 'KR',
     },
+  }
+
+  // T-121: 의료 카테고리는 medicalSpecialty 필수 (SCHEMA_DATA_DICTIONARY §2.1)
+  const medicalSpecialty = getMedicalSpecialty(place.category)
+  if (medicalSpecialty) {
+    jsonld.medicalSpecialty = medicalSpecialty
   }
 
   // CRITICAL 5: @id + mainEntityOfPage (§5.3)
@@ -136,7 +133,7 @@ export function generateItemList(
       position: index + 1,
       url: `${baseUrl}/${place.city}/${place.category}/${place.slug}`,
       item: {
-        '@type': CATEGORY_SCHEMA_MAP[place.category] ?? 'LocalBusiness',
+        '@type': getCategorySchemaType(place.category),
         '@id': `${baseUrl}/${place.city}/${place.category}/${place.slug}`,
         name: place.name,
         description: place.description,

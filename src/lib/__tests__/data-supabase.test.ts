@@ -296,10 +296,11 @@ describe('Sector/SchemaType 함수 (시드 폴백)', () => {
     expect(result[0].schemaType).toBeTruthy()
   })
 
-  it('getSchemaTypeForCategory → sector에서 schemaType 반환', async () => {
+  it('getSchemaTypeForCategory → 카테고리 매핑 테이블(T-121) 우선, 없으면 섹터 폴백', async () => {
     const { getSchemaTypeForCategory } = await import('@/lib/data.supabase')
     expect(await getSchemaTypeForCategory('dermatology')).toBe('MedicalClinic')
-    expect(await getSchemaTypeForCategory('hairsalon')).toBe('BeautySalon')
+    // T-121: hairsalon 은 매핑 테이블에서 HairSalon (BeautySalon 보다 정확)
+    expect(await getSchemaTypeForCategory('hairsalon')).toBe('HairSalon')
     expect(await getSchemaTypeForCategory('unknown')).toBe('LocalBusiness')
   })
 })

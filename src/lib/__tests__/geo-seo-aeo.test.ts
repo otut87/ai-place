@@ -115,10 +115,34 @@ describe('[페이지별]', () => {
       expect(generateLocalBusiness(place)['@type']).toBe('MedicalClinic')
     })
 
-    it('hairsalon → BeautySalon', async () => {
+    it('hairsalon → HairSalon (T-121: 소분류 override, BeautySalon 보다 더 정확)', async () => {
       const { generateLocalBusiness } = await import('@/lib/jsonld')
       const place = { slug: 't', name: 'T', city: 'c', category: 'hairsalon', description: 'd', address: 'a', services: [], faqs: [], tags: [] }
+      expect(generateLocalBusiness(place)['@type']).toBe('HairSalon')
+    })
+
+    it('T-121: skincare → BeautySalon (HairSalon 아님, 의료 효능 주장 금지)', async () => {
+      const { generateLocalBusiness } = await import('@/lib/jsonld')
+      const place = { slug: 't', name: 'T', city: 'c', category: 'skincare', description: 'd', address: 'a', services: [], faqs: [], tags: [] }
       expect(generateLocalBusiness(place)['@type']).toBe('BeautySalon')
+    })
+
+    it('T-121: dental → Dentist (MedicalClinic override)', async () => {
+      const { generateLocalBusiness } = await import('@/lib/jsonld')
+      const place = { slug: 't', name: 'T', city: 'c', category: 'dental', description: 'd', address: 'a', services: [], faqs: [], tags: [] }
+      expect(generateLocalBusiness(place)['@type']).toBe('Dentist')
+    })
+
+    it('T-121: vet → VeterinaryCare (pet 섹터 LocalBusiness 폴백 금지)', async () => {
+      const { generateLocalBusiness } = await import('@/lib/jsonld')
+      const place = { slug: 't', name: 'T', city: 'c', category: 'vet', description: 'd', address: 'a', services: [], faqs: [], tags: [] }
+      expect(generateLocalBusiness(place)['@type']).toBe('VeterinaryCare')
+    })
+
+    it('T-121: 의료 카테고리는 medicalSpecialty 자동 삽입', async () => {
+      const { generateLocalBusiness } = await import('@/lib/jsonld')
+      const place = { slug: 't', name: 'T', city: 'c', category: 'dermatology', description: 'd', address: 'a', services: [], faqs: [], tags: [] }
+      expect(generateLocalBusiness(place).medicalSpecialty).toBe('Dermatology')
     })
 
     it('unknown category → LocalBusiness fallback', async () => {

@@ -780,8 +780,15 @@ export async function getCategories(): Promise<Category[]> {
   return categories
 }
 
-/** 카테고리 slug로 해당 대분류의 schemaType을 가져옴 */
+/**
+ * 카테고리 slug → Schema.org 타입.
+ * T-121: 83 카테고리 매핑 테이블 (SCHEMA_DATA_DICTIONARY §1) 을 단일 소스로.
+ * 섹터 폴백은 매핑 테이블에 slug 가 없는 경우에만 사용.
+ */
 export async function getSchemaTypeForCategory(categorySlug: string): Promise<string> {
+  const { CATEGORY_SCHEMA_MAP } = await import('./jsonld/category-schema')
+  const mapped = CATEGORY_SCHEMA_MAP[categorySlug]
+  if (mapped) return mapped
   const cat = categories.find(c => c.slug === categorySlug)
   if (!cat) return 'LocalBusiness'
   const sector = sectors.find(s => s.slug === cat.sector)

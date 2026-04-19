@@ -14,7 +14,7 @@ const CATEGORIES = [
   { slug: 'interior', name: '인테리어', schemaType: 'HomeAndConstructionBusiness', sector: 'living' },
   { slug: 'webagency', name: '웹에이전시', schemaType: 'ProfessionalService', sector: 'professional' },
   { slug: 'auto-repair', name: '자동차정비', schemaType: 'AutoRepair', sector: 'auto' },
-  { slug: 'hairsalon', name: '미용실', schemaType: 'BeautySalon', sector: 'beauty' },
+  { slug: 'hairsalon', name: '미용실', schemaType: 'HairSalon', sector: 'beauty' },
 ]
 
 // ===== 1. JSON-LD Schema.org 매핑 =====
