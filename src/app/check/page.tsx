@@ -12,7 +12,7 @@ import { CheckForm } from './check-form'
 import { LeadForm } from './lead-form'
 
 const TITLE = composePageTitle('AI 가독성 진단 — 내 사이트가 AI 검색에 노출되는가')
-const DESC = '업체 홈페이지 URL을 입력하면 AI 크롤러가 읽을 수 있는지 30초 안에 진단합니다. JSON-LD, robots.txt, OG, 메타, 사이트맵 9개 항목을 점검.'
+const DESC = '업체 홈페이지 URL을 입력하면 AI 검색(ChatGPT·Perplexity·Claude)에서 인용될 가능성을 30초 안에 진단합니다. GEO·AEO·SEO 13개 항목을 점검.'
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -90,32 +90,53 @@ export default async function CheckPage({ searchParams }: Props) {
                       </div>
                     </div>
 
-                    {/* 체크 항목 */}
-                    <div className="mt-6 rounded-2xl border border-[#e7e7e7] bg-white p-6">
-                      <h2 className="mb-4 text-base font-semibold text-[#191919]">세부 체크 (9개 항목)</h2>
-                      <ul className="space-y-3">
-                        {result.checks.map(c => {
-                          const icon = c.status === 'pass' ? '✅' : c.status === 'warn' ? '⚠' : '❌'
-                          const bg = c.status === 'pass' ? 'bg-emerald-50' : c.status === 'warn' ? 'bg-amber-50' : 'bg-red-50'
-                          return (
-                            <li key={c.id} className={`rounded-lg border border-[#f0f0f0] p-3 ${bg}`}>
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex items-start gap-2">
-                                  <span className="text-base leading-none">{icon}</span>
-                                  <div>
-                                    <p className="text-sm font-medium text-[#191919]">{c.label}</p>
-                                    {c.detail && <p className="mt-0.5 text-xs text-[#6a6a6a]">{c.detail}</p>}
+                    {/* 체크 항목 — 카테고리별 그룹 */}
+                    {(['geo', 'aeo', 'seo'] as const).map(cat => {
+                      const items = result.checks.filter(c => c.category === cat)
+                      if (items.length === 0) return null
+                      const sum = items.reduce((s, c) => s + c.points, 0)
+                      const max = items.reduce((s, c) => s + c.maxPoints, 0)
+                      const meta =
+                        cat === 'geo' ? { title: 'GEO — AI 검색 인용 (가중치 55)', desc: 'ChatGPT·Perplexity·Claude가 업체를 답변에 인용할 때 핵심 신호' } :
+                        cat === 'aeo' ? { title: 'AEO — 답변 구조 (가중치 20)', desc: '직접 답변 단락·엔티티 링크·신선도' } :
+                        { title: 'SEO — 기초 (가중치 25)', desc: 'HTTPS·제목·설명·사이트맵 등 전통적 SEO 기본' }
+                      return (
+                        <div key={cat} className="mt-6 rounded-2xl border border-[#e7e7e7] bg-white p-6">
+                          <div className="mb-3 flex items-baseline justify-between">
+                            <div>
+                              <h2 className="text-base font-semibold text-[#191919]">{meta.title}</h2>
+                              <p className="mt-0.5 text-xs text-[#6a6a6a]">{meta.desc}</p>
+                            </div>
+                            <span className="font-mono text-sm text-[#191919]">{sum}/{max}</span>
+                          </div>
+                          <ul className="space-y-3">
+                            {items.map(c => {
+                              const icon = c.status === 'pass' ? '✅' : c.status === 'warn' ? '⚠' : '❌'
+                              const bg = c.status === 'pass' ? 'bg-emerald-50' : c.status === 'warn' ? 'bg-amber-50' : 'bg-red-50'
+                              return (
+                                <li key={c.id} className={`rounded-lg border border-[#f0f0f0] p-3 ${bg}`}>
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-start gap-2">
+                                      <span className="text-base leading-none">{icon}</span>
+                                      <div>
+                                        <p className="text-sm font-medium text-[#191919]">
+                                          {c.label}
+                                          {c.reference && <span className="ml-1.5 text-[10px] text-[#9a9a9a]">{c.reference}</span>}
+                                        </p>
+                                        {c.detail && <p className="mt-0.5 text-xs text-[#6a6a6a]">{c.detail}</p>}
+                                      </div>
+                                    </div>
+                                    <span className="shrink-0 text-xs text-[#6a6a6a]">
+                                      {c.points}/{c.maxPoints}
+                                    </span>
                                   </div>
-                                </div>
-                                <span className="shrink-0 text-xs text-[#6a6a6a]">
-                                  {c.points}/{c.maxPoints}
-                                </span>
-                              </div>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    </div>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      )
+                    })}
 
                     {/* CTA + 리드 수집 */}
                     <div className="mt-6 rounded-2xl bg-[#008060] p-6 text-white">
@@ -156,19 +177,35 @@ export default async function CheckPage({ searchParams }: Props) {
             {/* FAQ — 신규 방문자 설명 */}
             {!result && (
               <div className="mt-12 rounded-2xl border border-[#e7e7e7] bg-[#fafafa] p-6">
-                <h2 className="text-base font-semibold text-[#191919]">무엇을 점검하나요?</h2>
-                <ul className="mt-3 grid gap-2 text-sm text-[#484848] md:grid-cols-2">
-                  <li>✓ JSON-LD LocalBusiness 구조 (가장 중요)</li>
-                  <li>✓ robots.txt AI 크롤러 허용</li>
-                  <li>✓ sitemap.xml 존재 여부</li>
-                  <li>✓ llms.txt (AI 우선 안내)</li>
-                  <li>✓ Open Graph 태그</li>
-                  <li>✓ Meta title · description</li>
-                  <li>✓ HTTPS / 모바일 viewport</li>
-                  <li>✓ 구조화 데이터 완성도</li>
-                </ul>
+                <h2 className="text-base font-semibold text-[#191919]">무엇을 점검하나요? (13개 항목 · Princeton GEO 논문 기반)</h2>
+                <div className="mt-3 grid gap-4 md:grid-cols-3">
+                  <div>
+                    <p className="text-xs font-semibold text-emerald-700">GEO — AI 인용 (55점)</p>
+                    <ul className="mt-1.5 space-y-1 text-sm text-[#484848]">
+                      <li>✓ JSON-LD LocalBusiness (subtype)</li>
+                      <li>✓ robots.txt AI 크롤러 허용</li>
+                      <li>✓ FAQPage schema</li>
+                      <li>✓ Review·AggregateRating</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-sky-700">AEO — 답변 구조 (20점)</p>
+                    <ul className="mt-1.5 space-y-1 text-sm text-[#484848]">
+                      <li>✓ Direct Answer Block</li>
+                      <li>✓ sameAs 엔티티 링크</li>
+                      <li>✓ 최종 업데이트 (Freshness)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-[#6a6a6a]">SEO 기초 (25점)</p>
+                    <ul className="mt-1.5 space-y-1 text-sm text-[#484848]">
+                      <li>✓ 제목·설명·사이트맵</li>
+                      <li>✓ HTTPS·Viewport·llms.txt</li>
+                    </ul>
+                  </div>
+                </div>
                 <p className="mt-4 text-xs text-[#6a6a6a]">
-                  API 비용 없이 즉시 실행. 브라우저·로그인 불필요. 30초 내 결과.
+                  API 비용 없이 즉시 실행. 브라우저·로그인 불필요. 30초 내 결과. 근거: <code>docs/GEO-SEO-AEO-딥리서치.md</code>
                 </p>
               </div>
             )}
