@@ -96,7 +96,7 @@ export async function regenerateField({
     case 'faqs':
       return { success: true, value: pool.faqs.map(f => ({ question: f.question, answer: f.answer })), qualityScore }
     case 'tags':
-      return { success: true, value: pool.tags.map(t => t.name), qualityScore }
+      return { success: true, value: pool.tags, qualityScore }
   }
 }
 

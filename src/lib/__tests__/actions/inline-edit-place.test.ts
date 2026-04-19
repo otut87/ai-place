@@ -43,8 +43,8 @@ describe('updatePlaceInlineField', () => {
 
   it('검증 실패 시 에러 반환', async () => {
     const { updatePlaceInlineField } = await import('@/lib/actions/inline-edit-place')
-    // description 은 10자 이상 규칙이 있으므로 너무 짧으면 실패
-    const r = await updatePlaceInlineField('p1', 'description', 'a')
+    // phone 은 형식 검증이 있어 잘못된 값은 실패
+    const r = await updatePlaceInlineField('p1', 'phone', 'not-a-phone')
     expect(r.success).toBe(false)
   })
 

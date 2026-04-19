@@ -49,18 +49,18 @@ describe('findMedicalViolations', () => {
 
 describe('enforceConsultPrice', () => {
   it('의료 카테고리 → 상담 문의 강제', () => {
-    const r = enforceConsultPrice('dermatology', { name: '여드름 레이저', price: '100000' })
+    const r = enforceConsultPrice('dermatology', { price: '100000' })
     expect(r.price).toBe('상담 문의')
   })
 
   it('비의료 → 원본 유지', () => {
-    const r = enforceConsultPrice('hair-salon', { name: '컷', price: '20000' })
+    const r = enforceConsultPrice('hair-salon', { price: '20000' })
     expect(r.price).toBe('20000')
   })
 
   it('가격 없음 → 변환 안 함', () => {
-    const r = enforceConsultPrice('dermatology', { name: '상담' })
-    expect(r.price).toBeUndefined()
+    const r = enforceConsultPrice('dermatology', { price: null })
+    expect(r.price).toBeNull()
   })
 })
 

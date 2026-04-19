@@ -9,6 +9,7 @@ import { AddressPicker, type AddressResult } from '@/components/admin/address-pi
 import { validatePlaceDraft, type PlaceDraft } from '@/lib/admin/place-validation'
 import { RegisterValidationPreview } from './register-validation-preview'
 import { CandidatePicker, type PickerSelection } from './candidate-picker'
+import { AutofillEnqueueButton } from './autofill-enqueue-button'
 import type { CandidatePool } from '@/lib/ai/multi-candidates'
 
 type UnifiedCandidate = {
@@ -647,6 +648,14 @@ export default function RegisterPage() {
           >
             {loading ? '등록 중...' : hasErrors ? `필수 항목 ${Object.keys(validation.errors).length}개 남음` : '업체 등록'}
           </button>
+
+          {/* T-080 — AI 자동완성 등록 (파이프라인 트리거) */}
+          <AutofillEnqueueButton
+            placeName={draft.name}
+            city={draft.city}
+            category={draft.category}
+            address={draft.address}
+          />
         </div>
       )}
     </div>

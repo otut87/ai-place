@@ -239,7 +239,10 @@ const checks: Check[] = [
       return jsonLdBlocks.some(block =>
         block.includes('"MedicalClinic"') || block.includes('"HairSalon"') || block.includes('"BeautySalon"') || block.includes('"HealthAndBeautyBusiness"') ||
         block.includes('"Dentist"') || block.includes('"HomeAndConstructionBusiness"') ||
-        block.includes('"ProfessionalService"') || block.includes('"AutoRepair"')
+        block.includes('"ProfessionalService"') || block.includes('"AutoRepair"') ||
+        block.includes('"Restaurant"') || block.includes('"FoodEstablishment"') ||
+        block.includes('"Store"') || block.includes('"EducationalOrganization"') ||
+        block.includes('"LodgingBusiness"') || block.includes('"SportsActivityLocation"')
       )
     },
     required: ['profile'],

@@ -181,6 +181,17 @@ describe('dbPlaceToPlace', () => {
     longitude: 127.1135,
     owner_id: null,
     status: 'active',
+    recommended_for: [],
+    strengths: [],
+    place_type: null,
+    recommendation_note: null,
+    kakao_place_id: null,
+    naver_place_id: null,
+    road_address: null,
+    jibun_address: null,
+    sigungu_code: null,
+    zonecode: null,
+    customer_id: null,
     created_at: '2026-04-14T00:00:00Z',
     updated_at: '2026-04-14T12:00:00Z',
   }
@@ -287,13 +298,13 @@ describe('dbCityToCity', () => {
 
 describe('dbCategoryToCategory', () => {
   it('converts DB category row to Category with icon', () => {
-    const dbCat: DbCategory = { id: '1', slug: 'dermatology', name: '피부과', name_en: 'Dermatology', icon: 'Stethoscope', created_at: '2026-04-14T00:00:00Z' }
+    const dbCat: DbCategory = { id: '1', slug: 'dermatology', name: '피부과', name_en: 'Dermatology', icon: 'Stethoscope', sector: 'medical', created_at: '2026-04-14T00:00:00Z' }
     const cat = dbCategoryToCategory(dbCat)
-    expect(cat).toEqual({ slug: 'dermatology', name: '피부과', nameEn: 'Dermatology', icon: 'Stethoscope' })
+    expect(cat).toEqual({ slug: 'dermatology', name: '피부과', nameEn: 'Dermatology', icon: 'Stethoscope', sector: 'medical' })
   })
 
   it('converts null icon to undefined', () => {
-    const dbCat: DbCategory = { id: '1', slug: 'interior', name: '인테리어', name_en: 'Interior', icon: null, created_at: '2026-04-14T00:00:00Z' }
+    const dbCat: DbCategory = { id: '1', slug: 'interior', name: '인테리어', name_en: 'Interior', icon: null, sector: 'living', created_at: '2026-04-14T00:00:00Z' }
     const cat = dbCategoryToCategory(dbCat)
     expect(cat.icon).toBeUndefined()
   })
@@ -569,6 +580,9 @@ describe('dbPlaceToPlace — all-null optional fields', () => {
       google_business_url: null, google_place_id: null,
       review_summaries: null, images: null, latitude: null, longitude: null,
       owner_id: null, status: 'pending',
+      recommended_for: [], strengths: [], place_type: null, recommendation_note: null,
+      kakao_place_id: null, naver_place_id: null, road_address: null,
+      jibun_address: null, sigungu_code: null, zonecode: null, customer_id: null,
       created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
     }
     const place = dbPlaceToPlace(row)

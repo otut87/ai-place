@@ -21,7 +21,7 @@
 | **4** | GEO·AEO 구조화 데이터 | T-029~T-035 | ✅ | 2-3일 |
 | **5** | SEO·CWV·접근성 | T-036~T-045 | ✅ | 3일 |
 | **6** | 확장성·운영 자동화 | T-046~T-057 | ✅ | 1-2주 |
-| **7** | Admin 재설계 (IA·성능·검수·결제·자동화·분석) | **H-01 + T-058~T-084 + T-CP1/CP2** | 🔜 | 3개월 |
+| **7** | Admin 재설계 (IA·성능·검수·결제·자동화·분석) | **H-01 + T-058~T-084 + T-085/086** | 🔜 | 3개월 |
 
 **기준선**: Phase 6 종료 시점 — 899 tests / 79 test files / 5-gate 통과.
 
@@ -300,7 +300,7 @@ TASK 등록 (🔜) → Tests 먼저 (TDD) → 구현 (tests green) → coverage 
 - [ ] 하단 활동 로그 (T-068 actor_type 아이콘)
 - **DoD**: "오늘 해야 할 일" 한 장 파악
 
-## T-065. Places 목록 보강 (증분) 🔜 [Admin]
+## T-065. Places 목록 보강 (증분) ✅ [Admin]
 T-046 위에 증분. 필터·URL 쿼리·일괄 액션은 완료됨.
 - [ ] 컬럼 추가: 구독상태(T-070 조인), AI 노출 점수(`quality_score`)
 - [ ] 필터 `subscription` · `min_quality_score`
@@ -337,7 +337,7 @@ T-055 누락분.
 
 ### Milestone 3 — 결제·구독 (2주)
 
-## T-070. 결제 스키마 🔜 [Billing]
+## T-070. 결제 스키마 ✅ [Billing]
 - [ ] `020_billing.sql`: `customers / subscriptions / payments / billing_keys`
 - [ ] RLS: service role 전용, 사장님 포털에서 본인 구독 select
 - [ ] `places.customer_id` 연결
@@ -361,14 +361,14 @@ T-055 누락분.
 - [ ] 알림: `payment.failed`, `payment.retry_exhausted` (notify/* 재사용)
 - **DoD**: 실패 1건 4영업일 이내 재시도 3회
 
-## T-074. 카드 만료임박 자동 안내 🔜 [Billing]
+## T-074. 카드 만료임박 자동 안내 ✅ [Billing]
 - [ ] Vercel Cron 매일 스캔
 - [ ] 30일/7일 이내 만료 고객 이메일 (`billing.expiry_warning`)
 - **DoD**: 만료 30/7일 전 각 1회 발송
 
 ### Milestone 4 — 자동화·콘텐츠 (6주)
 
-## T-075. Regenerate 공통 컴포넌트 🔜 [GEO][Admin]
+## T-075. Regenerate 공통 컴포넌트 ✅ [GEO][Admin]
 현재 `CandidatePicker` register 전용.
 - [ ] `<RegenerateButton field options={tone,length,keywords}>`
 - [ ] T-052 `generateContentCandidates` 재사용
@@ -400,14 +400,14 @@ T-055 누락분.
 - [ ] 24시간 이내 생성물은 pending 유지
 - **DoD**: 카테고리별 ON/OFF + 유예 설정
 
-## T-080. 수동 등록 → 자동 파이프라인 🔜 [Admin]
+## T-080. 수동 등록 → 자동 파이프라인 ✅ [Admin]
 - [ ] `/admin/register` "AI 자동완성 등록" 버튼 → `pipeline_jobs` insert
 - [ ] 수집 → 생성 → 검수 통합 테스트
 - **DoD**: 업체명 한 줄 입력 → pending 진입
 
 ### Milestone 5 — 분석·고도화 (10주+)
 
-## T-081. `/admin/seo` AI 봇 로그 🔜 [GEO]
+## T-081. `/admin/seo` AI 봇 로그 ✅ [GEO]
 추가리뷰 §10 — "증명 도구가 제품의 핵심".
 - [ ] 미들웨어에서 AI 봇 UA 감지 → `bot_visits` insert
 - [ ] GPTBot/ClaudeBot/PerplexityBot/CCBot/Google-Extended 10+ 종
@@ -425,20 +425,20 @@ T-055 누락분.
 - [ ] 업체 검색 · 페이지 이동 · 최근 본 항목 · 검수 큐
 - **DoD**: 전역 ⌘K 검색
 
-## T-084. A/B 프롬프트 실험 🔜 [GEO]
+## T-084. A/B 프롬프트 실험 ✅ [GEO]
 - [ ] T-077 버전 ↔ T-027 `quality_score` 연결
 - [ ] 버전별 평균 스코어 + 통과율 비교 UI
 - **DoD**: "v3 대비 +12%" 관측 가능
 
 ### 컴플라이언스 (병렬)
 
-## T-CP1. 의료 카테고리 정책 가드 🔜 [Compliance]
+## T-085. 의료 카테고리 정책 가드 🔜 [Compliance]
 추가리뷰 §4 리스크 2.
 - [ ] 피부과·치과·한의원은 가격 "상담 문의" 강제 (T-048 확장)
 - [ ] 시술명 자동 생성 시 의료광고 금칙어 필터
 - [ ] 참고 문구 강제 표시 (T-004 재사용)
 
-## T-CP2. 리뷰 저작권 안전 🔜 [Compliance]
+## T-086. 리뷰 저작권 안전 🔜 [Compliance]
 추가리뷰 §4 리스크 3.
 - [ ] Google/Naver 리뷰 본문 스크래핑 금지 — URL + 점수만
 - [ ] `review_summaries.sampleQuote` 패러프레이즈 여부 플래그로 재정의

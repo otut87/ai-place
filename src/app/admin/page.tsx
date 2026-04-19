@@ -3,17 +3,22 @@ import { AdminLink } from '@/components/admin/admin-link'
 import { requireAuth } from '@/lib/auth'
 import { getDashboardMetrics, getRecentActivity, dashboardIssuesCount } from '@/lib/admin/dashboard-metrics'
 import { summarizeAction, actorTypeLabel, type AuditAction, type ActorType } from '@/lib/admin/audit'
+import { aggregateBotVisits } from '@/lib/admin/bot-visits'
+import { AI_BOT_PATTERNS } from '@/lib/seo/bot-detection'
 import { ClipboardCheck, Megaphone, ActivitySquare, CreditCardIcon, User, Bot, Cog } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminDashboard() {
   await requireAuth()
-  const [metrics, activity] = await Promise.all([
+  const [metrics, activity, botAgg7d, botAgg30d] = await Promise.all([
     getDashboardMetrics(),
     getRecentActivity(15),
+    aggregateBotVisits(7),
+    aggregateBotVisits(30),
   ])
   const totalIssues = dashboardIssuesCount(metrics)
+  const botLabelById = new Map(AI_BOT_PATTERNS.map(p => [p.id, p.label]))
 
   return (
     <div className="mx-auto w-full max-w-6xl p-6">
@@ -65,7 +70,23 @@ export default async function AdminDashboard() {
         <Stat label="활성 업체" value={metrics.activePlaces} />
         <Stat label="Pending" value={metrics.pendingPlaces} />
         <Stat label="Rejected" value={metrics.rejectedPlaces} />
-        <Stat label="MRR (₩)" value={0} placeholder="T-070 이후" />
+        <Stat label="MRR (₩)" value={0} placeholder="결제 데이터 축적 전" />
+      </section>
+
+      {/* AI 크롤러 방문 추이 (7/30일) */}
+      <section className="mb-6 rounded-lg border border-[#e5e7eb] bg-white">
+        <header className="flex items-center justify-between border-b border-[#f3f4f6] px-4 py-2">
+          <h2 className="text-sm font-semibold text-[#222222]">AI 크롤러 방문</h2>
+          <AdminLink href="/admin/seo" className="text-xs text-[#6a6a6a] hover:underline">전체 보기</AdminLink>
+        </header>
+        {botAgg7d.length === 0 && botAgg30d.length === 0 ? (
+          <p className="p-6 text-center text-sm text-[#6a6a6a]">아직 AI 봇 방문이 기록되지 않았습니다. 첫 크롤링까지 며칠~2주 소요.</p>
+        ) : (
+          <div className="grid grid-cols-2 divide-x divide-[#f3f4f6]">
+            <BotColumn title="최근 7일" rows={botAgg7d} labelMap={botLabelById} />
+            <BotColumn title="최근 30일" rows={botAgg30d} labelMap={botLabelById} />
+          </div>
+        )}
       </section>
 
       {/* 최근 활동 로그 */}
@@ -129,6 +150,32 @@ function ActionCard({
       <p className="mt-2 text-2xl font-semibold">{count}</p>
       <p className="mt-0.5 text-[10px] opacity-75">{detail}</p>
     </AdminLink>
+  )
+}
+
+function BotColumn({
+  title, rows, labelMap,
+}: {
+  title: string
+  rows: Array<{ botId: string; visits: number; lastVisitAt: string | null }>
+  labelMap: Map<string, string>
+}) {
+  return (
+    <div className="p-4">
+      <div className="mb-2 text-xs font-medium text-[#6a6a6a]">{title}</div>
+      {rows.length === 0 ? (
+        <p className="text-xs text-[#9a9a9a]">기록 없음</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {rows.slice(0, 5).map(r => (
+            <li key={r.botId} className="flex items-center justify-between text-sm">
+              <span className="text-[#222222]">{labelMap.get(r.botId) ?? r.botId}</span>
+              <span className="font-semibold text-[#222222]">{r.visits.toLocaleString()}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 

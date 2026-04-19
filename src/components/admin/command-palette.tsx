@@ -41,7 +41,10 @@ export function CommandPalette() {
         e.preventDefault()
         setOpen(v => !v)
       }
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') {
+        setOpen(false)
+        setQ('')
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -49,7 +52,6 @@ export function CommandPalette() {
 
   useEffect(() => {
     if (open) inputRef.current?.focus()
-    else setQ('')
   }, [open])
 
   const filtered = filterCommands(STATIC_COMMANDS, q)
@@ -59,7 +61,7 @@ export function CommandPalette() {
   return (
     <div
       className="fixed inset-0 z-[200] flex items-start justify-center bg-black/30 pt-24"
-      onClick={() => setOpen(false)}
+      onClick={() => { setOpen(false); setQ('') }}
     >
       <div
         className="w-full max-w-lg rounded-xl bg-white shadow-2xl"
@@ -87,6 +89,7 @@ export function CommandPalette() {
                   className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm hover:bg-[#f3f4f6]"
                   onClick={() => {
                     setOpen(false)
+                    setQ('')
                     router.push(c.href)
                   }}
                 >

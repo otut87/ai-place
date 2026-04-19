@@ -29,8 +29,8 @@ const DEFUNCT_BUSINESSES: ReadonlyArray<{ name: string; aliases?: string[] }> = 
 
 let allPlaces: Place[] = []
 let allGuides: GuidePage[] = []
-let allComparisons: ComparisonPage[] = []
-let allKeywords: KeywordPage[] = []
+const allComparisons: ComparisonPage[] = []
+const allKeywords: KeywordPage[] = []
 let allTextBlocks: Array<{ source: string; text: string }> = []
 
 beforeAll(async () => {

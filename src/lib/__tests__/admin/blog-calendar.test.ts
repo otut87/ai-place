@@ -1,5 +1,48 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { buildCalendarGrid, parseMonthParam, type BlogCalendarPost } from '@/lib/admin/blog-calendar'
+
+const mockFrom = vi.fn()
+const mockLimit = vi.fn()
+
+vi.mock('@/lib/supabase/admin-client', () => ({
+  getAdminClient: vi.fn(() => ({ from: mockFrom })),
+}))
+
+beforeEach(() => {
+  mockLimit.mockReset()
+  mockFrom.mockReset()
+  mockLimit.mockResolvedValue({ data: [{ id: 'b1', slug: 's1', title: 'T', status: 'active', published_at: '2026-04-10T00:00:00Z', created_at: '2026-04-01T00:00:00Z', category: null, post_type: 'guide' }], error: null })
+  mockFrom.mockImplementation(() => ({
+    select: vi.fn(() => ({
+      or: vi.fn(() => ({
+        order: vi.fn(() => ({ limit: mockLimit })),
+      })),
+    })),
+  }))
+})
+
+describe('listBlogPostsForMonth', () => {
+  it('admin null → []', async () => {
+    const { getAdminClient } = await import('@/lib/supabase/admin-client')
+    vi.mocked(getAdminClient).mockReturnValueOnce(null)
+    const { listBlogPostsForMonth } = await import('@/lib/admin/blog-calendar')
+    expect(await listBlogPostsForMonth(2026, 4)).toEqual([])
+  })
+
+  it('정상 쿼리 → 행 반환', async () => {
+    const { listBlogPostsForMonth } = await import('@/lib/admin/blog-calendar')
+    const r = await listBlogPostsForMonth(2026, 4)
+    expect(r).toHaveLength(1)
+    expect(r[0].id).toBe('b1')
+  })
+
+  it('DB 에러 → []', async () => {
+    mockLimit.mockResolvedValueOnce({ data: null, error: { message: 'x' } })
+    const { listBlogPostsForMonth } = await import('@/lib/admin/blog-calendar')
+    expect(await listBlogPostsForMonth(2026, 4)).toEqual([])
+  })
+})
+
 
 describe('parseMonthParam', () => {
   it('YYYY-MM 파싱', () => {

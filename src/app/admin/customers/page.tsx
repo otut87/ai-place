@@ -2,6 +2,7 @@
 
 import { requireAuth } from '@/lib/auth'
 import { buildCohorts, listCustomersWithAnalytics } from '@/lib/admin/customer-analytics'
+import { AdminLink } from '@/components/admin/admin-link'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -78,9 +79,11 @@ export default async function AdminCustomersPage() {
             </thead>
             <tbody className="divide-y divide-[#f0f0f0]">
               {rows.map((r) => (
-                <tr key={r.id}>
+                <tr key={r.id} className="hover:bg-[#fafafa]">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-[#191919]">{r.name ?? '(이름 없음)'}</div>
+                    <AdminLink href={`/admin/customers/${r.id}`} className="font-medium text-[#191919] hover:underline">
+                      {r.name ?? '(이름 없음)'}
+                    </AdminLink>
                     <div className="text-xs text-[#6b6b6b]">{r.email}</div>
                   </td>
                   <td className="px-4 py-3 text-xs">{r.subscriptionStatus ?? '—'}</td>
