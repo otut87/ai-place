@@ -11,9 +11,17 @@ export function Header() {
         </Link>
 
         {/* CTA */}
-        <InquiryButton className="hidden sm:inline-flex h-10 px-5 items-center rounded-lg bg-[#008060] text-white text-sm font-medium hover:bg-[#006b4f] transition-colors">
-          업체 등록
-        </InquiryButton>
+        <div className="hidden sm:flex items-center gap-2">
+          <Link
+            href="/check"
+            className="h-10 px-4 inline-flex items-center rounded-lg border border-[#008060] text-[#008060] text-sm font-medium hover:bg-emerald-50 transition-colors"
+          >
+            AI 진단
+          </Link>
+          <InquiryButton className="h-10 px-5 inline-flex items-center rounded-lg bg-[#008060] text-white text-sm font-medium hover:bg-[#006b4f] transition-colors">
+            업체 등록
+          </InquiryButton>
+        </div>
 
         {/* Mobile hamburger */}
         <button

@@ -1,0 +1,197 @@
+// T-136 — 공개 진단 페이지 /check.
+// 누구나 URL 입력 → 기술 진단 받기 (API 비용 0, fetch+regex 만).
+
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { Header } from '@/components/header'
+import { Footer } from '@/components/footer'
+import { composePageTitle } from '@/lib/seo/compose-title'
+import { runPublicDiagnosticAction } from '@/lib/actions/diagnose'
+import { getBenchmark, scoreBucket, deltaVsRegistered } from '@/lib/diagnostic/benchmark'
+import { CheckForm } from './check-form'
+import { LeadForm } from './lead-form'
+
+const TITLE = composePageTitle('AI 가독성 진단 — 내 사이트가 AI 검색에 노출되는가')
+const DESC = '업체 홈페이지 URL을 입력하면 AI 크롤러가 읽을 수 있는지 30초 안에 진단합니다. JSON-LD, robots.txt, OG, 메타, 사이트맵 9개 항목을 점검.'
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESC,
+  alternates: { canonical: '/check' },
+  openGraph: { title: TITLE, description: DESC, url: '/check' },
+}
+
+interface Props {
+  searchParams: Promise<{ url?: string }>
+}
+
+export default async function CheckPage({ searchParams }: Props) {
+  const { url } = await searchParams
+  const bench = getBenchmark()
+
+  const result = url ? await runPublicDiagnosticAction(url) : null
+  const bucket = result && !result.error ? scoreBucket(result.score) : null
+
+  return (
+    <>
+      <Header />
+      <main className="flex-1">
+        <section className="py-16 px-6">
+          <div className="mx-auto max-w-3xl">
+            <h1 className="text-[28px] font-bold text-[#222222] leading-tight">
+              AI 가독성 진단
+            </h1>
+            <p className="mt-3 text-base text-[#222222]">
+              홈페이지 URL 을 입력하면 AI 검색(ChatGPT, Claude, Gemini)이 당신의 업체를 읽을 수 있는지 30초 안에 확인합니다.
+            </p>
+
+            <div className="mt-6">
+              <CheckForm initialUrl={url ?? ''} />
+            </div>
+
+            {result && (
+              <div className="mt-10">
+                {result.error ? (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">
+                    <p className="font-semibold">진단 실패</p>
+                    <p className="mt-1">{result.error}</p>
+                    <p className="mt-2 text-xs">URL 이 올바른지, 사이트가 접근 가능한지 확인해 주세요.</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* 점수 헤더 */}
+                    <div className="rounded-2xl border border-[#e7e7e7] bg-white p-6">
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <p className="text-xs text-[#6a6a6a]">진단 대상</p>
+                          <p className="mt-0.5 break-all font-mono text-sm text-[#191919]">{result.url}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-[#6a6a6a]">AI 가독성 점수</p>
+                          <p className={`text-5xl font-bold leading-none ${
+                            bucket?.tone === 'great' ? 'text-emerald-600' :
+                            bucket?.tone === 'ok' ? 'text-sky-600' :
+                            bucket?.tone === 'warn' ? 'text-amber-600' : 'text-red-600'
+                          }`}>
+                            {result.score}
+                            <span className="text-xl text-[#9a9a9a]">/100</span>
+                          </p>
+                          {bucket && <p className="mt-1 text-xs text-[#6a6a6a]">{bucket.label}</p>}
+                        </div>
+                      </div>
+
+                      {/* 벤치마크 */}
+                      <div className="mt-4 border-t border-[#f0f0f0] pt-4">
+                        <p className="mb-2 text-xs font-medium text-[#6b6b6b]">업종 평균 비교</p>
+                        <BenchmarkBar label="내 사이트" value={result.score} tone={bucket?.tone ?? 'warn'} />
+                        <BenchmarkBar label="일반 업체 평균" value={bench.unregistered} tone="warn" />
+                        <BenchmarkBar label="AI Place 등록 업체 평균" value={bench.registered} tone="great" />
+                        <p className="mt-2 text-xs text-[#6a6a6a]">{deltaVsRegistered(result.score, bench)}</p>
+                      </div>
+                    </div>
+
+                    {/* 체크 항목 */}
+                    <div className="mt-6 rounded-2xl border border-[#e7e7e7] bg-white p-6">
+                      <h2 className="mb-4 text-base font-semibold text-[#191919]">세부 체크 (9개 항목)</h2>
+                      <ul className="space-y-3">
+                        {result.checks.map(c => {
+                          const icon = c.status === 'pass' ? '✅' : c.status === 'warn' ? '⚠' : '❌'
+                          const bg = c.status === 'pass' ? 'bg-emerald-50' : c.status === 'warn' ? 'bg-amber-50' : 'bg-red-50'
+                          return (
+                            <li key={c.id} className={`rounded-lg border border-[#f0f0f0] p-3 ${bg}`}>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-2">
+                                  <span className="text-base leading-none">{icon}</span>
+                                  <div>
+                                    <p className="text-sm font-medium text-[#191919]">{c.label}</p>
+                                    {c.detail && <p className="mt-0.5 text-xs text-[#6a6a6a]">{c.detail}</p>}
+                                  </div>
+                                </div>
+                                <span className="shrink-0 text-xs text-[#6a6a6a]">
+                                  {c.points}/{c.maxPoints}
+                                </span>
+                              </div>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </div>
+
+                    {/* CTA + 리드 수집 */}
+                    <div className="mt-6 rounded-2xl bg-[#008060] p-6 text-white">
+                      <h2 className="text-lg font-semibold">
+                        {result.score < 70
+                          ? `AI Place 에 등록하면 ${bench.registered}점까지 올라갑니다.`
+                          : '이미 좋은 점수지만, 더 높일 수 있습니다.'}
+                      </h2>
+                      <p className="mt-1.5 text-sm text-emerald-50">
+                        JSON-LD, robots.txt, sitemap, llms.txt, 업종 최적화 메타까지 — 등록 즉시 자동 적용.
+                        구독 중인 업체는 <strong>주 1회 실제 AI 인용 테스트</strong> (ChatGPT/Claude/Gemini) 도 받아볼 수 있습니다.
+                      </p>
+
+                      <div className="mt-4 rounded-xl bg-white/10 p-4">
+                        <LeadForm targetUrl={result.url} score={result.score} />
+                      </div>
+
+                      <div className="mt-3 flex gap-2">
+                        <Link
+                          href="/about"
+                          className="inline-flex h-10 items-center rounded-lg border border-white/30 px-4 text-sm hover:bg-white/10"
+                        >
+                          서비스 소개
+                        </Link>
+                        <Link
+                          href="/about/methodology"
+                          className="inline-flex h-10 items-center rounded-lg border border-white/30 px-4 text-sm hover:bg-white/10"
+                        >
+                          조사 방법론
+                        </Link>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* FAQ — 신규 방문자 설명 */}
+            {!result && (
+              <div className="mt-12 rounded-2xl border border-[#e7e7e7] bg-[#fafafa] p-6">
+                <h2 className="text-base font-semibold text-[#191919]">무엇을 점검하나요?</h2>
+                <ul className="mt-3 grid gap-2 text-sm text-[#484848] md:grid-cols-2">
+                  <li>✓ JSON-LD LocalBusiness 구조 (가장 중요)</li>
+                  <li>✓ robots.txt AI 크롤러 허용</li>
+                  <li>✓ sitemap.xml 존재 여부</li>
+                  <li>✓ llms.txt (AI 우선 안내)</li>
+                  <li>✓ Open Graph 태그</li>
+                  <li>✓ Meta title · description</li>
+                  <li>✓ HTTPS / 모바일 viewport</li>
+                  <li>✓ 구조화 데이터 완성도</li>
+                </ul>
+                <p className="mt-4 text-xs text-[#6a6a6a]">
+                  API 비용 없이 즉시 실행. 브라우저·로그인 불필요. 30초 내 결과.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+      <Footer />
+    </>
+  )
+}
+
+function BenchmarkBar({ label, value, tone }: { label: string; value: number; tone: 'bad' | 'warn' | 'ok' | 'great' }) {
+  const color =
+    tone === 'great' ? 'bg-emerald-500' :
+    tone === 'ok' ? 'bg-sky-500' :
+    tone === 'warn' ? 'bg-amber-500' : 'bg-red-500'
+  return (
+    <div className="mb-2 flex items-center gap-3 text-xs">
+      <span className="w-40 shrink-0 text-[#484848]">{label}</span>
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#f0f0f0]">
+        <div className={`h-full ${color}`} style={{ width: `${Math.min(100, value)}%` }} />
+      </div>
+      <span className="w-10 shrink-0 text-right font-mono text-[#191919]">{value}</span>
+    </div>
+  )
+}

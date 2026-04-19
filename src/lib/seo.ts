@@ -48,6 +48,14 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
     priority: 0.6,
   })
 
+  // T-136: 공개 진단 페이지
+  entries.push({
+    url: `${baseUrl}/check`,
+    lastModified: now,
+    changeFrequency: 'monthly',
+    priority: 0.75,
+  })
+
   const cities = await getCities()
   const categories = await getCategories()
   const { getSectors } = await import('./data.supabase')
