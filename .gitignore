@@ -46,5 +46,5 @@ next-env.d.ts
 .vercel
 .gstack/
 
-# Test keys / secrets
-docs/tosspaymentsapi.md
+# Research, internal docs, test keys — keep local only
+docs/
