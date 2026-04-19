@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Sidebar } from '@/components/admin/sidebar'
 import { Topbar } from '@/components/admin/topbar'
 import { AdminShellClient } from '@/components/admin/admin-shell-client'
+import { CommandPalette } from '@/components/admin/command-palette'
 import { getUser } from '@/lib/auth'
 
 // T-059: admin 은 Supabase admin-client 등 Node 전용 모듈을 사용하므로
@@ -28,6 +29,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <main className="flex-1">{children}</main>
         </div>
       </div>
+      <CommandPalette />
     </AdminShellClient>
   )
 }
