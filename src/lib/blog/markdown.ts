@@ -10,8 +10,9 @@
 
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
+import remarkGfm from 'remark-gfm'
 import remarkRehype from 'remark-rehype'
-import rehypeSanitize from 'rehype-sanitize'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import rehypeStringify from 'rehype-stringify'
 import { visit } from 'unist-util-visit'
 import type { Element, Root } from 'hast'
@@ -38,12 +39,24 @@ function rehypeDemoteHeadings() {
  * rehype-sanitize 의 default schema 사용 (script/iframe/on* 핸들러/javascript: 차단).
  * T-099: heading 한 단계 강등.
  */
+// T-115: rehype-sanitize 가 table 요소를 허용하도록 스키마 확장.
+const tableSchema = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames ?? []), 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+  attributes: {
+    ...defaultSchema.attributes,
+    th: [...(defaultSchema.attributes?.th ?? []), 'align'],
+    td: [...(defaultSchema.attributes?.td ?? []), 'align'],
+  },
+}
+
 export async function renderMarkdownToHtml(md: string): Promise<string> {
   const file = await unified()
     .use(remarkParse)
+    .use(remarkGfm) // T-115: Markdown 테이블 → <table> 강제
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeDemoteHeadings)
-    .use(rehypeSanitize)
+    .use(rehypeSanitize, tableSchema)
     .use(rehypeStringify)
     .process(md)
   return String(file)

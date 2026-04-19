@@ -4,6 +4,8 @@
 import type { Place, FAQ, BlogPostSummary } from './types'
 import { toSchemaOrgHours } from './format/hours'
 import { getCategorySchemaType, getMedicalSpecialty } from './jsonld/category-schema'
+import { getCityAddressRegion, extractAddressLocality } from './jsonld/address-region'
+import { getDefaultAuthor, authorToPersonJsonLd } from './authors'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type JsonLd = Record<string, any>
@@ -20,7 +22,10 @@ export function generateLocalBusiness(place: Place, pageUrl?: string, schemaType
     address: {
       '@type': 'PostalAddress',
       streetAddress: place.address,
-      addressLocality: place.city,
+      // T-112: addressLocality 는 한글 도시명 ("천안시"), slug 가 아님.
+      addressLocality: extractAddressLocality(place.address, place.city),
+      // T-112: addressRegion (도·광역시) 필수 권장 (SCHEMA_DATA_DICTIONARY §2.0.1)
+      ...(getCityAddressRegion(place.city) && { addressRegion: getCityAddressRegion(place.city) }),
       addressCountry: 'KR',
     },
   }
@@ -173,16 +178,11 @@ export function generateArticle(opts: {
   lastUpdated: string
   url: string
 }): JsonLd {
+  // T-124: 저자 단일 소스 (lib/authors.ts) / T-116: inLanguage
   const org = {
     '@type': 'Organization',
     name: 'AI 플레이스',
     url: 'https://aiplace.kr',
-  }
-  const author = {
-    '@type': 'Person',
-    name: '이지수',
-    jobTitle: 'AI Place 큐레이터',
-    url: 'https://aiplace.kr/about',
   }
   return {
     '@context': 'https://schema.org',
@@ -190,9 +190,10 @@ export function generateArticle(opts: {
     '@id': opts.url,
     headline: opts.title,
     description: opts.description,
+    inLanguage: 'ko-KR',
     datePublished: opts.lastUpdated,
     dateModified: opts.lastUpdated,
-    author,
+    author: authorToPersonJsonLd(getDefaultAuthor()),
     publisher: org,
     mainEntityOfPage: opts.url,
   }

@@ -15,6 +15,7 @@ import { generateItemList } from "@/lib/jsonld"
 import { generateBreadcrumbList, generateCategoryDAB } from "@/lib/seo"
 import { buildCategoryMetadata } from "@/lib/seo/page-meta"
 import { latestUpdatedAt, toIsoDate } from "@/lib/format/time"
+import { formatEvidenceTitle, extractReviewTotal } from "@/lib/seo/title-formula"
 
 interface Props {
   params: Promise<{ city: string; category: string }>
@@ -51,6 +52,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     categorySlug: category,
     hasPlaces,
     description,
+    placeCount: places.length,
+    reviewTotal: extractReviewTotal(places),
   })
 }
 
@@ -135,7 +138,12 @@ export default async function ListingPage({ params }: Props) {
 
             {/* Title */}
             <h1 className="text-[28px] font-bold text-[#222222] leading-[1.43]">
-              {cityObj.name} {catObj.name} 추천 — {new Date().getFullYear()}년 업데이트
+              {formatEvidenceTitle({
+                cityName: cityObj.name,
+                categoryName: catObj.name,
+                placeCount: places.length,
+                reviewTotal: extractReviewTotal(places),
+              })}
             </h1>
             <p className="mt-3 text-base text-[#6a6a6a]">
               {generateCategoryDAB(places, cityObj.name, catObj.name, descriptor)}

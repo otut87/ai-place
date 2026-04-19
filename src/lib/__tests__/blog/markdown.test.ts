@@ -15,6 +15,16 @@ describe('renderMarkdownToHtml — basic rendering', () => {
     expect(html).toContain('<p>')
   })
 
+  it('T-115: GFM 테이블이 <table><thead><tbody> 로 렌더된다', async () => {
+    const md = '| 병원 | 평점 |\n|---|---|\n| A | 4.5 |\n| B | 4.2 |'
+    const html = await renderMarkdownToHtml(md)
+    expect(html).toContain('<table>')
+    expect(html).toContain('<thead>')
+    expect(html).toContain('<tbody>')
+    expect(html).toContain('<th>병원</th>')
+    expect(html).toContain('<td>A</td>')
+  })
+
   it('list / blockquote 렌더링', async () => {
     const html = await renderMarkdownToHtml('> 인용\n\n- a\n- b')
     expect(html).toContain('<blockquote>')

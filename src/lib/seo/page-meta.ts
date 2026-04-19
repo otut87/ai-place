@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import type { Place } from '@/lib/types'
 import { normalizeAddress } from '@/lib/format/address'
 import { composePageTitle } from '@/lib/seo/compose-title'
+import { formatEvidenceTitle } from '@/lib/seo/title-formula'
 
 export const SITE_NAME = 'AI Place'
 export const SITE_DESCRIPTION =
@@ -33,12 +34,23 @@ interface CategoryMetaArgs {
   categorySlug: string
   hasPlaces: boolean
   description: string
+  /** T-110: 업체 수 (없으면 0) */
+  placeCount?: number
+  /** T-110: 전 업체 리뷰 합계 */
+  reviewTotal?: number
 }
 
 export function buildCategoryMetadata(args: CategoryMetaArgs): Metadata {
   const { cityName, categoryName, citySlug, categorySlug, hasPlaces, description } = args
-  const year = new Date().getFullYear()
-  const title = composePageTitle(`${cityName} ${categoryName} 추천 — ${year}년 업데이트`)
+  // T-110: 제목 공식에 N곳·리뷰 M건 숫자 근거 주입 (MedicalKoreaGuide 분석)
+  const title = composePageTitle(
+    formatEvidenceTitle({
+      cityName,
+      categoryName,
+      placeCount: args.placeCount ?? 0,
+      reviewTotal: args.reviewTotal ?? 0,
+    }),
+  )
   const url = `/${citySlug}/${categorySlug}`
 
   const meta: Metadata = {
