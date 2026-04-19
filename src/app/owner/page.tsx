@@ -18,33 +18,48 @@ export default async function OwnerPortalPage() {
       </header>
 
       {places.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#dddddd] p-8 text-center text-sm text-[#6a6a6a]">
-          아직 등록된 업체가 없습니다.
-          <br />
-          등록 요청은 관리자(support@dedo.kr)에게 문의해 주세요.
+        <div className="rounded-lg border border-dashed border-[#dddddd] bg-white p-8 text-center">
+          <p className="text-sm text-[#484848]">아직 등록된 업체가 없습니다.</p>
+          <p className="mt-1 text-xs text-[#6a6a6a]">5단계 마법사로 3분 내 등록할 수 있습니다.</p>
+          <AdminLink
+            href="/owner/places/new"
+            className="mt-4 inline-flex h-10 items-center rounded-lg bg-[#008060] px-4 text-sm font-medium text-white hover:bg-[#006e52]"
+          >
+            새 업체 등록
+          </AdminLink>
         </div>
       ) : (
-        <ul className="space-y-2">
-          {places.map(p => (
-            <li key={p.id} className="flex items-center justify-between rounded-lg border border-[#e5e7eb] bg-white p-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-[#222222]">{p.name}</span>
-                  <StatusBadge status={p.status} />
+        <>
+          <div className="mb-3 flex justify-end">
+            <AdminLink
+              href="/owner/places/new"
+              className="inline-flex h-9 items-center rounded-lg bg-[#008060] px-3 text-xs font-medium text-white hover:bg-[#006e52]"
+            >
+              + 새 업체
+            </AdminLink>
+          </div>
+          <ul className="space-y-2">
+            {places.map(p => (
+              <li key={p.id} className="flex items-center justify-between rounded-lg border border-[#e5e7eb] bg-white p-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-[#222222]">{p.name}</span>
+                    <StatusBadge status={p.status} />
+                  </div>
+                  <p className="mt-0.5 text-xs text-[#6a6a6a]">
+                    /{p.city}/{p.category}/{p.slug}
+                  </p>
                 </div>
-                <p className="mt-0.5 text-xs text-[#6a6a6a]">
-                  /{p.city}/{p.category}/{p.slug}
-                </p>
-              </div>
-              <AdminLink
-                href={`/owner/places/${p.id}`}
-                className="text-xs text-[#4c1d95] underline"
-              >
-                편집
-              </AdminLink>
-            </li>
-          ))}
-        </ul>
+                <AdminLink
+                  href={`/owner/places/${p.id}`}
+                  className="text-xs text-[#4c1d95] underline"
+                >
+                  편집
+                </AdminLink>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   )
