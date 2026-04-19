@@ -2,8 +2,8 @@
 // 기본 console.error 는 PostgrestError 를 {} 로 출력 (non-enumerable 속성).
 // serializePostgrestError 는 message/code/details/hint 를 명시 추출해야 함.
 
-import { describe, it, expect } from 'vitest'
-import { serializePostgrestError, formatUserFacingError } from '@/lib/supabase/error'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { serializePostgrestError, formatUserFacingError, logSupabaseError } from '@/lib/supabase/error'
 
 describe('serializePostgrestError', () => {
   it('PostgrestError 형태 객체의 필드를 모두 추출한다', () => {
@@ -58,6 +58,51 @@ describe('serializePostgrestError', () => {
     const out = serializePostgrestError(err)
     expect(() => JSON.stringify(out)).not.toThrow()
     expect(JSON.stringify(out)).toContain('test')
+  })
+})
+
+describe('serializePostgrestError — non-enumerable', () => {
+  it('비열거(non-enumerable) message/code 속성도 회수한다 (Supabase v2 실제 케이스)', () => {
+    const err = {}
+    Object.defineProperty(err, 'message', {
+      value: 'permission denied',
+      enumerable: false,
+    })
+    Object.defineProperty(err, 'code', {
+      value: '42501',
+      enumerable: false,
+    })
+    // Object.keys(err) 는 [] 이고 JSON.stringify(err) 는 '{}' 인 상태
+
+    const out = serializePostgrestError(err)
+    expect(out.message).toBe('permission denied')
+    expect(out.code).toBe('42501')
+  })
+})
+
+describe('logSupabaseError', () => {
+  let spy: ReturnType<typeof vi.spyOn>
+  beforeEach(() => {
+    spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+  afterEach(() => {
+    spy.mockRestore()
+  })
+
+  it('한 줄 문자열로 tag 와 message 를 함께 출력한다', () => {
+    logSupabaseError('admin/places', { message: 'RLS blocked', code: '42501', hint: 'grant select' })
+    expect(spy).toHaveBeenCalledOnce()
+    const line = spy.mock.calls[0][0] as string
+    expect(line).toContain('[admin/places]')
+    expect(line).toContain('RLS blocked')
+    expect(line).toContain('code=42501')
+    expect(line).toContain('hint=grant select')
+  })
+
+  it('빈 객체 입력은 "empty error object" 로 출력한다', () => {
+    logSupabaseError('test', {})
+    const line = spy.mock.calls[0][0] as string
+    expect(line).toContain('empty error object')
   })
 })
 
