@@ -35,6 +35,15 @@ export interface RegisterPlaceInput {
   googleBusinessUrl?: string
   naverPlaceUrl?: string
   kakaoMapUrl?: string
+  // Phase 11 — medicalkoreaguide 벤치마크
+  homepageUrl?: string
+  blogUrl?: string
+  instagramUrl?: string
+  googleRating?: number
+  googleReviewCount?: number
+  naverReviewCount?: number
+  kakaoRating?: number
+  kakaoReviewCount?: number
   latitude?: number
   longitude?: number
   // 3-Source / Daum Postcode (T-019/T-020)
@@ -622,6 +631,14 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
     kakao_map_url: input.kakaoMapUrl ?? null,
     google_business_url: input.googleBusinessUrl ?? null,
     google_place_id: input.googlePlaceId ?? null,
+    homepage_url: input.homepageUrl ?? null,
+    blog_url: input.blogUrl ?? null,
+    instagram_url: input.instagramUrl ?? null,
+    google_rating: input.googleRating ?? input.rating ?? null,
+    google_review_count: input.googleReviewCount ?? input.reviewCount ?? null,
+    naver_review_count: input.naverReviewCount ?? null,
+    kakao_rating: input.kakaoRating ?? null,
+    kakao_review_count: input.kakaoReviewCount ?? null,
     kakao_place_id: input.kakaoPlaceId ?? null,
     naver_place_id: input.naverPlaceId ?? null,
     road_address: input.roadAddress ?? null,

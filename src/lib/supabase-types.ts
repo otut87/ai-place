@@ -31,6 +31,15 @@ export interface DbPlace {
   kakao_map_url: string | null
   google_business_url: string | null
   google_place_id: string | null
+  // 027_places_review_sources_and_links.sql (Phase 11)
+  google_rating: number | null
+  google_review_count: number | null
+  naver_review_count: number | null
+  kakao_rating: number | null
+  kakao_review_count: number | null
+  homepage_url: string | null
+  blog_url: string | null
+  instagram_url: string | null
   review_summaries: ReviewSummary[] | null
   images: PlaceImage[] | null
   latitude: number | null
@@ -124,6 +133,14 @@ export function dbPlaceToPlace(row: DbPlace): Place {
     kakaoMapUrl: row.kakao_map_url ?? undefined,
     googleBusinessUrl: row.google_business_url ?? undefined,
     googlePlaceId: row.google_place_id ?? undefined,
+    homepageUrl: row.homepage_url ?? undefined,
+    blogUrl: row.blog_url ?? undefined,
+    instagramUrl: row.instagram_url ?? undefined,
+    googleRating: row.google_rating ?? undefined,
+    googleReviewCount: row.google_review_count ?? undefined,
+    naverReviewCount: row.naver_review_count ?? undefined,
+    kakaoRating: row.kakao_rating ?? undefined,
+    kakaoReviewCount: row.kakao_review_count ?? undefined,
     kakaoPlaceId: row.kakao_place_id ?? undefined,
     naverPlaceId: row.naver_place_id ?? undefined,
     roadAddress: row.road_address ?? undefined,
@@ -232,6 +249,14 @@ export function placeToDbInsert(place: Place): Omit<DbPlace, 'id' | 'created_at'
     kakao_map_url: place.kakaoMapUrl ?? null,
     google_business_url: place.googleBusinessUrl ?? null,
     google_place_id: place.googlePlaceId ?? null,
+    homepage_url: place.homepageUrl ?? null,
+    blog_url: place.blogUrl ?? null,
+    instagram_url: place.instagramUrl ?? null,
+    google_rating: place.googleRating ?? null,
+    google_review_count: place.googleReviewCount ?? null,
+    naver_review_count: place.naverReviewCount ?? null,
+    kakao_rating: place.kakaoRating ?? null,
+    kakao_review_count: place.kakaoReviewCount ?? null,
     kakao_place_id: place.kakaoPlaceId ?? null,
     naver_place_id: place.naverPlaceId ?? null,
     road_address: place.roadAddress ?? null,

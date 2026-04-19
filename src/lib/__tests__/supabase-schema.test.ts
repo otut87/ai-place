@@ -192,6 +192,14 @@ describe('dbPlaceToPlace', () => {
     sigungu_code: null,
     zonecode: null,
     customer_id: null,
+    google_rating: null,
+    google_review_count: null,
+    naver_review_count: null,
+    kakao_rating: null,
+    kakao_review_count: null,
+    homepage_url: null,
+    blog_url: null,
+    instagram_url: null,
     created_at: '2026-04-14T00:00:00Z',
     updated_at: '2026-04-14T12:00:00Z',
   }
@@ -583,6 +591,9 @@ describe('dbPlaceToPlace — all-null optional fields', () => {
       recommended_for: [], strengths: [], place_type: null, recommendation_note: null,
       kakao_place_id: null, naver_place_id: null, road_address: null,
       jibun_address: null, sigungu_code: null, zonecode: null, customer_id: null,
+      google_rating: null, google_review_count: null, naver_review_count: null,
+      kakao_rating: null, kakao_review_count: null,
+      homepage_url: null, blog_url: null, instagram_url: null,
       created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
     }
     const place = dbPlaceToPlace(row)

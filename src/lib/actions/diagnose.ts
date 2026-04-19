@@ -5,9 +5,20 @@
 
 import { scanSite, type ScanResult } from '@/lib/diagnostic/scan-site'
 import { getAdminClient } from '@/lib/supabase/admin-client'
+import { saveDiagnosticRun, getPreviousRun, scoreDelta, computeCheckDiffs } from '@/lib/diagnostic/history'
 import { headers } from 'next/headers'
 
-export async function runPublicDiagnosticAction(url: string): Promise<ScanResult> {
+export interface DiagnosticCompare {
+  prev: {
+    runId: string
+    score: number
+    createdAt: string
+  } | null
+  delta: { delta: number | null; tone: 'up' | 'down' | 'same' | 'new'; label: string }
+  checkDiffs?: Array<{ id: string; label: string; prevStatus: string | null; currStatus: string; prevPoints: number | null; currPoints: number; pointDelta: number }>
+}
+
+export async function runPublicDiagnosticAction(url: string): Promise<ScanResult & { compare?: DiagnosticCompare }> {
   if (!url || url.length > 500) {
     return {
       url,
@@ -15,9 +26,33 @@ export async function runPublicDiagnosticAction(url: string): Promise<ScanResult
       score: 0,
       checks: [],
       error: 'URL 이 비었거나 너무 깁니다 (최대 500자)',
+      pagesScanned: 0,
+      sitemapPresent: false,
     }
   }
-  return await scanSite(url)
+  const result = await scanSite(url)
+  if (result.error) return result
+
+  // 이전 진단 조회 → 저장 (순서 중요: 현재 결과 저장 전에 이전 조회)
+  let compare: DiagnosticCompare | undefined
+  try {
+    const origin = new URL(result.url).origin
+    const hdrs = await headers()
+    const ua = hdrs.get('user-agent') ?? ''
+    const prev = await getPreviousRun(origin, result.fetchedAt)
+    const delta = scoreDelta(prev?.score ?? null, result.score)
+    compare = {
+      prev: prev ? { runId: prev.id, score: prev.score, createdAt: prev.created_at } : null,
+      delta,
+      checkDiffs: prev
+        ? computeCheckDiffs(prev.checks, result.checks.map(c => ({ id: c.id, label: c.label, status: c.status, points: c.points })))
+        : undefined,
+    }
+    await saveDiagnosticRun({ result, triggeredBy: 'public', userAgent: ua })
+  } catch {
+    // 이력 기능 실패해도 진단 결과는 반환
+  }
+  return { ...result, compare }
 }
 
 export interface LeadCaptureInput {

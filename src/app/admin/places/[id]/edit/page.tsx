@@ -19,6 +19,12 @@ export default function EditPlacePage() {
   const [phone, setPhone] = useState('')
   const [naverPlaceUrl, setNaverPlaceUrl] = useState('')
   const [kakaoMapUrl, setKakaoMapUrl] = useState('')
+  const [homepageUrl, setHomepageUrl] = useState('')
+  const [blogUrl, setBlogUrl] = useState('')
+  const [instagramUrl, setInstagramUrl] = useState('')
+  const [naverReviewCount, setNaverReviewCount] = useState('')
+  const [kakaoRating, setKakaoRating] = useState('')
+  const [kakaoReviewCount, setKakaoReviewCount] = useState('')
   const [services, setServices] = useState<Array<{ name: string; description?: string; priceRange?: string }>>([])
   const [faqs, setFaqs] = useState<Array<{ question: string; answer: string }>>([])
   const [tags, setTags] = useState('')
@@ -32,6 +38,12 @@ export default function EditPlacePage() {
       setPhone((d.phone as string) ?? '')
       setNaverPlaceUrl((d.naver_place_url as string) ?? '')
       setKakaoMapUrl((d.kakao_map_url as string) ?? '')
+      setHomepageUrl((d.homepage_url as string) ?? '')
+      setBlogUrl((d.blog_url as string) ?? '')
+      setInstagramUrl((d.instagram_url as string) ?? '')
+      setNaverReviewCount(d.naver_review_count != null ? String(d.naver_review_count) : '')
+      setKakaoRating(d.kakao_rating != null ? String(d.kakao_rating) : '')
+      setKakaoReviewCount(d.kakao_review_count != null ? String(d.kakao_review_count) : '')
       setServices((d.services as Array<{ name: string; description?: string; priceRange?: string }>) ?? [])
       setFaqs((d.faqs as Array<{ question: string; answer: string }>) ?? [])
       setTags(((d.tags as string[]) ?? []).join(', '))
@@ -47,12 +59,31 @@ export default function EditPlacePage() {
   async function handleSave() {
     setSaving(true)
     setError(null)
+    const parseIntSafe = (v: string): number | null => {
+      const t = v.trim()
+      if (!t) return null
+      const n = Number.parseInt(t, 10)
+      return Number.isFinite(n) && n >= 0 ? n : null
+    }
+    const parseRatingSafe = (v: string): number | null => {
+      const t = v.trim()
+      if (!t) return null
+      const n = Number.parseFloat(t)
+      return Number.isFinite(n) && n >= 0 && n <= 5 ? n : null
+    }
+
     const result = await updatePlace(placeId, {
       name,
       description,
       phone: phone || undefined,
       naver_place_url: naverPlaceUrl || undefined,
       kakao_map_url: kakaoMapUrl || undefined,
+      homepage_url: homepageUrl || undefined,
+      blog_url: blogUrl || undefined,
+      instagram_url: instagramUrl || undefined,
+      naver_review_count: parseIntSafe(naverReviewCount),
+      kakao_rating: parseRatingSafe(kakaoRating),
+      kakao_review_count: parseIntSafe(kakaoReviewCount),
       services: services.filter(s => s.name.trim()),
       faqs: faqs.filter(f => f.question.trim() && f.answer.trim()),
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
@@ -104,6 +135,42 @@ export default function EditPlacePage() {
           <label className="block text-sm font-medium text-[#484848] mb-1">네이버 플레이스 URL</label>
           <input type="url" value={naverPlaceUrl} onChange={e => setNaverPlaceUrl(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
         </div>
+
+        {/* Phase 11 — 외부 링크 3종 + 소스별 수치 (수동 입력) */}
+        <fieldset className="border border-[#e5e5e5] rounded-lg p-4">
+          <legend className="px-2 text-xs font-semibold text-[#6a6a6a]">외부 링크 / 플랫폼별 수치</legend>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-[#484848] mb-1">홈페이지</label>
+              <input type="url" value={homepageUrl} onChange={e => setHomepageUrl(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[#484848] mb-1">블로그</label>
+              <input type="url" value={blogUrl} onChange={e => setBlogUrl(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[#484848] mb-1">Instagram</label>
+              <input type="url" value={instagramUrl} onChange={e => setInstagramUrl(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+            <div>
+              <label className="block text-xs font-medium text-[#484848] mb-1">Naver 리뷰 수</label>
+              <input type="number" min={0} value={naverReviewCount} onChange={e => setNaverReviewCount(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[#484848] mb-1">Kakao 평점 (0~5)</label>
+              <input type="number" step="0.1" min={0} max={5} value={kakaoRating} onChange={e => setKakaoRating(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[#484848] mb-1">Kakao 리뷰 수</label>
+              <input type="number" min={0} value={kakaoReviewCount} onChange={e => setKakaoReviewCount(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-[#9a9a9a]">
+            Google 평점/리뷰수는 Places API로 자동 수집됩니다. Naver/Kakao 는 공식 API가 없어 수동 입력입니다.
+          </p>
+        </fieldset>
 
         {/* 서비스 */}
         <div>

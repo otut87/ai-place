@@ -109,6 +109,16 @@ export interface Place {
   naverPlaceUrl?: string    // 네이버 플레이스 URL (sameAs)
   kakaoMapUrl?: string      // 카카오맵 URL (sameAs)
   googleBusinessUrl?: string // Google Business Profile URL (sameAs)
+  homepageUrl?: string      // 업체 공식 홈페이지
+  blogUrl?: string          // 블로그 (네이버 블로그 / 공식 블로그)
+  instagramUrl?: string     // Instagram
+  // 소스별 평점/리뷰수 — Phase 11 (medicalkoreaguide 벤치마크)
+  // Google 은 Places API 로 자동 수집, Naver/Kakao 는 수동 입력 (공식 API 없음, 스크래핑 금지)
+  googleRating?: number
+  googleReviewCount?: number
+  naverReviewCount?: number
+  kakaoRating?: number
+  kakaoReviewCount?: number
   lastUpdated?: string      // "2026-04-14" (ISO 8601, Freshness §4.2)
   latitude?: number
   longitude?: number

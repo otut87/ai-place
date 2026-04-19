@@ -59,6 +59,38 @@ export default async function CheckPage({ searchParams }: Props) {
                   </div>
                 ) : (
                   <>
+                    {/* 이전 진단 대비 변화 (M11.4) */}
+                    {result.compare?.prev && (
+                      <div className={`mb-4 rounded-xl border p-4 text-sm ${
+                        result.compare.delta.tone === 'up' ? 'border-emerald-300 bg-emerald-50 text-emerald-900' :
+                        result.compare.delta.tone === 'down' ? 'border-red-300 bg-red-50 text-red-900' :
+                        'border-slate-300 bg-slate-50 text-slate-800'
+                      }`}>
+                        <p className="font-semibold">
+                          {result.compare.delta.tone === 'up' ? '↑' : result.compare.delta.tone === 'down' ? '↓' : '='} {result.compare.delta.label}
+                        </p>
+                        <p className="mt-1 text-xs">
+                          이전 진단: {new Date(result.compare.prev.createdAt).toLocaleDateString('ko-KR')} · 점수 {result.compare.prev.score}
+                          → 현재 {result.score}
+                        </p>
+                        {result.compare.checkDiffs && result.compare.checkDiffs.some(d => d.pointDelta !== 0) && (
+                          <details className="mt-2">
+                            <summary className="cursor-pointer text-xs underline">체크별 변화 상세</summary>
+                            <ul className="mt-2 space-y-1 text-xs">
+                              {result.compare.checkDiffs.filter(d => d.pointDelta !== 0).map(d => (
+                                <li key={d.id}>
+                                  <strong>{d.label}</strong>: {d.prevStatus ?? '-'} → {d.currStatus}
+                                  {' '}(<span className={d.pointDelta > 0 ? 'text-emerald-700' : 'text-red-700'}>
+                                    {d.pointDelta > 0 ? `+${d.pointDelta}` : d.pointDelta}점
+                                  </span>)
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                      </div>
+                    )}
+
                     {/* 사이트맵 없음 경고 */}
                     {!result.sitemapPresent && (
                       <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">

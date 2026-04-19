@@ -2,6 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import type { Place } from "@/lib/types"
 import { formatRatingLine } from "@/lib/format/rating"
+import { PlaceReviewBadges } from "@/components/business/place-review-badges"
 
 // T-098: 사진 없는 업체 플레이스홀더 — 회색 아이콘 대신 업체명 첫 글자로 정돈.
 // 철학 10% UI 비중 내 최소 공수. 복잡한 일러스트/애니메이션 금지.
@@ -44,6 +45,18 @@ export function PlaceCard({ place }: { place: Place }) {
                 {formatRatingLine(place.rating, place.reviewCount ?? 0, 'google')}
               </span>
             </div>
+          )}
+
+          {/* Phase 11: 소스별 리뷰 배지 — Naver/Kakao 수치가 있을 때만 (Google 은 상단 평점과 중복이므로 생략) */}
+          {(place.naverReviewCount || place.kakaoRating != null || place.kakaoReviewCount) && (
+            <PlaceReviewBadges
+              className="mt-2"
+              place={{
+                naverReviewCount: place.naverReviewCount,
+                kakaoRating: place.kakaoRating,
+                kakaoReviewCount: place.kakaoReviewCount,
+              }}
+            />
           )}
 
           {/* Address */}

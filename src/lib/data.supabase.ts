@@ -142,7 +142,9 @@ export async function getAllPlaces(): Promise<Place[]> {
   return (await supabaseAllPlaces()) ?? []
 }
 
-/** Google Places API 결과를 DB에 저장 — 빌드 시 상세페이지에서 호출 */
+/** Google Places API 결과를 DB에 저장 — 빌드 시 상세페이지에서 호출.
+ *  Phase 11: 기존 rating/review_count 에 더해 google_rating/google_review_count 도 동시 저장.
+ *  배지 표시(PlaceReviewBadges)에서 소스별 수치를 분리 노출하기 위함. */
 export async function updatePlaceGoogleData(slug: string, data: {
   rating: number
   reviewCount: number
@@ -156,6 +158,8 @@ export async function updatePlaceGoogleData(slug: string, data: {
       .update({
         rating: data.rating,
         review_count: data.reviewCount,
+        google_rating: data.rating,
+        google_review_count: data.reviewCount,
         ...(data.googleBusinessUrl && { google_business_url: data.googleBusinessUrl }),
       })
       .eq('slug', slug)

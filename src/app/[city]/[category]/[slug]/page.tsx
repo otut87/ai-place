@@ -6,6 +6,8 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PhoneButton } from "@/components/phone-button"
 import { Disclaimer } from "@/components/business/disclaimer"
+import { PlaceReviewBadges } from "@/components/business/place-review-badges"
+import { PlaceExternalLinks } from "@/components/business/place-external-links"
 import { formatRatingLine } from "@/lib/format/rating"
 import { formatHoursKo } from "@/lib/format/hours"
 import { normalizeAddress } from "@/lib/format/address"
@@ -177,6 +179,19 @@ export default async function ProfilePage({ params }: Props) {
               </div>
             )}
 
+            {/* Phase 11: 소스별 리뷰 배지 (Google/Naver/Kakao) — 있는 것만 */}
+            <PlaceReviewBadges
+              className="mt-2"
+              size="md"
+              place={{
+                googleRating: googleData?.rating ?? place.googleRating,
+                googleReviewCount: googleData?.reviewCount ?? place.googleReviewCount,
+                naverReviewCount: place.naverReviewCount,
+                kakaoRating: place.kakaoRating,
+                kakaoReviewCount: place.kakaoReviewCount,
+              }}
+            />
+
             {/* GEO: Direct Answer Block — 추천형 문장 우선, 없으면 기존 description */}
             <p className="mt-3 text-base text-[#222222] font-medium leading-relaxed">
               {place.recommendationNote ?? place.description}
@@ -264,6 +279,9 @@ export default async function ProfilePage({ params }: Props) {
                   </div>
                 )}
               </dl>
+
+              {/* Phase 11: 외부 플랫폼 링크 6종 — 있는 것만 */}
+              <PlaceExternalLinks place={place} className="mt-4" />
             </section>
 
             {/* Services */}

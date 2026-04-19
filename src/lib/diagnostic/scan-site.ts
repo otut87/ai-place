@@ -28,8 +28,9 @@ export interface CheckResult {
   points: number
   maxPoints: number
   detail?: string
-  reference?: string
-  foundOn?: string          // schema 가 발견된 페이지 경로 (멀티 페이지 맥락)
+  reference?: string          // 문서 §표기
+  foundOn?: string            // schema 가 발견된 페이지 경로
+  evidence?: string           // T-145: 발견된 JSON-LD 일부 발췌 (디버깅·증거용, 최대 500자)
 }
 
 export type CheckId =
@@ -76,8 +77,8 @@ const WEIGHTS: Record<CheckId, number> = {
 
 const FETCH_TIMEOUT_MS = 10_000
 const MAX_SAMPLE_PAGES = 49       // 홈 포함 최대 50 페이지 (고유 route pattern 기준)
-const FETCH_CONCURRENCY = 6       // 병렬 fetch 동시 수 (서버 부담 완화)
-const USER_AGENT = 'AIPlaceDiagnostic/3.0 (+https://aiplace.kr/check)'
+const FETCH_CONCURRENCY = 8       // T-148: 6 → 8 병렬 증가 (속도 개선)
+const USER_AGENT = 'AIPlaceDiagnostic/3.1 (+https://aiplace.kr/check)'
 
 interface PageScan {
   url: string
