@@ -32,11 +32,14 @@ export interface BlogPostLoaded {
   title: string
   summary: string
   content: string
+  city: string
+  sector: string
   category: string | null
   status: string
   post_type: string
   target_query: string | null
   tags: string[]
+  published_at: string | null
 }
 
 export async function loadBlogPostForEdit(slug: string): Promise<BlogPostLoaded | null> {
@@ -44,7 +47,7 @@ export async function loadBlogPostForEdit(slug: string): Promise<BlogPostLoaded 
   if (!admin) return null
   const { data } = await admin
     .from('blog_posts')
-    .select('id, slug, title, summary, content, category, status, post_type, target_query, tags')
+    .select('id, slug, title, summary, content, city, sector, category, status, post_type, target_query, tags, published_at')
     .eq('slug', slug)
     .maybeSingle()
   return data as BlogPostLoaded | null

@@ -3,9 +3,10 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, Eye, FileText, LinkIcon, Calendar } from 'lucide-react'
-import { saveBlogPost, type SaveBlogInput } from '@/lib/actions/blog-edit'
+import { saveBlogPost, deleteBlogPost, type SaveBlogInput } from '@/lib/actions/blog-edit'
 import { renderMarkdown } from '@/lib/admin/blog-editor'
 import { getBlockChecklist } from '@/lib/blog/template'
+import { Trash2, ExternalLink } from 'lucide-react'
 import { useToast } from '@/components/admin/toast'
 import { AdminLink } from '@/components/admin/admin-link'
 
@@ -14,10 +15,13 @@ interface PostData {
   title: string
   summary: string
   content: string
+  city: string
+  sector: string
   category: string | null
   status: string
   target_query: string | null
   tags: string[]
+  published_at: string | null
 }
 
 interface SuggestionRow {
@@ -61,6 +65,18 @@ export function BlogEditorClient({
       else toast.error(r.error ?? '저장 실패')
     })
   }
+
+  function onDelete() {
+    if (!window.confirm(`"${post.title}" 을(를) 영구 삭제합니다. 되돌릴 수 없습니다. 계속할까요?`)) return
+    start(async () => {
+      const r = await deleteBlogPost(post.slug)
+      if (r.success) { toast.success('삭제됨'); router.push('/admin/blog') }
+      else toast.error(r.error ?? '삭제 실패')
+    })
+  }
+
+  const publicUrl = `/blog/${post.city}/${post.sector}/${post.slug}`
+  const isPublic = status === 'active'
 
   function insertLink(sug: SuggestionRow) {
     const snippet = `[${sug.label}](${sug.url})`
@@ -121,7 +137,39 @@ export function BlogEditorClient({
             <Save className="h-3.5 w-3.5" />
             {pending ? '저장 중…' : '저장'}
           </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={onDelete}
+            className="inline-flex h-9 items-center gap-1 rounded-md border border-[#e7e7e7] bg-white px-2 text-xs text-[#c26a6a] hover:bg-[#fef2f2] disabled:opacity-50"
+            title="삭제"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
         </div>
+      </div>
+
+      {/* 공개 URL 인디케이터 */}
+      <div className="flex items-center gap-2 border-b border-[#f0f0f0] bg-[#fafafa] px-5 py-1.5 text-[11px]">
+        <span className="text-[#6b6b6b]">공개 주소:</span>
+        {isPublic ? (
+          <a
+            href={publicUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 font-mono text-[#00a67c] hover:underline"
+          >
+            {publicUrl}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        ) : (
+          <>
+            <span className="font-mono text-[#9a9a9a]">{publicUrl}</span>
+            <span className="rounded-sm bg-amber-100 px-1.5 text-[10px] text-amber-800">
+              {status === 'draft' ? '초안 — 발행 전 비공개' : status === 'scheduled' ? '예약 — 발행 전 비공개' : '보관 — 비공개'}
+            </span>
+          </>
+        )}
       </div>
 
       {/* 분할 뷰 */}

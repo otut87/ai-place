@@ -55,6 +55,19 @@ export async function saveBlogPost(input: SaveBlogInput): Promise<{ success: boo
   return { success: true }
 }
 
+// T-128 — 블로그 글 삭제 (archive 가 아닌 진짜 DB 행 삭제).
+export async function deleteBlogPost(slug: string): Promise<{ success: boolean; error?: string }> {
+  await requireAuthForAction()
+  const admin = getAdminClient()
+  if (!admin) return { success: false, error: 'admin_unavailable' }
+  if (!slug.trim()) return { success: false, error: 'slug 필수' }
+  const { error } = await admin.from('blog_posts').delete().eq('slug', slug)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/admin/blog')
+  revalidatePath('/blog')
+  return { success: true }
+}
+
 // T-128 — 블로그 캘린더에서 "+ 새 토픽" 생성.
 export interface CreateBlogTopicInput {
   title: string
