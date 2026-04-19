@@ -125,4 +125,123 @@ describe('suggestInternalLinks', () => {
     const { suggestInternalLinks } = await import('@/lib/admin/blog-editor')
     expect(await suggestInternalLinks('dermatology', '')).toEqual([])
   })
+
+  it('place/blog 후보 병합 + content 에 이미 등장한 slug 는 제외한다', async () => {
+    // 두 개의 from 호출 (places, blog_posts) 각각 limit 반환이 다르도록 구성
+    const placesLimit = vi.fn().mockResolvedValue({
+      data: [
+        { slug: 'dr-evers', name: '닥터에버스의원', city: 'cheonan' },
+        { slug: 'cleanhue', name: '클린휴의원', city: 'cheonan' },
+      ],
+    })
+    const blogsLimit = vi.fn().mockResolvedValue({
+      data: [
+        { slug: 'acne-guide', title: '여드름 가이드' },
+        { slug: 'scar-guide', title: '흉터 가이드' },
+      ],
+    })
+
+    let call = 0
+    mockFrom.mockImplementation(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({ limit: call++ === 0 ? placesLimit : blogsLimit })),
+        })),
+      })),
+    }))
+
+    const { suggestInternalLinks } = await import('@/lib/admin/blog-editor')
+    // content 에 'cleanhue' + 'scar-guide' 포함 → 제외 대상
+    const out = await suggestInternalLinks('dermatology', 'cleanhue 참고. scar-guide 도.')
+    const slugs = out.map(o => o.slug)
+    expect(slugs).toContain('dr-evers')
+    expect(slugs).toContain('acne-guide')
+    expect(slugs).not.toContain('cleanhue')
+    expect(slugs).not.toContain('scar-guide')
+
+    const place = out.find(o => o.slug === 'dr-evers')!
+    expect(place.kind).toBe('place')
+    expect(place.url).toBe('/cheonan/dermatology/dr-evers')
+
+    const blog = out.find(o => o.slug === 'acne-guide')!
+    expect(blog.kind).toBe('blog')
+    expect(blog.url).toBe('/blog/acne-guide')
+  })
+
+  it('limit 에 의해 합계가 제한된다', async () => {
+    const placesLimit = vi.fn().mockResolvedValue({
+      data: Array.from({ length: 8 }, (_, i) => ({ slug: `p${i}`, name: `P${i}`, city: 'cheonan' })),
+    })
+    const blogsLimit = vi.fn().mockResolvedValue({
+      data: Array.from({ length: 8 }, (_, i) => ({ slug: `b${i}`, title: `B${i}` })),
+    })
+    let call = 0
+    mockFrom.mockImplementation(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({ limit: call++ === 0 ? placesLimit : blogsLimit })),
+        })),
+      })),
+    }))
+    const { suggestInternalLinks } = await import('@/lib/admin/blog-editor')
+    const out = await suggestInternalLinks('dermatology', '', 5)
+    expect(out.length).toBeLessThanOrEqual(5)
+  })
+
+  it('places/blogs 데이터가 null 이면 빈 배열을 반환한다', async () => {
+    const nullLimit = vi.fn().mockResolvedValue({ data: null })
+    mockFrom.mockImplementation(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({ limit: nullLimit })),
+        })),
+      })),
+    }))
+    const { suggestInternalLinks } = await import('@/lib/admin/blog-editor')
+    expect(await suggestInternalLinks('dermatology', '')).toEqual([])
+  })
+})
+
+describe('renderMarkdown (추가 커버리지)', () => {
+  it('h2/h4/h5/h6 도 렌더된다', () => {
+    expect(renderMarkdown('## h2')).toContain('<h2>h2</h2>')
+    expect(renderMarkdown('#### h4')).toContain('<h4>h4</h4>')
+    expect(renderMarkdown('##### h5')).toContain('<h5>h5</h5>')
+    expect(renderMarkdown('###### h6')).toContain('<h6>h6</h6>')
+  })
+
+  it('코드블록 안의 & < > 는 엔티티로 이스케이프', () => {
+    const r = renderMarkdown('```\nA & <B>\n```')
+    expect(r).toContain('&amp;')
+    expect(r).toContain('&lt;B&gt;')
+  })
+
+  it('줄바꿈 하나는 <br/> 로', () => {
+    const r = renderMarkdown('1행\n2행')
+    expect(r).toContain('1행<br/>2행')
+  })
+})
+
+describe('loadBlogPostForEdit (데이터 반환)', () => {
+  it('slug 일치 → 레코드 반환', async () => {
+    mockMaybeSingle.mockResolvedValueOnce({
+      data: {
+        id: 'x',
+        slug: 'y',
+        title: 'T',
+        summary: 'S',
+        content: 'body',
+        category: 'dermatology',
+        status: 'draft',
+        post_type: 'guide',
+        target_query: null,
+        tags: ['a'],
+      },
+      error: null,
+    })
+    const { loadBlogPostForEdit } = await import('@/lib/admin/blog-editor')
+    const r = await loadBlogPostForEdit('y')
+    expect(r?.slug).toBe('y')
+    expect(r?.tags).toEqual(['a'])
+  })
 })

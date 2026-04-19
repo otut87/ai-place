@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
+import { logSupabaseError, formatUserFacingError } from '@/lib/supabase/error'
 import { cachedCities, cachedCategories, cachedSectors } from '@/lib/admin/cached-data'
 import { parseListParams, clampPage, buildRange } from '@/lib/admin/places-query'
 import { AdminLink } from '@/components/admin/admin-link'
@@ -64,7 +65,7 @@ export default async function AdminPlacesPage({
   const { data, count, error } = await query.range(from, to)
 
   if (error) {
-    console.error('[admin/places] Query failed:', error)
+    logSupabaseError('admin/places', error)
   }
 
   const total = count ?? 0
@@ -123,6 +124,13 @@ export default async function AdminPlacesPage({
         sectors={sectors.map((s) => ({ value: s.slug, label: s.name }))}
         categories={categories.map((c) => ({ value: c.slug, label: c.name, sector: c.sector }))}
       />
+
+      {error ? (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <p className="font-medium">업체 목록을 불러오지 못했습니다</p>
+          <p className="mt-1 text-red-700">{formatUserFacingError(error)}</p>
+        </div>
+      ) : null}
 
       {places.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#dddddd] p-12 text-center">

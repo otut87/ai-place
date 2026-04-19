@@ -21,12 +21,15 @@ import type { BlogPostSummary } from '@/lib/types'
 
 const BASE_URL = 'https://aiplace.kr'
 
+const BLOG_INDEX_TITLE = 'AI Place 블로그 — 천안 지역 업체 가이드·비교·추천'
+const BLOG_INDEX_OG_TITLE = 'AI Place 블로그 — 천안 업체 가이드'
+
 export const metadata: Metadata = {
-  title: 'AI Place 블로그 — 천안 지역 업체 가이드·비교·추천',
+  title: BLOG_INDEX_TITLE,
   description: 'AI Place 블로그는 천안 지역 로컬 업체의 비교, 가이드, 추천 키워드 글을 제공합니다. ChatGPT, Claude, Gemini 검색에 최적화된 콘텐츠.',
   alternates: { canonical: '/blog' },
   openGraph: {
-    title: 'AI Place 블로그 — 천안 업체 가이드',
+    title: BLOG_INDEX_OG_TITLE,
     description: '천안 지역 업체 비교·가이드·추천 글 모음. AI 검색 최적화 콘텐츠.',
     url: '/blog',
     type: 'website',

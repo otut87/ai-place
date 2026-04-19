@@ -8,10 +8,10 @@ import { describe, it, expect } from 'vitest'
 import { renderMarkdownToHtml } from '@/lib/blog/markdown'
 
 describe('renderMarkdownToHtml — basic rendering', () => {
-  it('일반 markdown → HTML 변환', async () => {
+  it('일반 markdown → HTML 변환 (T-099: # 는 <h2> 로 강등, H1 은 페이지 헤더에만)', async () => {
     const html = await renderMarkdownToHtml('# 천안 피부과\n\n본문 내용')
-    expect(html).toContain('<h1>')
-    expect(html).toContain('천안 피부과')
+    expect(html).not.toContain('<h1>')
+    expect(html).toContain('<h2>천안 피부과</h2>')
     expect(html).toContain('<p>')
   })
 

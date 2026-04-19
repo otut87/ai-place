@@ -6,17 +6,20 @@ import { InquiryButton } from "@/components/inquiry-modal"
 import { safeJsonLd } from "@/lib/utils"
 import { generatePerson, generateProfilePage, generateFAQPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
+import { composePageTitle } from "@/lib/seo/compose-title"
 import type { FAQ } from "@/lib/types"
 
 const BASE_URL = 'https://aiplace.kr'
+const ABOUT_TITLE = composePageTitle('AI Place 소개 — 이지수 큐레이터')
+const ABOUT_DESCRIPTION = 'AI Place는 ChatGPT, Claude, Gemini에서 추천되는 로컬 업체 디렉토리입니다. 큐레이터 이지수가 천안 지역 업체의 AI 검색 노출을 돕고 있습니다.'
 
 export const metadata: Metadata = {
-  title: 'AI Place 소개 — 이지수 큐레이터',
-  description: 'AI Place는 ChatGPT, Claude, Gemini에서 추천되는 로컬 업체 디렉토리입니다. 큐레이터 이지수가 천안 지역 업체의 AI 검색 노출을 돕고 있습니다.',
+  title: ABOUT_TITLE,
+  description: ABOUT_DESCRIPTION,
   alternates: { canonical: '/about' },
   openGraph: {
-    title: 'AI Place 소개 — 이지수 큐레이터',
-    description: 'AI Place는 ChatGPT, Claude, Gemini에서 추천되는 로컬 업체 디렉토리입니다. 큐레이터 이지수가 천안 지역 업체의 AI 검색 노출을 돕고 있습니다.',
+    title: ABOUT_TITLE,
+    description: ABOUT_DESCRIPTION,
     url: '/about',
   },
 }

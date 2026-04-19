@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import type { Place } from '@/lib/types'
 import { normalizeAddress } from '@/lib/format/address'
+import { composePageTitle } from '@/lib/seo/compose-title'
 
 export const SITE_NAME = 'AI Place'
 export const SITE_DESCRIPTION =
@@ -37,7 +38,7 @@ interface CategoryMetaArgs {
 export function buildCategoryMetadata(args: CategoryMetaArgs): Metadata {
   const { cityName, categoryName, citySlug, categorySlug, hasPlaces, description } = args
   const year = new Date().getFullYear()
-  const title = `${cityName} ${categoryName} 추천 — ${year}년 업데이트`
+  const title = composePageTitle(`${cityName} ${categoryName} 추천 — ${year}년 업데이트`)
   const url = `/${citySlug}/${categorySlug}`
 
   const meta: Metadata = {
@@ -60,7 +61,7 @@ interface PlaceMetaArgs {
 
 export function buildPlaceMetadata(args: PlaceMetaArgs): Metadata {
   const { place, cityName, categoryName, citySlug, categorySlug } = args
-  const title = `${place.name} - ${cityName} ${categoryName}`
+  const title = composePageTitle(`${place.name} - ${cityName} ${categoryName}`)
   const serviceList = place.services?.map((s) => s.name).filter(Boolean).join(', ') ?? ''
   const ratingPhrase = place.rating != null ? `평점 ${place.rating}점.` : ''
   const addr = normalizeAddress(place.address)
@@ -85,7 +86,7 @@ export function buildPlaceMetadata(args: PlaceMetaArgs): Metadata {
 }
 
 export function buildBlogIndexMetadata(): Metadata {
-  const title = `${SITE_NAME} 블로그`
+  const title = composePageTitle(`${SITE_NAME} 블로그`)
   return {
     title,
     alternates: { canonical: '/blog' },
@@ -103,13 +104,14 @@ interface BlogPostMetaArgs {
 }
 
 export function buildBlogPostMetadata(args: BlogPostMetaArgs): Metadata {
+  const title = composePageTitle(args.postTitle)
   const url = `/blog/${args.citySlug}/${args.sectorSlug}/${args.postSlug}`
   return {
-    title: args.postTitle,
+    title,
     description: args.postSummary,
     alternates: { canonical: url },
     openGraph: {
-      title: args.postTitle,
+      title,
       description: args.postSummary,
       url,
       type: 'article',
@@ -126,7 +128,7 @@ interface GuideMetaArgs {
 }
 
 export function buildGuideMetadata(args: GuideMetaArgs): Metadata {
-  const title = `${args.cityName} ${args.categoryName} 가이드`
+  const title = composePageTitle(`${args.cityName} ${args.categoryName} 가이드`)
   const url = `/guide/${args.citySlug}/${args.categorySlug}`
   return {
     title,
@@ -141,7 +143,7 @@ interface CompareMetaArgs extends GuideMetaArgs {
 }
 
 export function buildCompareMetadata(args: CompareMetaArgs): Metadata {
-  const title = `${args.cityName} ${args.categoryName} — ${args.topicTitle}`
+  const title = composePageTitle(`${args.cityName} ${args.categoryName} — ${args.topicTitle}`)
   const url = `/compare/${args.citySlug}/${args.categorySlug}/${args.topicSlug}`
   return {
     title,

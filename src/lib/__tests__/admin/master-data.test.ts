@@ -114,9 +114,81 @@ describe('upsertCategory / deleteCategory', () => {
     expect((await upsertCategory({ slug: 'dermatology', name: '피부과', nameEn: 'Dermatology', sector: 'medical', icon: 'Stethoscope' })).success).toBe(true)
   })
 
+  it('DB 에러 → 실패', async () => {
+    mockUpsert.mockResolvedValueOnce({ error: { message: 'dup' } })
+    const { upsertCategory } = await import('@/lib/admin/master-data')
+    expect((await upsertCategory({ slug: 'x', name: 'X', nameEn: 'X', sector: 'living' })).success).toBe(false)
+  })
+
   it('사용 중 카테고리 삭제 → 거부', async () => {
     mockCountEq.mockResolvedValueOnce({ count: 10, error: null })
     const { deleteCategory } = await import('@/lib/admin/master-data')
     expect((await deleteCategory('dermatology')).success).toBe(false)
+  })
+
+  it('미사용 카테고리 삭제 → 성공', async () => {
+    const { deleteCategory } = await import('@/lib/admin/master-data')
+    expect((await deleteCategory('unused')).success).toBe(true)
+  })
+
+  it('카테고리 삭제 DB 에러 → 실패', async () => {
+    mockDeleteEq.mockResolvedValueOnce({ error: { message: 'cannot delete' } })
+    const { deleteCategory } = await import('@/lib/admin/master-data')
+    expect((await deleteCategory('unused')).success).toBe(false)
+  })
+})
+
+describe('admin null 가드 (전체 CRUD)', () => {
+  it('upsertCity / deleteCity / upsertCategory / deleteCategory 가 admin_unavailable 을 반환한다', async () => {
+    const { getAdminClient } = await import('@/lib/supabase/admin-client')
+    const { upsertCity, deleteCity, upsertCategory, deleteCategory } = await import('@/lib/admin/master-data')
+
+    vi.mocked(getAdminClient).mockReturnValueOnce(null)
+    expect((await upsertCity({ slug: 'x', name: 'X', nameEn: 'X' })).error).toBe('admin_unavailable')
+
+    vi.mocked(getAdminClient).mockReturnValueOnce(null)
+    expect((await deleteCity('x')).error).toBe('admin_unavailable')
+
+    vi.mocked(getAdminClient).mockReturnValueOnce(null)
+    expect((await upsertCategory({ slug: 'x', name: 'X', nameEn: 'X', sector: 'living' })).error).toBe('admin_unavailable')
+
+    vi.mocked(getAdminClient).mockReturnValueOnce(null)
+    expect((await deleteCategory('x')).error).toBe('admin_unavailable')
+  })
+})
+
+describe('deleteCity DB 에러 경로', () => {
+  it('count 검사 통과 후 delete 에러', async () => {
+    mockDeleteEq.mockResolvedValueOnce({ error: { message: 'FK violation' } })
+    const { deleteCity } = await import('@/lib/admin/master-data')
+    expect((await deleteCity('unused')).success).toBe(false)
+  })
+})
+
+describe('listCategories / listSectors', () => {
+  it('listCategories admin null → []', async () => {
+    const { getAdminClient } = await import('@/lib/supabase/admin-client')
+    vi.mocked(getAdminClient).mockReturnValueOnce(null)
+    const { listCategories } = await import('@/lib/admin/master-data')
+    expect(await listCategories()).toEqual([])
+  })
+
+  it('listSectors admin null → []', async () => {
+    const { getAdminClient } = await import('@/lib/supabase/admin-client')
+    vi.mocked(getAdminClient).mockReturnValueOnce(null)
+    const { listSectors } = await import('@/lib/admin/master-data')
+    expect(await listSectors()).toEqual([])
+  })
+
+  it('listCategories 정상 반환', async () => {
+    const { listCategories } = await import('@/lib/admin/master-data')
+    const r = await listCategories()
+    expect(Array.isArray(r)).toBe(true)
+  })
+
+  it('listSectors 정상 반환', async () => {
+    const { listSectors } = await import('@/lib/admin/master-data')
+    const r = await listSectors()
+    expect(Array.isArray(r)).toBe(true)
   })
 })

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { getPlaceById, updatePlace } from '@/lib/actions/manage-place'
+import { serializePostgrestError, formatUserFacingError } from '@/lib/supabase/error'
 
 export default function EditPlacePage() {
   const router = useRouter()
@@ -36,8 +37,9 @@ export default function EditPlacePage() {
       setTags(((d.tags as string[]) ?? []).join(', '))
       setLoading(false)
     }).catch(err => {
-      console.error('[edit] getPlaceById error:', err)
-      setError('데이터 로딩 실패: ' + (err?.message ?? '알 수 없는 오류'))
+      const serialized = serializePostgrestError(err)
+      console.error('[edit] getPlaceById error:', serialized)
+      setError(`데이터 로딩 실패: ${formatUserFacingError(err)}`)
       setLoading(false)
     })
   }, [placeId])

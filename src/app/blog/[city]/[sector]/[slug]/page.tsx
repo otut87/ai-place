@@ -22,6 +22,7 @@ import {
 import { getCities, getSectors, getCategories, getPlaceBySlug } from '@/lib/data.supabase'
 import { generateArticle, generateFAQPage, generateItemList } from '@/lib/jsonld'
 import { generateBreadcrumbList, buildBlogBreadcrumb } from '@/lib/seo'
+import { composePageTitle } from '@/lib/seo/compose-title'
 import { safeJsonLd } from '@/lib/utils'
 import type { Place, BlogPostSummary } from '@/lib/types'
 
@@ -42,12 +43,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = await getBlogPost(city, sector, slug)
   if (!post) return {}
   const url = `/blog/${city}/${sector}/${slug}`
+  const pageTitle = composePageTitle(post.title)
   return {
-    title: `${post.title} | AI Place`,
+    title: pageTitle,
     description: post.summary,
     alternates: { canonical: url },
     openGraph: {
-      title: post.title,
+      title: pageTitle,
       description: post.summary,
       url,
       type: 'article',
