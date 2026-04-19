@@ -28,9 +28,14 @@ function classifyPage(relativePath: string): PageType {
   if (relativePath.match(/^guide\//)) return 'guide'
   if (relativePath.match(/\/k\//)) return 'keyword'
   if (relativePath.match(/^admin\//)) return 'other'
+  // T-097: 블로그 허브/글은 'other' — 별도 SEO 프로파일 미적용 (기존 블로그 글은 기본
+  // Article 스키마 검증만 별도로 있음)
+  if (relativePath.match(/^blog\//)) return 'other'
   // /cheonan/dermatology.html = category
   // /cheonan/dermatology/soo-derm.html = profile
+  // /cheonan.html = city hub (T-097) — 'other' (업체 스키마 강제 않음)
   const parts = relativePath.replace('.html', '').split('/')
+  if (parts.length === 1) return 'other'     // T-097: /[city] 도시 허브
   if (parts.length === 2) return 'category'  // city/category
   if (parts.length === 3) return 'profile'   // city/category/slug
   return 'other'

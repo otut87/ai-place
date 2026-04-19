@@ -41,10 +41,24 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
 
   const cities = await getCities()
   const categories = await getCategories()
+  const { getSectors } = await import('./data.supabase')
+  const sectors = await getSectors()
 
   // 업체 프로필 페이지 (sitemap 필터링에도 사용)
   const places = await getAllPlaces()
   const activeCategoryKeys = new Set(places.map(p => `${p.city}/${p.category}`))
+
+  // T-097: 도시 허브 (/[city]) — 업체가 있는 도시만
+  const activeCities = new Set(places.map(p => p.city))
+  for (const city of cities) {
+    if (!activeCities.has(city.slug)) continue
+    entries.push({
+      url: `${baseUrl}/${city.slug}`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    })
+  }
 
   // 도시+카테고리 리스트 페이지 (업체가 있는 카테고리만)
   for (const city of cities) {
@@ -55,6 +69,31 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
         lastModified: now,
         changeFrequency: 'weekly',
         priority: 0.9,
+      })
+    }
+  }
+
+  // T-097: 블로그 도시/섹터 허브 — 블로그가 있는 도시/섹터만
+  const blogAll = await getAllActiveBlogPosts()
+  const blogCities = new Set(blogAll.map(p => p.city))
+  for (const city of cities) {
+    if (!blogCities.has(city.slug)) continue
+    entries.push({
+      url: `${baseUrl}/blog/${city.slug}`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    })
+  }
+  const blogCitySectorKeys = new Set(blogAll.map(p => `${p.city}/${p.sector}`))
+  for (const city of cities) {
+    for (const sec of sectors) {
+      if (!blogCitySectorKeys.has(`${city.slug}/${sec.slug}`)) continue
+      entries.push({
+        url: `${baseUrl}/blog/${city.slug}/${sec.slug}`,
+        lastModified: now,
+        changeFrequency: 'weekly',
+        priority: 0.75,
       })
     }
   }
@@ -78,7 +117,7 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
   })
 
   // 블로그 글 (T-010g 마이그레이션 후 통합 — keyword/compare/guide 12개)
-  const blogPosts = await getAllActiveBlogPosts()
+  const blogPosts = blogAll
   for (const p of blogPosts) {
     entries.push({
       url: `${baseUrl}/blog/${p.city}/${p.sector}/${p.slug}`,
