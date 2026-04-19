@@ -16,9 +16,27 @@ describe('parseListParams', () => {
       category: null,
       sector: null,
       status: null,
+      subscription: null,
+      minQualityScore: null,
       page: 1,
       pageSize: DEFAULT_PAGE_SIZE,
     })
+  })
+
+  it('accepts subscription filter values', () => {
+    expect(parseListParams({ subscription: 'paid' }).subscription).toBe('paid')
+    expect(parseListParams({ subscription: 'past_due' }).subscription).toBe('past_due')
+    expect(parseListParams({ subscription: 'suspended' }).subscription).toBe('suspended')
+    expect(parseListParams({ subscription: 'weird' }).subscription).toBeNull()
+    expect(parseListParams({ subscription: 'all' }).subscription).toBeNull()
+  })
+
+  it('clamps min_quality_score to 0~100', () => {
+    expect(parseListParams({ min_quality_score: '70' }).minQualityScore).toBe(70)
+    expect(parseListParams({ min_quality_score: '-5' }).minQualityScore).toBe(0)
+    expect(parseListParams({ min_quality_score: '150' }).minQualityScore).toBe(100)
+    expect(parseListParams({ min_quality_score: 'abc' }).minQualityScore).toBeNull()
+    expect(parseListParams({}).minQualityScore).toBeNull()
   })
 
   it('trims the search query', () => {

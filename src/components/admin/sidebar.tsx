@@ -38,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/admin/seo', label: 'SEO & AI 봇', icon: Radar, group: 'ops' },
   { href: '/admin/citations', label: 'AI 인용', icon: Radar, group: 'ops' },
   { href: '/admin/customers', label: '고객', icon: Users, group: 'crm' },
-  { href: '/admin/billing', label: '결제', icon: CreditCard, group: 'crm' },
+  { href: '/admin/billing/failures', label: '결제 실패', icon: CreditCard, group: 'crm' },
   { href: '/admin/settings', label: '설정', icon: Settings, group: 'settings' },
 ]
 

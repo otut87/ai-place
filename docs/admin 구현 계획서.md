@@ -194,14 +194,15 @@
   - [ ] `places.customer_id` 연결 (1 고객 ↔ N 업체)
 - **DoD**: 마이그레이션 적용 후 타입 동기화
 
-### T-071 PG 어댑터 인터페이스 + 포트원 1순위 *(3일)*
-- **근거**: 설계안 §3.10
+### T-071 PG 어댑터 인터페이스 + 토스페이먼츠 *(3일)*
+- **근거**: 설계안 §3.10. 단일 PG 직결로 중개 수수료 제거. 초기에는 **공개 테스트키** (`test_ck_...` / `test_sk_...`) 로 가입 없이 착수.
 - **작업**:
-  - [ ] `src/lib/billing/adapter.ts` — `issueBillingKey / chargeOnce / scheduleNext / revoke` 인터페이스
-  - [ ] `src/lib/billing/portone.ts` — 1차 구현 (토스페이먼츠 호환)
+  - [ ] `src/lib/billing/adapter.ts` — `issueBillingKey / chargeOnce / scheduleNext / revoke / verifyWebhook` 인터페이스
+  - [ ] `src/lib/billing/toss.ts` — 1차 구현. `https://api.tosspayments.com/v1/billing/authorizations/*` 기반
+  - [ ] Basic Auth: `Buffer.from(`${secretKey}:`).toString('base64')`
   - [ ] 환경변수 없으면 mock 어댑터 폴백 (기존 `notify/email.ts`, `notify/slack.ts` 패턴 준용)
-  - [ ] 테스트: 성공/실패/만료/한도초과 4개 경로
-- **DoD**: 실제 PG 키 없이도 개발·테스트 완결
+  - [ ] 테스트: 성공/실패/만료/한도초과 4개 경로 (테스트 카드번호 규칙)
+- **DoD**: 실제 가맹점 키 없이도 공개 테스트키로 개발·테스트 완결
 
 ### T-072 결제 정책 문구 단일 소스 *(1일)*
 - **근거**: 설계안 §3.11 — "카드매출전표가 부가세 적격증빙…" 4곳 일괄 반영
@@ -338,8 +339,8 @@ Phase 7 진행과 **병렬로** 선제 대응.
 
 | 변수 | 용도 | TASK |
 |---|---|---|
-| `PORTONE_API_KEY`, `PORTONE_STORE_ID` | 빌링키 발급·결제 | T-071 |
-| `TOSS_PAYMENTS_SECRET_KEY` | Fallback PG | T-071 |
+| `TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY` | 빌링키 발급·정기결제 (미설정 시 공개 테스트키 사용) | T-071 |
+| `TOSS_WEBHOOK_SECRET` | 웹훅 서명 검증 | T-071 |
 | `VERCEL_CRON_SECRET` | 만료임박·결제 재시도 배치 | T-073, T-074 |
 | `RESEND_API_KEY`, `RESEND_FROM`, `ADMIN_NOTIFY_EMAIL` | 이메일 알림 | Phase 6 완료 |
 | `SLACK_WEBHOOK_URL` | 어드민 슬랙 | Phase 6 완료 |

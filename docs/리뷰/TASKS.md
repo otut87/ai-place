@@ -343,11 +343,11 @@ T-055 누락분.
 - [ ] `places.customer_id` 연결
 - **DoD**: 마이그레이션 + 타입 동기화
 
-## T-071. PG 어댑터 + 포트원 🔜 [Billing]
-- [ ] `src/lib/billing/adapter.ts` — `issueBillingKey / chargeOnce / scheduleNext / revoke`
-- [ ] `portone.ts` 1차 구현 + mock 폴백 (notify 패턴)
-- [ ] 테스트: 성공/실패/만료/한도초과
-- **DoD**: 실 PG 키 없이도 테스트 완결
+## T-071. PG 어댑터 + 토스페이먼츠 🔜 [Billing]
+- [ ] `src/lib/billing/adapter.ts` — `issueBillingKey / chargeOnce / scheduleNext / revoke / verifyWebhook`
+- [ ] `toss.ts` 1차 구현 + mock 폴백 (notify 패턴). 공개 테스트키로 시작
+- [ ] 테스트: 성공/실패/만료/한도초과 4경로 (테스트 카드번호 규칙)
+- **DoD**: 가맹점 가입 전 공개 테스트키로 테스트 완결
 
 ## T-072. 결제 정책 문구 단일 소스 🔜 [Billing]
 "카드매출전표가 부가세 적격증빙…" 4곳 일괄.

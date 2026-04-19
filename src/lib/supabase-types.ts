@@ -48,6 +48,8 @@ export interface DbPlace {
   jibun_address: string | null
   sigungu_code: string | null
   zonecode: string | null
+  // 020_billing.sql (T-070)
+  customer_id: string | null
   created_at: string
   updated_at: string
 }
@@ -246,5 +248,6 @@ export function placeToDbInsert(place: Place): Omit<DbPlace, 'id' | 'created_at'
     recommendation_note: place.recommendationNote ?? null,
     owner_id: null,
     status: 'active',
+    customer_id: null,
   }
 }

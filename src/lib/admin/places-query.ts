@@ -2,6 +2,9 @@ export const DEFAULT_PAGE_SIZE = 20
 export const MAX_PAGE_SIZE = 100
 
 export type PlaceStatus = 'active' | 'pending' | 'rejected'
+// T-065 — 구독 상태 필터. DB 값은 subscriptions.status.
+// 'paid' 는 UX 단순화를 위한 별칭 (active).
+export type SubscriptionFilter = 'paid' | 'unpaid' | 'past_due' | 'suspended' | null
 
 export interface ListParams {
   q: string
@@ -9,6 +12,8 @@ export interface ListParams {
   category: string | null
   sector: string | null
   status: PlaceStatus | null
+  subscription: SubscriptionFilter
+  minQualityScore: number | null      // T-065 — 0~100
   page: number
   pageSize: number
 }
@@ -39,6 +44,20 @@ function normalizeStatus(value: string | undefined): PlaceStatus | null {
   return null
 }
 
+function normalizeSubscription(value: string | undefined): SubscriptionFilter {
+  if (value === 'paid' || value === 'unpaid' || value === 'past_due' || value === 'suspended') return value
+  return null
+}
+
+function normalizeMinQualityScore(value: string | undefined): number | null {
+  if (!value) return null
+  const n = Number.parseInt(value, 10)
+  if (!Number.isFinite(n)) return null
+  if (n < 0) return 0
+  if (n > 100) return 100
+  return n
+}
+
 function parseIntSafe(value: string | undefined, fallback: number): number {
   if (value == null) return fallback
   const n = Number.parseInt(value, 10)
@@ -57,6 +76,8 @@ export function parseListParams(raw: RawInput): ListParams {
     category: normalizeSlug(pickFirst(raw, 'category')),
     sector: normalizeSlug(pickFirst(raw, 'sector')),
     status: normalizeStatus(pickFirst(raw, 'status')),
+    subscription: normalizeSubscription(pickFirst(raw, 'subscription')),
+    minQualityScore: normalizeMinQualityScore(pickFirst(raw, 'min_quality_score')),
     page,
     pageSize,
   }

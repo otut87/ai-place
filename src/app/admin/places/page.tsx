@@ -26,9 +26,26 @@ export default async function AdminPlacesPage({
   }
 
   const supabase = await createServerClient()
+
+  // T-065: subscription 필터가 걸리면 해당 상태의 customer_ids 를 먼저 확보.
+  let customerIdsFilter: string[] | null = null
+  if (params.subscription) {
+    const subStatus = params.subscription === 'paid' ? 'active' : params.subscription
+    const { data: subRows } = await supabase
+      .from('subscriptions')
+      .select('customer_id')
+      .eq('status', subStatus)
+    customerIdsFilter = (subRows ?? []).map((r) => (r as { customer_id: string }).customer_id)
+    // 매칭 구독이 0건이면 결과도 0건
+    if (customerIdsFilter.length === 0) customerIdsFilter = ['00000000-0000-0000-0000-000000000000']
+  }
+
   let query = supabase
     .from('places')
-    .select('id, slug, name, city, category, status, rating, review_count, phone, tags, created_at', { count: 'exact' })
+    .select(
+      'id, slug, name, city, category, status, rating, review_count, phone, tags, quality_score, customer_id, created_at',
+      { count: 'exact' },
+    )
     .order('created_at', { ascending: false })
 
   if (params.q) query = query.ilike('name', `%${params.q}%`)
@@ -38,6 +55,8 @@ export default async function AdminPlacesPage({
     query = query.in('category', categorySlugsForSector)
   }
   if (params.status) query = query.eq('status', params.status)
+  if (params.minQualityScore !== null) query = query.gte('quality_score', params.minQualityScore)
+  if (customerIdsFilter) query = query.in('customer_id', customerIdsFilter)
 
   // 서버에서 count를 먼저 얻기 위해 range는 호출 후 결과의 count로 총 페이지 계산 → 재요청 필요 시 clamp
   const pageSize = params.pageSize
@@ -52,7 +71,24 @@ export default async function AdminPlacesPage({
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const safePage = clampPage(params.page, totalPages)
 
-  const places = (data ?? []) as TableRow[]
+  const placesRaw = (data ?? []) as Array<TableRow & { customer_id: string | null }>
+
+  // T-065: 현재 페이지 업체들의 구독 상태를 일괄 조회해 각 행에 주입
+  const customerIds = Array.from(new Set(placesRaw.map((p) => p.customer_id).filter((x): x is string => !!x)))
+  const subByCustomer = new Map<string, string>()
+  if (customerIds.length > 0) {
+    const { data: subs } = await supabase
+      .from('subscriptions')
+      .select('customer_id, status')
+      .in('customer_id', customerIds)
+    for (const s of (subs ?? []) as Array<{ customer_id: string; status: string }>) {
+      subByCustomer.set(s.customer_id, s.status)
+    }
+  }
+  const places: TableRow[] = placesRaw.map((p) => ({
+    ...p,
+    subscription_status: p.customer_id ? subByCustomer.get(p.customer_id) ?? null : null,
+  }))
 
   // Pagination 컴포에 넘길 기본 쿼리 (page 제외)
   const baseParams = new URLSearchParams()
@@ -61,6 +97,8 @@ export default async function AdminPlacesPage({
   if (params.category) baseParams.set('category', params.category)
   if (params.sector) baseParams.set('sector', params.sector)
   if (params.status) baseParams.set('status', params.status)
+  if (params.subscription) baseParams.set('subscription', params.subscription)
+  if (params.minQualityScore !== null) baseParams.set('min_quality_score', String(params.minQualityScore))
   if (params.pageSize !== 20) baseParams.set('pageSize', String(params.pageSize))
 
   return (

@@ -21,6 +21,29 @@ export interface TableRow {
   phone: string | null
   tags: string[] | null
   created_at: string
+  // T-065
+  quality_score?: number | null
+  subscription_status?: string | null
+  customer_id?: string | null
+}
+
+function SubscriptionPill({ status }: { status: string | null | undefined }) {
+  if (!status) return <span className="text-xs text-[#9a9a9a]">—</span>
+  const map: Record<string, { label: string; cls: string }> = {
+    active:    { label: '결제 중',  cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    past_due:  { label: '연체',     cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+    suspended: { label: '중단',     cls: 'bg-red-50 text-red-700 border-red-200' },
+    canceled:  { label: '해지',     cls: 'bg-[#f3f4f6] text-[#6b6b6b] border-[#e7e7e7]' },
+    pending:   { label: '결제 대기', cls: 'bg-[#f3f4f6] text-[#6b6b6b] border-[#e7e7e7]' },
+  }
+  const { label, cls } = map[status] ?? { label: status, cls: 'bg-[#f3f4f6] text-[#6b6b6b] border-[#e7e7e7]' }
+  return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] ${cls}`}>{label}</span>
+}
+
+function QualityPill({ score }: { score: number | null | undefined }) {
+  if (score == null) return <span className="text-xs text-[#9a9a9a]">—</span>
+  const tone = score >= 80 ? 'text-emerald-700' : score >= 60 ? 'text-amber-700' : 'text-red-700'
+  return <span className={`text-xs font-medium ${tone}`}>{score}점</span>
 }
 
 function StatusPill({ status }: { status: string }) {
@@ -201,6 +224,8 @@ export function PlacesTable({ places }: { places: TableRow[] }) {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                <QualityPill score={place.quality_score} />
+                <SubscriptionPill status={place.subscription_status} />
                 <StatusPill status={place.status} />
                 <PlaceActions placeId={place.id} placeName={place.name} status={place.status} />
               </div>

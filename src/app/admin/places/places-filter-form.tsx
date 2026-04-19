@@ -30,6 +30,9 @@ export function PlacesFilterForm({ cities, sectors, categories }: Props) {
   const [sector, setSector] = useState(sp.get('sector') ?? 'all')
   const [category, setCategory] = useState(sp.get('category') ?? 'all')
   const [status, setStatus] = useState(sp.get('status') ?? 'all')
+  // T-065
+  const [subscription, setSubscription] = useState(sp.get('subscription') ?? 'all')
+  const [minQualityScore, setMinQualityScore] = useState(sp.get('min_quality_score') ?? '')
 
   const filteredCategories =
     sector === 'all' ? categories : categories.filter((c) => c.sector === sector)
@@ -42,6 +45,9 @@ export function PlacesFilterForm({ cities, sectors, categories }: Props) {
     if (sector !== 'all') params.set('sector', sector)
     if (category !== 'all') params.set('category', category)
     if (status !== 'all') params.set('status', status)
+    if (subscription !== 'all') params.set('subscription', subscription)
+    const mq = Number.parseInt(minQualityScore, 10)
+    if (Number.isFinite(mq) && mq > 0) params.set('min_quality_score', String(mq))
     router.push(`/admin/places${params.toString() ? `?${params}` : ''}`)
   }
 
@@ -51,6 +57,8 @@ export function PlacesFilterForm({ cities, sectors, categories }: Props) {
     setSector('all')
     setCategory('all')
     setStatus('all')
+    setSubscription('all')
+    setMinQualityScore('')
     router.push('/admin/places')
   }
 
@@ -115,6 +123,29 @@ export function PlacesFilterForm({ cities, sectors, categories }: Props) {
           </option>
         ))}
       </select>
+
+      <select
+        value={subscription}
+        onChange={(e) => setSubscription(e.target.value)}
+        className={selectCls}
+        aria-label="구독 상태"
+      >
+        <option value="all">전체 구독</option>
+        <option value="paid">결제 중</option>
+        <option value="past_due">연체</option>
+        <option value="suspended">일시 중단</option>
+      </select>
+
+      <input
+        type="number"
+        min={0}
+        max={100}
+        value={minQualityScore}
+        onChange={(e) => setMinQualityScore(e.target.value)}
+        placeholder="최소 품질 점수"
+        aria-label="최소 품질 점수"
+        className="h-10 w-32 rounded-lg border border-[#dddddd] bg-white px-3 text-sm focus:outline-none focus:border-[#222222]"
+      />
 
       <button type="submit" className="h-10 px-4 rounded-lg bg-[#222222] text-white text-sm font-medium">
         적용
