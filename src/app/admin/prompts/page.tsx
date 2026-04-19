@@ -8,6 +8,7 @@ import {
   type PromptTemplateRow,
   type PromptAggregate,
 } from '@/lib/admin/prompt-templates'
+import { ActivatePromptButton } from './activate-button'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -73,7 +74,7 @@ export default async function AdminPromptsPage({
                   <tr key={t.id}>
                     <td className="px-4 py-3 font-medium text-[#191919]">v{t.version}</td>
                     <td className="px-4 py-3">
-                      {t.active ? <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">활성</span> : <span className="text-xs text-[#6b6b6b]">—</span>}
+                      <ActivatePromptButton id={t.id} active={t.active} />
                     </td>
                     <td className="px-4 py-3">{a?.calls ?? 0}</td>
                     <td className="px-4 py-3">{a ? a.avgScore.toFixed(1) : '—'}</td>

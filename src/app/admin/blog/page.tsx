@@ -4,6 +4,8 @@ import { requireAuth } from '@/lib/auth'
 import { listBlogPostsForMonth, buildCalendarGrid, parseMonthParam } from '@/lib/admin/blog-calendar'
 import { listDraftTopics } from '@/lib/admin/blog-editor'
 import { AdminLink } from '@/components/admin/admin-link'
+import { cachedCities, cachedCategories, cachedSectors } from '@/lib/admin/cached-data'
+import { CreateTopicButton } from './create-topic-button'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -20,11 +22,17 @@ export default async function AdminBlogPage({
   const monthRaw = Array.isArray(raw.m) ? raw.m[0] : raw.m
   const { year, month } = parseMonthParam(monthRaw)
 
-  const [posts, drafts] = await Promise.all([
+  const [posts, drafts, cities, sectors, categories] = await Promise.all([
     listBlogPostsForMonth(year, month),
     listDraftTopics(20),
+    cachedCities(),
+    cachedSectors(),
+    cachedCategories(),
   ])
   const grid = buildCalendarGrid(year, month, posts)
+  const cityOpts = cities.map(c => ({ value: c.slug, label: c.name }))
+  const sectorOpts = sectors.map(s => ({ value: s.slug, label: s.name }))
+  const categoryOpts = categories.map(c => ({ value: c.slug, label: c.name, sector: c.sector }))
 
   const prev = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 }
   const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 }
@@ -40,6 +48,7 @@ export default async function AdminBlogPage({
           <AdminLink href={`/admin/blog?m=${prev.y}-${String(prev.m).padStart(2, '0')}`} className="rounded-md border border-[#e7e7e7] bg-white px-3 py-1.5">이전</AdminLink>
           <span className="min-w-24 text-center font-medium">{year}년 {month}월</span>
           <AdminLink href={`/admin/blog?m=${next.y}-${String(next.m).padStart(2, '0')}`} className="rounded-md border border-[#e7e7e7] bg-white px-3 py-1.5">다음</AdminLink>
+          <CreateTopicButton cities={cityOpts} sectors={sectorOpts} categories={categoryOpts} />
         </div>
       </header>
 
@@ -54,11 +63,24 @@ export default async function AdminBlogPage({
             {grid.map((day) => (
               <div
                 key={day.date}
-                className={`min-h-24 border-b border-r border-[#f0f0f0] p-2 text-xs ${
+                className={`group min-h-24 border-b border-r border-[#f0f0f0] p-2 text-xs ${
                   day.inCurrentMonth ? 'bg-white' : 'bg-[#fafafa] text-[#bdbdbd]'
                 }`}
               >
-                <div className="mb-1 font-medium">{day.dayOfMonth}</div>
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="font-medium">{day.dayOfMonth}</span>
+                  {day.inCurrentMonth && (
+                    <span className="opacity-0 group-hover:opacity-100">
+                      <CreateTopicButton
+                        cities={cityOpts}
+                        sectors={sectorOpts}
+                        categories={categoryOpts}
+                        initialDate={day.date}
+                        compact
+                      />
+                    </span>
+                  )}
+                </div>
                 <ul className="space-y-0.5">
                   {day.posts.map((p) => (
                     <li key={p.id}>

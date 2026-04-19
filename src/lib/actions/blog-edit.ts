@@ -49,3 +49,55 @@ export async function saveBlogPost(input: SaveBlogInput): Promise<{ success: boo
   revalidatePath('/blog')
   return { success: true }
 }
+
+// T-128 — 블로그 캘린더에서 "+ 새 토픽" 생성.
+export interface CreateBlogTopicInput {
+  title: string
+  city: string
+  sector: string
+  category?: string | null
+  postType: 'keyword' | 'compare' | 'guide' | 'general'
+  scheduledDate?: string | null   // YYYY-MM-DD 형식
+}
+
+export async function createBlogTopic(
+  input: CreateBlogTopicInput,
+): Promise<{ success: true; slug: string } | { success: false; error: string }> {
+  await requireAuthForAction()
+  const admin = getAdminClient()
+  if (!admin) return { success: false, error: 'admin_unavailable' }
+
+  const title = input.title.trim()
+  if (!title) return { success: false, error: '제목 필수' }
+  if (!input.city.trim() || !input.sector.trim()) return { success: false, error: 'city·sector 필수' }
+
+  // slug 생성: 영숫자·한글 간략화 + 3글자 랜덤 접미 (유일성 확보)
+  const base = title
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 40)
+  const suffix = Math.random().toString(36).slice(2, 5)
+  const slug = (base || 'draft') + '-' + suffix
+
+  const payload = {
+    slug,
+    title,
+    summary: '',
+    content: '',
+    city: input.city.trim(),
+    sector: input.sector.trim(),
+    category: input.category ?? null,
+    post_type: input.postType,
+    tags: [] as string[],
+    status: input.scheduledDate ? 'scheduled' : 'draft',
+    published_at: input.scheduledDate ? new Date(input.scheduledDate).toISOString() : null,
+  }
+
+  const { error } = await admin.from('blog_posts').insert(payload)
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin/blog')
+  return { success: true, slug }
+}

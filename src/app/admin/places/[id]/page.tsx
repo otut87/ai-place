@@ -5,6 +5,7 @@ import { listAuditForPlace } from '@/lib/actions/audit-places'
 import { computeCompleteness, PUBLIC_READY_THRESHOLD } from '@/lib/admin/completeness'
 import { parseFieldMeta, summarizeSource, type FieldMetaField } from '@/lib/admin/field-meta'
 import { summarizeAction, actorTypeLabel, type AuditAction, type ActorType } from '@/lib/admin/audit'
+import { getBlogPostsByPlace } from '@/lib/blog/data.supabase'
 import { AdminLink } from '@/components/admin/admin-link'
 import { User, Bot, Cog, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { notFound } from 'next/navigation'
@@ -107,9 +108,9 @@ export default async function AdminPlaceDetailPage({ params, searchParams }: Par
             {activeTab === 'services' && <ListTab items={place.services ?? []} kind="services" meta={meta} />}
             {activeTab === 'faqs' && <FaqsTab items={place.faqs ?? []} meta={meta} />}
             {activeTab === 'tags' && <TagsTab tags={place.tags ?? []} meta={meta} />}
-            {activeTab === 'blog' && <StubTab task="T-078" label="블로그 연동" />}
-            {activeTab === 'seo' && <StubTab task="T-081" label="SEO / AI 봇 방문" />}
-            {activeTab === 'pipeline' && <StubTab task="T-076" label="자동화 파이프라인 이력" />}
+            {activeTab === 'blog' && <BlogTab placeSlug={place.slug} />}
+            {activeTab === 'seo' && <SeoTab placeSlug={place.slug} city={place.city} category={place.category} />}
+            {activeTab === 'pipeline' && <PipelineTab placeId={place.id} />}
             {activeTab === 'audit' && <AuditTab placeId={place.id} />}
           </section>
         </div>
@@ -273,6 +274,189 @@ function StubTab({ task, label }: { task: string; label: string }) {
         <strong>{label}</strong> 탭은 <code className="rounded bg-[#f3f4f6] px-1">{task}</code> 에서 구현 예정입니다.
       </span>
     </div>
+  )
+}
+
+// T-128: 이 업체와 연결된 블로그 글 (related_place_slugs 기반)
+async function BlogTab({ placeSlug }: { placeSlug: string }) {
+  const posts = await getBlogPostsByPlace(placeSlug)
+  if (posts.length === 0) {
+    return (
+      <p className="text-sm text-[#6a6a6a]">
+        이 업체와 연결된 블로그 글이 아직 없습니다. 블로그 글 편집 시 관련 업체로 등록해 주세요.
+      </p>
+    )
+  }
+  return (
+    <ul className="space-y-2 text-sm">
+      {posts.map(p => (
+        <li key={p.slug} className="rounded border border-[#e5e7eb] bg-white p-3">
+          <div className="flex items-center justify-between">
+            <AdminLink
+              href={`/admin/blog/${p.slug}/edit`}
+              className="font-medium text-[#222222] hover:text-[#00a67c]"
+            >
+              {p.title}
+            </AdminLink>
+            <span className="text-xs text-[#6a6a6a]">
+              {p.publishedAt
+                ? `발행 · ${new Date(p.publishedAt).toLocaleDateString('ko-KR')}`
+                : '초안'}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-[#6a6a6a]">
+            {p.city} · {p.sector} · {p.postType}
+          </p>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+// T-128: 이 업체 페이지 경로의 봇 방문 통계 (bot_visits 최근 30일)
+async function SeoTab({
+  placeSlug,
+  city,
+  category,
+}: {
+  placeSlug: string
+  city: string
+  category: string
+}) {
+  const admin = getAdminClient()
+  if (!admin) return <p className="text-sm text-red-600">DB 연결 실패</p>
+
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const path = `/${city}/${category}/${placeSlug}`
+
+  const { data: visits } = await admin
+    .from('bot_visits')
+    .select('bot_id, status, visited_at')
+    .eq('path', path)
+    .gte('visited_at', since)
+    .order('visited_at', { ascending: false })
+    .limit(200)
+
+  const rows = (visits ?? []) as Array<{ bot_id: string; status: number | null; visited_at: string }>
+
+  if (rows.length === 0) {
+    return (
+      <div className="text-sm text-[#6a6a6a]">
+        <p>최근 30일 AI 봇 방문 기록이 없습니다.</p>
+        <p className="mt-1 text-xs">경로: <code className="rounded bg-[#f3f4f6] px-1">{path}</code></p>
+      </div>
+    )
+  }
+
+  // 봇별 집계
+  const byBot = new Map<string, { visits: number; s200: number; s404: number; last: string }>()
+  for (const r of rows) {
+    const e = byBot.get(r.bot_id) ?? { visits: 0, s200: 0, s404: 0, last: r.visited_at }
+    e.visits += 1
+    if (r.status === 200) e.s200 += 1
+    if (r.status === 404) e.s404 += 1
+    if (r.visited_at > e.last) e.last = r.visited_at
+    byBot.set(r.bot_id, e)
+  }
+  const agg = Array.from(byBot.entries()).sort((a, b) => b[1].visits - a[1].visits)
+
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="text-xs text-[#6a6a6a]">
+        최근 30일 · 경로 <code className="rounded bg-[#f3f4f6] px-1">{path}</code> · 총 {rows.length}회 방문
+      </p>
+      <table className="w-full text-sm">
+        <thead className="bg-[#fafafa] text-left text-xs uppercase text-[#6b6b6b]">
+          <tr>
+            <th className="px-3 py-2 font-medium">봇</th>
+            <th className="px-3 py-2 font-medium">방문</th>
+            <th className="px-3 py-2 font-medium">200</th>
+            <th className="px-3 py-2 font-medium">404</th>
+            <th className="px-3 py-2 font-medium">최종 방문</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[#f0f0f0]">
+          {agg.map(([botId, e]) => (
+            <tr key={botId}>
+              <td className="px-3 py-2 font-medium text-[#191919]">{botId}</td>
+              <td className="px-3 py-2">{e.visits}</td>
+              <td className="px-3 py-2 text-emerald-700">{e.s200}</td>
+              <td className={`px-3 py-2 ${e.s404 > 0 ? 'text-red-600' : 'text-[#6b6b6b]'}`}>{e.s404}</td>
+              <td className="px-3 py-2 text-xs text-[#6b6b6b]">
+                {new Date(e.last).toLocaleString('ko-KR')}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// T-128: 이 업체 관련 pipeline_jobs 이력 (job_data.place_id 매칭)
+async function PipelineTab({ placeId }: { placeId: string }) {
+  const admin = getAdminClient()
+  if (!admin) return <p className="text-sm text-red-600">DB 연결 실패</p>
+
+  const { data, error } = await admin
+    .from('pipeline_jobs')
+    .select('id, job_type, status, created_at, started_at, finished_at, error, retried_count')
+    .eq('target_type', 'place')
+    .eq('target_id', placeId)
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  if (error) {
+    return <p className="text-sm text-red-600">파이프라인 조회 실패: {error.message}</p>
+  }
+
+  const jobs = (data ?? []) as Array<{
+    id: string
+    job_type: string
+    status: string
+    created_at: string
+    started_at: string | null
+    finished_at: string | null
+    error: string | null
+    retried_count: number
+  }>
+
+  if (jobs.length === 0) {
+    return (
+      <p className="text-sm text-[#6a6a6a]">
+        이 업체 관련 자동화 작업 이력이 없습니다. <AdminLink href="/admin/pipelines" className="text-[#00a67c] hover:underline">전체 파이프라인 보기 →</AdminLink>
+      </p>
+    )
+  }
+
+  return (
+    <ol className="space-y-2 text-sm">
+      {jobs.map(j => {
+        const statusColor =
+          j.status === 'succeeded' ? 'text-emerald-700' :
+          j.status === 'failed' ? 'text-red-600' :
+          j.status === 'running' ? 'text-sky-700' : 'text-[#6a6a6a]'
+        return (
+          <li key={j.id} className="rounded border border-[#e5e7eb] bg-white p-3">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-[#222222]">{j.job_type}</span>
+              <span className={`text-xs font-medium ${statusColor}`}>
+                {j.status}{j.retried_count > 0 && ` · ${j.retried_count}회 재시도`}
+              </span>
+            </div>
+            <div className="mt-1 text-xs text-[#6a6a6a]">
+              생성 {new Date(j.created_at).toLocaleString('ko-KR')}
+              {j.finished_at && ` · 완료 ${new Date(j.finished_at).toLocaleString('ko-KR')}`}
+            </div>
+            {j.error && (
+              <div className="mt-1 rounded bg-red-50 px-2 py-1 text-xs text-red-700">
+                {j.error}
+              </div>
+            )}
+          </li>
+        )
+      })}
+    </ol>
   )
 }
 
