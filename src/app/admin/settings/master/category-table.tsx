@@ -2,8 +2,9 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Save } from 'lucide-react'
+import { Plus, Trash2, Save, Sparkles } from 'lucide-react'
 import { upsertCategoryAction, deleteCategoryAction } from '@/lib/actions/master-data'
+import { suggestCategoryFromKorean } from '@/lib/admin/category-suggest'
 import { useToast } from '@/components/admin/toast'
 
 interface CategoryRow { slug: string; name: string; name_en: string; icon: string | null; sector: string }
@@ -76,7 +77,29 @@ export function CategoryTable({ rows, sectors }: { rows: CategoryRow[]; sectors:
                 <input value={newSlug} onChange={e => setNewSlug(e.target.value)} placeholder="new-slug" className="h-8 w-full rounded border border-[#e7e7e7] px-2 text-sm" />
               </td>
               <td className="px-4 py-3">
-                <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="이름" className="h-8 w-full rounded border border-[#e7e7e7] px-2 text-sm" />
+                <div className="flex gap-1">
+                  <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="이름" className="h-8 flex-1 rounded border border-[#e7e7e7] px-2 text-sm" />
+                  <button
+                    type="button"
+                    title="T-127: 한글명으로 AI 자동 제안"
+                    disabled={!newName}
+                    onClick={() => {
+                      const s = suggestCategoryFromKorean(newName)
+                      setNewSlug(s.slug)
+                      setNewNameEn(s.nameEn)
+                      setNewSector(s.sector)
+                      if (s.icon) setNewIcon(s.icon)
+                      if (s.needsDictionaryUpdate) {
+                        toast.info(`${s.reasoning}. SCHEMA_DATA_DICTIONARY 업데이트 필요.`)
+                      } else {
+                        toast.success(`자동 제안: ${s.schemaType}`)
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 rounded border border-[#e7e7e7] bg-white px-2 text-xs hover:bg-[#fafafa] disabled:opacity-50"
+                  >
+                    <Sparkles className="h-3 w-3" /> 제안
+                  </button>
+                </div>
               </td>
               <td className="px-4 py-3">
                 <input value={newNameEn} onChange={e => setNewNameEn(e.target.value)} placeholder="English" className="h-8 w-full rounded border border-[#e7e7e7] px-2 text-sm" />

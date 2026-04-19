@@ -30,10 +30,23 @@ export function getCityAddressRegion(citySlug: string): string | null {
 }
 
 /**
- * 주소 문자열에서 도시명을 추출 ("충청남도 천안시 ..." → "천안시").
- * Schema.org addressLocality 는 한글 도시명을 선호.
+ * 주소 문자열에서 도시명(또는 구·군)을 추출.
+ * "충청남도 천안시 동남구" → "천안시"
+ * "서울특별시 강남구 테헤란로" → "강남구" (광역시·특별시는 locality 가 아니므로 구 선호)
  */
 export function extractAddressLocality(address: string, fallback: string): string {
-  const match = address.match(/([가-힣]+시|[가-힣]+군|[가-힣]+구)/)
-  return match?.[1] ?? fallback
+  // 1) 광역시/특별시/자치시 뒤의 "구"가 있으면 우선
+  const wideCityPattern = /(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시)\s*([가-힣]+구|[가-힣]+군)/
+  const wideMatch = address.match(wideCityPattern)
+  if (wideMatch) return wideMatch[2]
+
+  // 2) "~시"
+  const siMatch = address.match(/([가-힣]+시)/)
+  if (siMatch && !/[가-힣]+(특별시|광역시|자치시)/.test(siMatch[1])) return siMatch[1]
+
+  // 3) "~군" 또는 "~구"
+  const etcMatch = address.match(/([가-힣]+군|[가-힣]+구)/)
+  if (etcMatch) return etcMatch[1]
+
+  return fallback
 }
