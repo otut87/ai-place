@@ -52,5 +52,8 @@ docs/
 # Design handoff bundles (작업 참조용, 소스는 /tmp 에 백업)
 /tmp-design/
 
+# 검수 스냅샷 HTML (디버깅용, 커밋 제외)
+.harness/*.html
+
 # 개인 권한/설정 (팀 공유 대상 아님)
 .claude/settings.local.json

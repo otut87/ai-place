@@ -10,14 +10,14 @@ const LINKS = [
   { href: '/about/methodology', label: '소개' },
 ]
 
-export function PreviewNav() {
+export function HomeNav() {
   const [open, setOpen] = useState(false)
 
   return (
     <>
       <nav className="top">
         <div className="wrap inner">
-          <Link className="logo" href="/home-v2">
+          <Link className="logo" href="/">
             <span className="mark" /> AI Place
           </Link>
           <div className="links">
