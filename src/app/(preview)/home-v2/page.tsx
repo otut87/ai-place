@@ -199,7 +199,7 @@ export default async function HomeV2Page() {
             </p>
             <div className="cta-row">
               <Link href="/owner/places/new" className="btn primary lg">
-                5분 만에 업체 등록
+                무료로 업체 등록
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <path d="M5 12h14M13 5l7 7-7 7" />
                 </svg>
@@ -211,19 +211,19 @@ export default async function HomeV2Page() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                Schema.org 자동 생성
+                업체명만 검색하면 자동 등록
               </span>
               <span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                FAQ 자동 생성
+                소개글·자주 묻는 질문 자동 작성
               </span>
               <span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                월간 AI 인용 리포트
+                매월 AI 추천 결과 리포트
               </span>
             </div>
           </div>
@@ -232,7 +232,7 @@ export default async function HomeV2Page() {
         </div>
 
         <div className="wrap engine-strip">
-          <div className="label">OPTIMIZED FOR · AI 검색 엔진</div>
+          <div className="label">지원 AI — 주요 5개 모두 대응</div>
           <div className="engine-row">
             <div className="lg-pill"><span className="d" style={{ background: '#10a37f' }} /> ChatGPT</div>
             <div className="lg-pill"><span className="d" style={{ background: '#cc785c' }} /> Claude</div>
@@ -355,13 +355,13 @@ export default async function HomeV2Page() {
             </div>
 
             <div className="proof-card col-6">
-              <div className="head"><b>구조화 제공 항목 (업체 단위)</b></div>
+              <div className="head"><b>등록하면 이런 게 자동으로 만들어집니다</b></div>
               <ul className="bullet-list" style={{ margin: 0 }}>
-                <li><span className="rank">01</span><span className="name">JSON-LD LocalBusiness (서브타입 분기)</span><span className="tag">자동</span></li>
-                <li><span className="rank">02</span><span className="name">FAQPage + 업종별 질문 세트</span><span className="tag">자동</span></li>
-                <li><span className="rank">03</span><span className="name">BreadcrumbList 5단계</span><span className="tag">자동</span></li>
-                <li><span className="rank">04</span><span className="name">Review / AggregateRating</span><span className="tag">자동</span></li>
-                <li><span className="rank">05</span><span className="name">sameAs · 네이버·카카오·구글 URL</span><span className="tag">자동</span></li>
+                <li><span className="rank">01</span><span className="name">업체 정보 카드 (AI 가 읽는 전용 포맷)</span><span className="tag">자동</span></li>
+                <li><span className="rank">02</span><span className="name">업종별 자주 묻는 질문 20~30개</span><span className="tag">자동</span></li>
+                <li><span className="rank">03</span><span className="name">위치 경로 (도시·업종·업체)</span><span className="tag">자동</span></li>
+                <li><span className="rank">04</span><span className="name">평점·리뷰 수 요약</span><span className="tag">자동</span></li>
+                <li><span className="rank">05</span><span className="name">네이버·카카오·구글 링크 연결</span><span className="tag">자동</span></li>
               </ul>
             </div>
           </div>
@@ -384,33 +384,33 @@ export default async function HomeV2Page() {
           <div className="pillars">
             <div className="pillar">
               <div className="num">01</div>
-              <h3>AI가 읽을 수 있는 구조로</h3>
-              <p>Schema.org 마크업(LocalBusiness · Service · FAQ · Review)을 업체별로 자동 생성. Google·네이버·AI 모두 같은 텍스트를 읽습니다.</p>
+              <h3>AI가 알아보는 형식으로</h3>
+              <p>업체 정보를 AI 가 이해하기 쉬운 전용 형식으로 자동 변환합니다. Google · 네이버 · ChatGPT · Claude · Gemini 가 모두 같은 페이지를 근거로 사용할 수 있게 됩니다.</p>
               <div className="tag-row">
-                <span className="chip">JSON-LD</span><span className="chip">LocalBusiness</span><span className="chip">FAQPage</span><span className="chip">Review</span>
+                <span className="chip">업체 정보 카드</span><span className="chip">업종 분류</span><span className="chip">자주 묻는 질문</span><span className="chip">후기 요약</span>
               </div>
             </div>
             <div className="pillar">
               <div className="num">02</div>
-              <h3>출처·날짜 투명하게</h3>
-              <p>모든 수치에 출처와 업데이트 날짜를 명시. AI는 불확실한 문장을 회피하고 근거가 명확한 페이지를 우선 인용합니다.</p>
+              <h3>출처와 날짜가 선명하게</h3>
+              <p>평점·리뷰 수·서비스 목록 등 모든 숫자에 <b>어디서 가져왔는지 · 언제 기준인지</b>를 표시합니다. AI 는 근거가 명확한 페이지를 우선 인용합니다.</p>
               <div className="tag-row">
-                <span className="chip">Source · Date</span><span className="chip">네이버 플레이스</span><span className="chip">공개 데이터</span>
+                <span className="chip">출처 표기</span><span className="chip">업데이트 날짜</span><span className="chip">네이버·구글 연동</span>
               </div>
             </div>
             <div className="pillar">
               <div className="num">03</div>
-              <h3>비교·가이드 콘텐츠</h3>
-              <p>업종별 비교표와 선택 가이드가 함께 생성돼, AI가 &ldquo;근거 있는 추천&rdquo;을 만들 수 있는 주변 문맥을 확보합니다.</p>
+              <h3>비교표와 가이드도 함께</h3>
+              <p>업종별 비교표 · 선택 가이드 · 자주 묻는 질문까지 함께 만들어져, AI 가 &ldquo;근거 있는 추천&rdquo;을 구성할 수 있는 재료가 풍부해집니다.</p>
               <div className="tag-row">
-                <span className="chip">비교표</span><span className="chip">선택 가이드</span><span className="chip">FAQ 세트</span>
+                <span className="chip">비교표</span><span className="chip">선택 가이드</span><span className="chip">Q&amp;A 20~30개</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SCHEMA DEMO */}
+      {/* SCHEMA DEMO — "AI가 이렇게 봅니다" 카드 (JSON 코드 대신 평이한 한글 필드) */}
       <section>
         <div className="wrap">
           <div className="sec-head">
@@ -418,39 +418,62 @@ export default async function HomeV2Page() {
             <h2 className="sec-title">
               등록 후 이런 페이지가 <span className="it"><br />자동으로</span> 생깁니다.
             </h2>
-            <p className="sec-lede">JSON-LD, FAQ, 비교 콘텐츠까지 — 업체 정보 하나만 주시면 저희가 전부 생성합니다.</p>
+            <p className="sec-lede">
+              업체 정보 한 번만 주시면 — 소개글·질문·답변·비교표까지 AI 가 읽기 좋은 형식으로 전부 정리해 드립니다.
+            </p>
           </div>
           <div className="schema-demo">
-            <div className="code-card" role="img" aria-label="Schema.org JSON-LD 예시">
+            <div className="code-card" role="img" aria-label="AI 가 읽는 업체 정보 카드 예시">
               <div className="tabbar">
-                <span className="tf active">profile.jsonld</span>
-                <span className="tf">faq.jsonld</span>
-                <span className="tf">compare.md</span>
+                <span className="tf active">업체 정보 카드</span>
+                <span className="tf">자주 묻는 질문</span>
+                <span className="tf">비교표</span>
               </div>
               <pre>
-                <span className="c">{'// 자동 생성된 Schema.org 마크업'}</span>
-                {'\n{\n  '}
-                <span className="k">&quot;@context&quot;</span>: <span className="s">&quot;https://schema.org&quot;</span>,{'\n  '}
-                <span className="k">&quot;@type&quot;</span>: <span className="s">&quot;MedicalClinic&quot;</span>,{'\n  '}
-                <span className="k">&quot;name&quot;</span>: <span className="s">&quot;클린휴의원&quot;</span>,{'\n  '}
-                <span className="k">&quot;address&quot;</span>: {'{\n    '}
-                <span className="k">&quot;@type&quot;</span>: <span className="s">&quot;PostalAddress&quot;</span>,{'\n    '}
-                <span className="k">&quot;streetAddress&quot;</span>: <span className="s">&quot;청수4로 16 5층&quot;</span>,{'\n    '}
-                <span className="k">&quot;addressLocality&quot;</span>: <span className="s">&quot;천안시 동남구&quot;</span>,{'\n    '}
-                <span className="k">&quot;addressRegion&quot;</span>: <span className="s">&quot;충남&quot;</span>{'\n  },\n  '}
-                <span className="k">&quot;aggregateRating&quot;</span>: {'{\n    '}
-                <span className="k">&quot;@type&quot;</span>: <span className="s">&quot;AggregateRating&quot;</span>,{'\n    '}
-                <span className="k">&quot;ratingValue&quot;</span>: <span className="n">4.3</span>,{'\n    '}
-                <span className="k">&quot;reviewCount&quot;</span>: <span className="n">29</span>{'\n  },\n  '}
-                <span className="k">&quot;medicalSpecialty&quot;</span>: <span className="s">&quot;Dermatology&quot;</span>,{'\n  '}
-                <span className="k">&quot;dataSource&quot;</span>: <span className="s">&quot;naver-place · {updatedMonth}&quot;</span>{'\n}'}
+                <span className="c">{'// AI가 보는 업체 정보 — 예시'}</span>
+                {'\n\n'}
+                <span className="k">업체명</span>       <span className="s">클린휴의원</span>{'\n'}
+                <span className="k">업종</span>         <span className="s">피부과 (의료)</span>{'\n'}
+                <span className="k">주소</span>         <span className="s">충남 천안시 동남구 청수4로 16 5층</span>{'\n'}
+                <span className="k">평점</span>         <span className="n">4.3</span> <span className="c">(리뷰 29건)</span>{'\n'}
+                <span className="k">대표 시술</span>    <span className="s">기미 치료 · 여드름 치료 · 리프팅</span>{'\n'}
+                <span className="k">영업 시간</span>    <span className="s">월~금 10:00–19:00</span>{'\n'}
+                <span className="k">전화</span>         <span className="s">041-***-****</span>{'\n'}
+                <span className="k">네이버</span>       <span className="s">naver.me/…</span>{'\n'}
+                <span className="k">카카오맵</span>     <span className="s">map.kakao.com/…</span>{'\n'}
+                <span className="k">구글</span>         <span className="s">google.com/maps/…</span>{'\n\n'}
+                <span className="c">{'// 출처: 네이버 플레이스 · 기준 '}{updatedMonth}</span>
               </pre>
             </div>
             <div className="schema-copy">
-              <div className="step"><div className="idx">01</div><div><h4>구조화 데이터 (JSON-LD)</h4><p>AI가 &ldquo;이 업체가 무슨 업체인지&rdquo;를 기계적으로 이해합니다. 애매한 마케팅 문구가 아닌 사실 기반 카드.</p></div></div>
-              <div className="step"><div className="idx">02</div><div><h4>FAQ 자동 생성</h4><p>업종별 자주 묻는 질문을 사장님 승인 후 게시. AI가 인용할 &lsquo;답변 문장&rsquo;을 미리 준비해둡니다.</p></div></div>
-              <div className="step"><div className="idx">03</div><div><h4>비교·가이드 콘텐츠</h4><p>시술/서비스별 비교표와 선택 가이드를 함께 발행해, AI가 &ldquo;근거 있는 추천&rdquo;을 구성할 수 있게 합니다.</p></div></div>
-              <div className="step"><div className="idx">04</div><div><h4>월간 AI 인용 리포트</h4><p>어떤 질문에, 어떤 AI가, 어떤 문맥으로 내 업체를 인용했는지 매달 정리해 드립니다.</p></div></div>
+              <div className="step">
+                <div className="idx">01</div>
+                <div>
+                  <h4>업체 정보 카드 (기본)</h4>
+                  <p>이름·주소·평점·서비스 등 핵심 정보를 AI 가 바로 인용할 수 있는 형태로 정리합니다. 광고 문구가 아닌 &ldquo;사실&rdquo;만.</p>
+                </div>
+              </div>
+              <div className="step">
+                <div className="idx">02</div>
+                <div>
+                  <h4>자주 묻는 질문 20~30개</h4>
+                  <p>업종별 자주 묻는 질문을 AI 가 초안 작성 → 사장님 승인 후 게시. AI 가 인용할 &lsquo;답변 문장&rsquo;을 미리 준비해 둡니다.</p>
+                </div>
+              </div>
+              <div className="step">
+                <div className="idx">03</div>
+                <div>
+                  <h4>비교표 · 선택 가이드</h4>
+                  <p>시술·서비스별 비교표와 업종 선택 가이드도 함께 발행되어 &ldquo;근거 있는 추천&rdquo;의 재료가 됩니다.</p>
+                </div>
+              </div>
+              <div className="step">
+                <div className="idx">04</div>
+                <div>
+                  <h4>매월 AI 추천 리포트</h4>
+                  <p>어떤 질문에 · 어떤 AI 가 · 어떤 문맥으로 내 업체를 인용했는지 매달 이메일로 정리해 드립니다.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -517,33 +540,33 @@ export default async function HomeV2Page() {
           </div>
           <div className="timeline">
             <div className="tstep">
-              <div className="hdr"><span className="idx">STEP 01</span><span className="dur">약 10분</span></div>
-              <h3>가입 · 업체 등록</h3>
-              <p>이메일 회원가입 → 네이버 플레이스 URL 입력 → 5단계 마법사로 기본 정보 확인.</p>
+              <div className="hdr"><span className="idx">STEP 01</span><span className="dur">약 5분</span></div>
+              <h3>업체 검색 → 선택</h3>
+              <p>이메일로 가입한 뒤 검색창에 업체명을 입력하세요. 네이버·카카오·구글에서 자동으로 찾아 드립니다.</p>
               <ul className="list">
-                <li>이메일 본인 확인 (Supabase Auth)</li>
-                <li>네이버 URL 자동 매칭 · 중복 검사</li>
-                <li>서비스 · 사진 입력 (Google 사진 자동 import)</li>
+                <li>이메일 인증 (1분)</li>
+                <li>업체명 검색 → 내 업체 클릭 → 기본 정보 자동 입력</li>
+                <li>대표 사진 · 전화 · 영업시간은 자동으로 불러옴</li>
               </ul>
             </div>
             <div className="tstep">
               <div className="hdr"><span className="idx">STEP 02</span><span className="dur">당일 ~ 익일</span></div>
-              <h3>AI 프로필 자동 생성</h3>
-              <p>Claude Sonnet 이 구조화 데이터·FAQ·설명문 초안을 생성. Diff 뷰로 검수 후 한 번에 발행.</p>
+              <h3>AI 가 소개글·질문·답변 작성</h3>
+              <p>AI 가 업종에 맞는 소개글과 자주 묻는 질문 20~30개를 초안으로 만들어 드립니다. 사장님은 &ldquo;수정 전·후&rdquo; 화면에서 확인만 하면 돼요.</p>
               <ul className="list">
-                <li>JSON-LD · FAQPage · Review 스키마 자동 생성</li>
-                <li>의료광고법·과장 표현 가드 자동 검증</li>
-                <li>승인 즉시 공개 + IndexNow 자동 통지</li>
+                <li>업체 정보 카드 · Q&amp;A · 비교표 자동 생성</li>
+                <li>의료·법률 과장 표현 자동 점검 (허위·과장 문구 차단)</li>
+                <li>승인 즉시 공개 + 검색엔진에 자동 알림</li>
               </ul>
             </div>
             <div className="tstep">
               <div className="hdr"><span className="idx">STEP 03</span><span className="dur">매주 · 매월</span></div>
-              <h3>대시보드 · 리포트</h3>
-              <p>AI 인용 자동 테스트(주 1회) · 진단 점수 추이 · 월간 이메일 리포트로 성과를 확인.</p>
+              <h3>대시보드 · 매월 리포트</h3>
+              <p>주 1회 ChatGPT·Claude·Gemini 에서 내 업체가 추천되는지 자동 확인하고, 매월 결과를 이메일로 정리해 드립니다.</p>
               <ul className="list">
-                <li>GPT · Claude · Gemini 인용 테스트 (주 1회)</li>
-                <li>기술 진단 점수 추이 + 30일 봇 방문</li>
-                <li>월간 리포트 이메일 자동 발송</li>
+                <li>주 1회 — 주요 AI 3사 추천 여부 자동 체크</li>
+                <li>점수 추이 그래프 + 30일간 AI 방문 통계</li>
+                <li>매월 성과 리포트 이메일 자동 발송</li>
               </ul>
             </div>
           </div>
