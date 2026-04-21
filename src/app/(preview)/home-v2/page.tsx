@@ -1,15 +1,83 @@
 // Preview 홈 — 전달받은 디자인 시스템(aip.css + home-v2.css) 기반 재설계.
 // 통계는 실측(DB), testimonials·proof-card 는 "예시/샘플" 라벨.
-// noindex (preview layout 에서 지정). 품질 검수 후 / 로 승격 예정.
+// 품질 검수 후 / 로 승격 예정 — 승격 시 preview layout 의 noindex 제거 +
+// canonical 을 / 로 전환만 하면 즉시 프로덕션 투입 가능.
 
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getAllPlaces, getCities, getCategories } from '@/lib/data.supabase'
 import { aggregateBotVisits } from '@/lib/admin/bot-visits'
+import {
+  generateWebSite,
+  generateWebPage,
+  generateItemList,
+  generateFAQPage,
+} from '@/lib/jsonld'
+import { safeJsonLd } from '@/lib/utils'
+import type { FAQ } from '@/lib/types'
 import { PreviewNav } from './_components/preview-nav'
 import { HeroChatCard } from './_components/hero-chat-card'
 import './home-v2.css'
 
-export const dynamic = 'force-dynamic'
+// ISR — 1시간 캐시 + place CRUD 액션의 revalidatePath('/') 로 on-demand 갱신.
+// force-dynamic 은 preview 검수용이었고, 프로덕션 승격 시 이 설정이 적합.
+export const revalidate = 3600
+
+const BASE_URL = 'https://aiplace.kr'
+const PAGE_URL = `${BASE_URL}/home-v2` // 승격 시 BASE_URL 로 교체
+
+export const metadata: Metadata = {
+  title: 'AI Place — AI 검색에서 추천받는 로컬 업체',
+  description:
+    'ChatGPT · Claude · Gemini가 내 업체를 답변으로 인용하도록. 구조화 데이터 · FAQ · 비교 콘텐츠를 자동으로 만들어, AI 검색에 최적화된 프로필을 완성합니다.',
+  alternates: {
+    canonical: PAGE_URL,
+    languages: { 'ko-KR': PAGE_URL },
+  },
+  openGraph: {
+    type: 'website',
+    url: PAGE_URL,
+    siteName: 'AI Place',
+    locale: 'ko_KR',
+    title: 'AI Place — AI 검색에서 추천받는 로컬 업체',
+    description:
+      'ChatGPT · Claude · Gemini가 내 업체를 답변으로 인용하도록. 구조화 데이터 · FAQ 자동 생성.',
+  },
+  twitter: { card: 'summary_large_image' },
+}
+
+// FAQ — 단일 소스 (본문 렌더 + FAQPage JSON-LD 에 동시 사용).
+const FAQS: FAQ[] = [
+  {
+    question: '정말 AI가 제 가게를 추천하게 되나요?',
+    answer:
+      '100% 보장은 어렵지만, 구조화 데이터·FAQ·출처 명시 이 세 가지는 AI가 인용 여부를 결정할 때 가장 큰 변수입니다. 등록 후 월간 AI 인용 리포트로 실제 결과를 확인해 드립니다.',
+  },
+  {
+    question: '네이버 플레이스가 이미 있는데 또 필요할까요?',
+    answer:
+      '역할이 다릅니다. 네이버 플레이스는 지도 기반 검색, AI Place는 생성형 AI 답변을 위한 구조입니다. 네이버 데이터를 기초로 활용하지만, AI가 읽는 문법은 따로 생성해야 합니다.',
+  },
+  {
+    question: '비용은 어떻게 되나요?',
+    answer:
+      '초기 세팅 + 월 관리 형태로 운영하며, 업종과 지역 경쟁도에 따라 다릅니다. /pricing 에서 플랜별 가격을 확인하세요.',
+  },
+  {
+    question: '해지하면 페이지는 어떻게 되나요?',
+    answer:
+      '해지 시 프로필은 비공개 처리되며, AI 모델이 가진 캐시는 수주 이내 자연 만료됩니다. 재등록 시 기존 리포트 데이터는 복원됩니다.',
+  },
+  {
+    question: '천안 외 지역도 되나요?',
+    answer: '현재는 천안 중심 파일럿 운영 중이며, 충청권부터 순차 확장 예정입니다.',
+  },
+  {
+    question: '데이터는 어디서 가져오나요?',
+    answer:
+      '네이버 플레이스, 공개 데이터(심평원 등)와 업체가 직접 제공한 정보를 조합합니다. 모든 수치에 출처와 업데이트 날짜를 표기합니다.',
+  },
+]
 
 // 실측 집계 — 허수 금지 (환각 방지 원칙).
 async function loadStats() {
@@ -43,24 +111,64 @@ export default async function HomeV2Page() {
   const s = await loadStats()
   const updatedMonth = s.updatedAt.slice(0, 7) // 2026-04
 
-  const orgJsonLd = {
+  // --- JSON-LD (4종) ---
+  const organizationJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': `${BASE_URL}/#organization`,
     name: 'AI Place',
-    url: 'https://aiplace.kr/',
+    url: BASE_URL + '/',
     description: 'ChatGPT, Claude, Gemini 등 AI 검색에서 추천되는 로컬 업체 디렉토리.',
     areaServed: { '@type': 'City', name: '천안', alternateName: 'Cheonan' },
     knowsAbout: ['AI Engine Optimization', 'AEO', 'Schema.org', 'LocalBusiness SEO'],
   }
 
+  const websiteJsonLd = generateWebSite(BASE_URL)
+
+  const webPageJsonLd = generateWebPage({
+    url: PAGE_URL,
+    name: 'AI Place — AI 검색에서 추천받는 로컬 업체',
+    description:
+      'ChatGPT · Claude · Gemini가 내 업체를 답변으로 인용하도록. 구조화 데이터·FAQ·비교 콘텐츠를 자동 생성.',
+    lastUpdated: s.updatedAt,
+  })
+
+  // featured 업체 ItemList — force-dynamic 대신 ISR 로 1시간마다 재생성.
+  const itemListJsonLd =
+    s.featured.length > 0
+      ? generateItemList(s.featured, 'AI Place 추천 업체', { baseUrl: BASE_URL })
+      : null
+
+  const faqPageJsonLd = generateFAQPage(FAQS)
+
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(websiteJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(webPageJsonLd) }}
+      />
+      {itemListJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(itemListJsonLd) }}
+        />
+      )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(faqPageJsonLd) }}
       />
 
       <PreviewNav />
+
+      <main>
 
       {/* HERO */}
       <header className="hero">
@@ -503,30 +611,12 @@ export default async function HomeV2Page() {
             </h2>
           </div>
           <div>
-            <details className="faq" open>
-              <summary>정말 AI가 제 가게를 추천하게 되나요?</summary>
-              <div className="ans">100% 보장은 어렵지만, 구조화 데이터·FAQ·출처 명시 이 세 가지는 AI가 인용 여부를 결정할 때 가장 큰 변수입니다. 등록 후 월간 AI 인용 리포트로 실제 결과를 확인해 드립니다.</div>
-            </details>
-            <details className="faq">
-              <summary>네이버 플레이스가 이미 있는데 또 필요할까요?</summary>
-              <div className="ans">역할이 다릅니다. 네이버 플레이스는 &lsquo;지도 기반 검색&rsquo;, AI Place는 &lsquo;생성형 AI 답변&rsquo;을 위한 구조입니다. 네이버 데이터를 기초로 활용하지만, AI가 읽는 문법은 따로 생성해야 합니다.</div>
-            </details>
-            <details className="faq">
-              <summary>비용은 어떻게 되나요?</summary>
-              <div className="ans">초기 세팅 + 월 관리 형태로 운영하며, 업종과 지역 경쟁도에 따라 다릅니다. <Link href="/pricing">가격 페이지</Link>에서 플랜별 가격을 확인하세요.</div>
-            </details>
-            <details className="faq">
-              <summary>해지하면 페이지는 어떻게 되나요?</summary>
-              <div className="ans">해지 시 프로필은 비공개 처리되며, AI 모델이 가진 캐시는 수주 이내 자연 만료됩니다. 재등록 시 기존 리포트 데이터는 복원됩니다.</div>
-            </details>
-            <details className="faq">
-              <summary>천안 외 지역도 되나요?</summary>
-              <div className="ans">현재는 천안 중심 파일럿 운영 중이며, 충청권부터 순차 확장 예정입니다.</div>
-            </details>
-            <details className="faq">
-              <summary>데이터는 어디서 가져오나요?</summary>
-              <div className="ans">네이버 플레이스, 공개 데이터(심평원 등)와 업체가 직접 제공한 정보를 조합합니다. 모든 수치에 출처와 업데이트 날짜를 표기합니다.</div>
-            </details>
+            {FAQS.map((faq, i) => (
+              <details key={faq.question} className="faq" open={i === 0}>
+                <summary>{faq.question}</summary>
+                <div className="ans">{faq.answer}</div>
+              </details>
+            ))}
           </div>
         </div>
       </section>
@@ -559,6 +649,8 @@ export default async function HomeV2Page() {
           </div>
         </div>
       </section>
+
+      </main>
 
       {/* FOOTER */}
       <footer className="site">
