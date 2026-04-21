@@ -11,18 +11,31 @@ export async function BlogMarkdown({ content }: { content: string }) {
   const html = await renderMarkdownToHtml(content)
   return (
     <div
-      className="prose prose-neutral max-w-none text-[#1a1a1a] leading-relaxed
-                 prose-headings:text-[#1a1a1a] prose-headings:font-bold
+      className="prose prose-neutral max-w-none text-[#1a1a1a] leading-[1.75]
+                 prose-headings:text-[#1a1a1a] prose-headings:font-bold prose-headings:tracking-tight
                  prose-h1:text-[28px] prose-h1:mt-0 prose-h1:mb-4
-                 prose-h2:text-[22px] prose-h2:mt-10 prose-h2:mb-3
-                 prose-h3:text-[18px] prose-h3:mt-6 prose-h3:mb-2
-                 prose-p:text-base prose-p:my-3
-                 prose-li:my-1
-                 prose-blockquote:border-l-4 prose-blockquote:border-[#e5e5e5]
-                 prose-blockquote:pl-4 prose-blockquote:text-[#666]
-                 prose-blockquote:not-italic
-                 prose-a:text-[#1a1a1a] prose-a:underline hover:prose-a:no-underline
-                 prose-strong:text-[#1a1a1a]"
+                 prose-h2:text-[24px] prose-h2:mt-12 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-[#e5e5e5]
+                 prose-h3:text-[20px] prose-h3:mt-10 prose-h3:mb-3
+                 prose-h4:text-[17px] prose-h4:mt-6 prose-h4:mb-2
+                 prose-p:text-[15px] prose-p:my-4 prose-p:leading-[1.8]
+                 prose-ul:my-4 prose-ol:my-4 prose-li:my-1.5 prose-li:leading-[1.75]
+                 prose-blockquote:border-l-4 prose-blockquote:border-[#1a1a1a]
+                 prose-blockquote:pl-5 prose-blockquote:py-1 prose-blockquote:text-[#444]
+                 prose-blockquote:not-italic prose-blockquote:bg-[#fafafa]
+                 prose-a:text-[#008060] prose-a:underline prose-a:underline-offset-2
+                 hover:prose-a:no-underline
+                 prose-strong:text-[#1a1a1a] prose-strong:font-semibold
+                 prose-code:text-[#c2410c] prose-code:bg-[#f5f5f5]
+                 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
+                 prose-code:before:content-none prose-code:after:content-none
+                 prose-hr:my-10 prose-hr:border-[#e5e5e5]
+                 [&_table]:my-6 [&_table]:w-full [&_table]:border-collapse
+                 [&_table]:text-[14px]
+                 [&_thead]:bg-[#f9f9f9]
+                 [&_th]:border [&_th]:border-[#e5e5e5] [&_th]:px-3 [&_th]:py-2.5
+                 [&_th]:text-left [&_th]:font-semibold [&_th]:text-[#1a1a1a]
+                 [&_td]:border [&_td]:border-[#e5e5e5] [&_td]:px-3 [&_td]:py-2.5
+                 [&_td]:align-top"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )
