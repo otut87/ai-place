@@ -26,20 +26,15 @@ export const revalidate = 3600
 const BASE_URL = 'https://aiplace.kr'
 const PAGE_URL = `${BASE_URL}/home-v2` // 승격 시 BASE_URL 로 교체
 
-const OG_IMAGE = `${BASE_URL}/opengraph-image`
-
+// NOTE: openGraph.images / twitter.images 를 명시하면 file-based opengraph-image.tsx
+// 자동 주입이 꺼짐. buildHomeMetadata 패턴과 동일하게 images 를 생략해 자동 주입 유지.
 export const metadata: Metadata = {
   title: 'AI Place — AI 검색에서 추천받는 로컬 업체',
   description:
     'ChatGPT · Claude · Gemini가 내 업체를 답변으로 인용하도록. 구조화 데이터 · FAQ · 비교 콘텐츠를 자동으로 만들어, AI 검색에 최적화된 프로필을 완성합니다.',
   alternates: {
     canonical: PAGE_URL,
-    // self-reference 만으로는 Next.js 가 <link rel="alternate"> 출력을 생략해서
-    // 'x-default' 도 함께 지정 — 단일 언어 사이트에서도 명시적 선언 보장.
-    languages: {
-      'ko-KR': PAGE_URL,
-      'x-default': PAGE_URL,
-    },
+    languages: { 'ko-KR': PAGE_URL, 'x-default': PAGE_URL },
   },
   openGraph: {
     type: 'website',
@@ -49,20 +44,11 @@ export const metadata: Metadata = {
     title: 'AI Place — AI 검색에서 추천받는 로컬 업체',
     description:
       'ChatGPT · Claude · Gemini가 내 업체를 답변으로 인용하도록. 구조화 데이터 · FAQ 자동 생성.',
-    images: [
-      {
-        url: OG_IMAGE,
-        width: 1200,
-        height: 630,
-        alt: 'AI Place — AI 검색에서 추천받는 로컬 업체',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'AI Place — AI 검색에서 추천받는 로컬 업체',
     description: 'ChatGPT · Claude · Gemini에서 추천받는 로컬 업체 디렉토리.',
-    images: [OG_IMAGE],
   },
 }
 
