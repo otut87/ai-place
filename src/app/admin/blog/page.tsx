@@ -7,6 +7,7 @@ import { AdminLink } from '@/components/admin/admin-link'
 import { cachedCities, cachedCategories, cachedSectors } from '@/lib/admin/cached-data'
 import { CreateTopicButton } from './create-topic-button'
 import { GenerateDraftButton } from './generate-draft-button'
+import { DeleteTopicButton } from './delete-topic-button'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -112,14 +113,17 @@ export default async function AdminBlogPage({
           ) : (
             <ul className="max-h-[500px] overflow-y-auto p-2">
               {drafts.map(d => (
-                <li key={d.id}>
+                <li key={d.id} className="group flex items-start gap-1 rounded-md hover:bg-[#fafafa]">
                   <AdminLink
-                    href={`/admin/blog/${d.slug}/edit`}
-                    className="block rounded-md px-2 py-1.5 text-xs hover:bg-[#fafafa]"
+                    href={`/admin/blog/${encodeURIComponent(d.slug)}/edit`}
+                    className="block flex-1 px-2 py-1.5 text-xs"
                   >
                     <div className="font-medium text-[#191919]">{d.title}</div>
                     <div className="mt-0.5 text-[10px] text-[#6b6b6b]">{d.category ?? '—'} · {d.post_type}</div>
                   </AdminLink>
+                  <div className="pr-1 pt-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                    <DeleteTopicButton id={d.id} title={d.title} />
+                  </div>
                 </li>
               ))}
             </ul>

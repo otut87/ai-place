@@ -70,3 +70,45 @@ describe('saveBlogPost', () => {
     expect((await saveBlogPost(BASE)).success).toBe(false)
   })
 })
+
+describe('deleteBlogPostById', () => {
+  const mockDeleteEq = vi.fn()
+  beforeEach(() => {
+    mockDeleteEq.mockReset()
+    mockDeleteEq.mockResolvedValue({ error: null })
+    mockFrom.mockImplementation(() => ({
+      delete: vi.fn(() => ({ eq: mockDeleteEq })),
+    }))
+  })
+
+  it('id 빈 값 → 실패', async () => {
+    const { deleteBlogPostById } = await import('@/lib/actions/blog-edit')
+    expect((await deleteBlogPostById('   ')).success).toBe(false)
+  })
+
+  it('admin null → 실패', async () => {
+    const { getAdminClient } = await import('@/lib/supabase/admin-client')
+    vi.mocked(getAdminClient).mockReturnValueOnce(null)
+    const { deleteBlogPostById } = await import('@/lib/actions/blog-edit')
+    expect((await deleteBlogPostById('abc-uuid')).success).toBe(false)
+  })
+
+  it('정상 삭제 → revalidatePath 호출', async () => {
+    const cache = await import('next/cache')
+    vi.mocked(cache.revalidatePath).mockClear()
+    const { deleteBlogPostById } = await import('@/lib/actions/blog-edit')
+    const r = await deleteBlogPostById('abc-uuid')
+    expect(r.success).toBe(true)
+    expect(mockDeleteEq).toHaveBeenCalledWith('id', 'abc-uuid')
+    expect(cache.revalidatePath).toHaveBeenCalledWith('/admin/blog')
+    expect(cache.revalidatePath).toHaveBeenCalledWith('/blog')
+  })
+
+  it('DB 에러 → 실패', async () => {
+    mockDeleteEq.mockResolvedValueOnce({ error: { message: 'fk violation' } })
+    const { deleteBlogPostById } = await import('@/lib/actions/blog-edit')
+    const r = await deleteBlogPostById('abc-uuid')
+    expect(r.success).toBe(false)
+    expect(r.error).toBe('fk violation')
+  })
+})

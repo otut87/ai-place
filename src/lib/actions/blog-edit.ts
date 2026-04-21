@@ -70,6 +70,19 @@ export async function deleteBlogPost(slug: string): Promise<{ success: boolean; 
   return { success: true }
 }
 
+/** id (UUID) 로 삭제 — 한글/특수문자 slug 로 인한 URL 인코딩 불일치를 피하기 위한 경로. */
+export async function deleteBlogPostById(id: string): Promise<{ success: boolean; error?: string }> {
+  await requireAuthForAction()
+  const admin = getAdminClient()
+  if (!admin) return { success: false, error: 'admin_unavailable' }
+  if (!id.trim()) return { success: false, error: 'id 필수' }
+  const { error } = await admin.from('blog_posts').delete().eq('id', id)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/admin/blog')
+  revalidatePath('/blog')
+  return { success: true }
+}
+
 // T-128 — 블로그 캘린더에서 "+ 새 토픽" 생성.
 export interface CreateBlogTopicInput {
   title: string
