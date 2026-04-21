@@ -1,4 +1,4 @@
-// Preview 홈 — 전달받은 디자인 시스템(aip.css) 기반 재설계.
+// Preview 홈 — 전달받은 디자인 시스템(aip.css + home-v2.css) 기반 재설계.
 // 통계는 실측(DB), testimonials·proof-card 는 "예시/샘플" 라벨.
 // noindex (preview layout 에서 지정). 품질 검수 후 / 로 승격 예정.
 
@@ -7,6 +7,7 @@ import { getAllPlaces, getCities, getCategories } from '@/lib/data.supabase'
 import { aggregateBotVisits } from '@/lib/admin/bot-visits'
 import { PreviewNav } from './_components/preview-nav'
 import { HeroChatCard } from './_components/hero-chat-card'
+import './home-v2.css'
 
 export const dynamic = 'force-dynamic'
 
