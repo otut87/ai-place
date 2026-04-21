@@ -48,3 +48,9 @@ next-env.d.ts
 
 # Research, internal docs, test keys — keep local only
 docs/
+
+# Design handoff bundles (작업 참조용, 소스는 /tmp 에 백업)
+/tmp-design/
+
+# 개인 권한/설정 (팀 공유 대상 아님)
+.claude/settings.local.json
