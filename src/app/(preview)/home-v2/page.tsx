@@ -503,34 +503,48 @@ export default async function HomeV2Page() {
         </section>
       )}
 
-      {/* PROCESS */}
+      {/* PROCESS — 실제 Owner 플로우 반영 (T-149~T-176) */}
       <section id="process">
         <div className="wrap">
           <div className="sec-head">
-            <div className="sec-kicker">등록 과정 · PROCESS</div>
+            <div className="sec-kicker">실제 플로우 · PROCESS</div>
             <h2 className="sec-title">
-              사장님이 할 일은 <span className="it">단 5분</span>.<br />나머지는 저희가.
+              가입부터 <span className="it">월간 리포트</span>까지,<br />AI 최적화 전 과정.
             </h2>
-            <p className="sec-lede">평균 3영업일 안에 AI 최적화 프로필이 발행됩니다.</p>
+            <p className="sec-lede">
+              사장님 작업은 회원가입 · 네이버 URL 입력 · AI 초안 검수 3가지. 나머지는 전부 자동화되어 있습니다.
+            </p>
           </div>
           <div className="timeline">
             <div className="tstep">
-              <div className="hdr"><span className="idx">STEP 01</span><span className="dur">5분</span></div>
-              <h3>정보 전달</h3>
-              <p>네이버 플레이스 URL 1개 + 대표 서비스 3개만 주시면 됩니다.</p>
-              <ul className="list"><li>상호·주소·전화번호</li><li>주력 서비스 3개</li><li>선택: 실내 사진 3장</li></ul>
+              <div className="hdr"><span className="idx">STEP 01</span><span className="dur">약 10분</span></div>
+              <h3>가입 · 업체 등록</h3>
+              <p>이메일 회원가입 → 네이버 플레이스 URL 입력 → 5단계 마법사로 기본 정보 확인.</p>
+              <ul className="list">
+                <li>이메일 본인 확인 (Supabase Auth)</li>
+                <li>네이버 URL 자동 매칭 · 중복 검사</li>
+                <li>서비스 · 사진 입력 (Google 사진 자동 import)</li>
+              </ul>
             </div>
             <div className="tstep">
-              <div className="hdr"><span className="idx">STEP 02</span><span className="dur">3영업일</span></div>
-              <h3>AI 최적화 생성</h3>
-              <p>구조화 데이터·FAQ·비교 콘텐츠가 자동 생성되며, 사장님 검수 후 발행됩니다.</p>
-              <ul className="list"><li>Schema.org 자동 검증</li><li>FAQ 세트 · 가이드 1편</li><li>검수·수정 2회 포함</li></ul>
+              <div className="hdr"><span className="idx">STEP 02</span><span className="dur">당일 ~ 익일</span></div>
+              <h3>AI 프로필 자동 생성</h3>
+              <p>Claude Sonnet 이 구조화 데이터·FAQ·설명문 초안을 생성. Diff 뷰로 검수 후 한 번에 발행.</p>
+              <ul className="list">
+                <li>JSON-LD · FAQPage · Review 스키마 자동 생성</li>
+                <li>의료광고법·과장 표현 가드 자동 검증</li>
+                <li>승인 즉시 공개 + IndexNow 자동 통지</li>
+              </ul>
             </div>
             <div className="tstep">
-              <div className="hdr"><span className="idx">STEP 03</span><span className="dur">매월</span></div>
-              <h3>리포트 수신</h3>
-              <p>어떤 AI가, 어떤 질문에, 내 업체를 어떻게 인용했는지 매월 리포트로 확인.</p>
-              <ul className="list"><li>AI별 인용 횟수</li><li>추천된 질문 TOP 10</li><li>경쟁 업체 대비 위치</li></ul>
+              <div className="hdr"><span className="idx">STEP 03</span><span className="dur">매주 · 매월</span></div>
+              <h3>대시보드 · 리포트</h3>
+              <p>AI 인용 자동 테스트(주 1회) · 진단 점수 추이 · 월간 이메일 리포트로 성과를 확인.</p>
+              <ul className="list">
+                <li>GPT · Claude · Gemini 인용 테스트 (주 1회)</li>
+                <li>기술 진단 점수 추이 + 30일 봇 방문</li>
+                <li>월간 리포트 이메일 자동 발송</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -573,36 +587,30 @@ export default async function HomeV2Page() {
           <div style={{ height: 40 }} />
 
           <div className="quotes">
-            <div className="quote">
-              <span className="mark">&ldquo;</span>
-              <blockquote style={{ margin: 0 }}>
-                <p>ChatGPT에서 &lsquo;천안 기미&rsquo; 검색하면 첫 줄에 저희 병원이 나옵니다. 문의 전화가 주 2건에서 <b>주 7건으로</b> 늘었습니다.</p>
-                <cite style={{ fontStyle: 'normal' }}>
-                  <div className="who">
-                    <span className="ava">샘</span>
-                    <div>
-                      <b>피부과 원장 (샘플)</b>
-                      <span>가상 인터뷰 · 실제 사례 기반 각색</span>
-                    </div>
-                  </div>
-                </cite>
-              </blockquote>
-            </div>
-            <div className="quote">
-              <span className="mark">&ldquo;</span>
-              <blockquote style={{ margin: 0 }}>
-                <p>실내건축 면허 보유가 <b>구조화되어 있으니</b> AI가 &lsquo;믿을 만한 업체&rsquo;라고 요약하더군요.</p>
-                <cite style={{ fontStyle: 'normal' }}>
-                  <div className="who">
-                    <span className="ava">샘</span>
-                    <div>
-                      <b>인테리어 대표 (샘플)</b>
-                      <span>가상 인터뷰 · 실제 사례 기반 각색</span>
-                    </div>
-                  </div>
-                </cite>
-              </blockquote>
-            </div>
+            {/* blockquote 자체를 .quote 플렉스 컨테이너로 만들어서
+                mark/p/cite(.who) 가 직접 플렉스 자식이 되도록 하여 gap:18px 적용. */}
+            <blockquote className="quote">
+              <span className="mark" aria-hidden="true">&ldquo;</span>
+              <p>ChatGPT에서 &lsquo;천안 기미&rsquo; 검색하면 첫 줄에 저희 병원이 나옵니다. 문의 전화가 주 2건에서 <b>주 7건으로</b> 늘었습니다.</p>
+              <cite className="who" style={{ fontStyle: 'normal' }}>
+                <span className="ava" aria-hidden="true">샘</span>
+                <div>
+                  <b>피부과 원장 (샘플)</b>
+                  <span>가상 인터뷰 · 실제 사례 기반 각색</span>
+                </div>
+              </cite>
+            </blockquote>
+            <blockquote className="quote">
+              <span className="mark" aria-hidden="true">&ldquo;</span>
+              <p>실내건축 면허 보유가 <b>구조화되어 있으니</b> AI가 &lsquo;믿을 만한 업체&rsquo;라고 요약하더군요.</p>
+              <cite className="who" style={{ fontStyle: 'normal' }}>
+                <span className="ava" aria-hidden="true">샘</span>
+                <div>
+                  <b>인테리어 대표 (샘플)</b>
+                  <span>가상 인터뷰 · 실제 사례 기반 각색</span>
+                </div>
+              </cite>
+            </blockquote>
           </div>
         </div>
       </section>
