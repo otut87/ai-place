@@ -16,6 +16,7 @@ import { safeJsonLd } from '@/lib/utils'
 import type { FAQ } from '@/lib/types'
 import { HomeNav } from './_components/home/home-nav'
 import { HeroChatCard } from './_components/home/hero-chat-card'
+import { SchemaDemoTabs } from './_components/home/schema-demo-tabs'
 import '@/styles/aip.css'
 import '@/styles/home-wrap.css'
 import '@/styles/home.css'
@@ -427,28 +428,7 @@ export default async function HomePage() {
             </p>
           </div>
           <div className="schema-demo">
-            <div className="code-card" role="img" aria-label="AI 가 읽는 업체 정보 카드 예시">
-              <div className="tabbar">
-                <span className="tf active">업체 정보 카드</span>
-                <span className="tf">자주 묻는 질문</span>
-                <span className="tf">비교표</span>
-              </div>
-              <pre>
-                <span className="c">{'// AI가 보는 업체 정보 — 예시'}</span>
-                {'\n\n'}
-                <span className="k">업체명</span>       <span className="s">클린휴의원</span>{'\n'}
-                <span className="k">업종</span>         <span className="s">피부과 (의료)</span>{'\n'}
-                <span className="k">주소</span>         <span className="s">충남 천안시 동남구 청수4로 16 5층</span>{'\n'}
-                <span className="k">평점</span>         <span className="n">4.3</span> <span className="c">(리뷰 29건)</span>{'\n'}
-                <span className="k">대표 시술</span>    <span className="s">기미 치료 · 여드름 치료 · 리프팅</span>{'\n'}
-                <span className="k">영업 시간</span>    <span className="s">월~금 10:00–19:00</span>{'\n'}
-                <span className="k">전화</span>         <span className="s">041-***-****</span>{'\n'}
-                <span className="k">네이버</span>       <span className="s">naver.me/…</span>{'\n'}
-                <span className="k">카카오맵</span>     <span className="s">map.kakao.com/…</span>{'\n'}
-                <span className="k">구글</span>         <span className="s">google.com/maps/…</span>{'\n\n'}
-                <span className="c">{'// 출처: 네이버 플레이스 · 기준 '}{updatedMonth}</span>
-              </pre>
-            </div>
+            <SchemaDemoTabs updatedMonth={updatedMonth} />
             <div className="schema-copy">
               <div className="step">
                 <div className="idx">01</div>
@@ -664,7 +644,7 @@ export default async function HomePage() {
       <section id="diag">
         <div className="wrap">
           <div className="cta-card">
-            <h2>지금 내 업체,<br />AI는 뭐라고<br />말할까요?</h2>
+            <h2>지금 내 업체, AI는 뭐라고 말할까요?</h2>
             <p>
               업체 이름·주소만 알려주시면 60초 내 <b>무료 AI 진단 리포트</b>를 보내드립니다.<br />
               등록 결정은 진단 보고 천천히 하셔도 됩니다.
