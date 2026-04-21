@@ -114,6 +114,7 @@ export interface DbBlogPost {
 /** DbPlace → Place (snake_case → camelCase) */
 export function dbPlaceToPlace(row: DbPlace): Place {
   return {
+    id: row.id,
     slug: row.slug,
     name: row.name,
     nameEn: row.name_en ?? undefined,
