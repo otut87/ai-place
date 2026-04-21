@@ -408,10 +408,12 @@ export default async function ProfilePage({ params }: Props) {
             {/* 업종별 면책 분기 (T-004) */}
             <Disclaimer sector={sector?.slug ?? ''} />
 
-            {/* 신고 — 잘못된 정보, 폐업, 스팸 등 */}
-            <div className="mt-6 text-right">
-              <ReportPlaceButton placeId={place.id} />
-            </div>
+            {/* 신고 — 잘못된 정보, 폐업, 스팸 등 (DB UUID 없는 seed 폴백은 노출 안 함) */}
+            {place.id && (
+              <div className="mt-6 text-right">
+                <ReportPlaceButton placeId={place.id} />
+              </div>
+            )}
           </div>
         </article>
       </main>

@@ -68,13 +68,15 @@ export async function cancelSubscriptionAction(input: CancelInput): Promise<Canc
 
   // 3) 해지 사유 로깅 (별도 테이블 있으면 기록, 없으면 subscription_events)
   if (input.reason || input.feedback) {
-    await admin.from('subscription_events').insert({
-      subscription_id: subRow.id,
-      event_type: 'cancellation_requested',
-      metadata: { reason: input.reason, feedback: input.feedback, mode: input.mode },
-    }).then(r => r).catch(() => {
+    try {
+      await admin.from('subscription_events').insert({
+        subscription_id: subRow.id,
+        event_type: 'cancellation_requested',
+        metadata: { reason: input.reason, feedback: input.feedback, mode: input.mode },
+      })
+    } catch {
       // subscription_events 테이블 없어도 무시
-    })
+    }
   }
 
   revalidatePath('/owner/billing')

@@ -91,6 +91,7 @@ export interface FAQ {
 
 /** 업체 (Place) — 핵심 엔티티 */
 export interface Place {
+  id?: string               // DB UUID (Supabase places.id). seed data 폴백에는 없음.
   slug: string              // "pretty-clinic" (영문, URL용)
   name: string              // "천안예쁜피부과"
   nameEn?: string           // "Cheonan Pretty Dermatology"
