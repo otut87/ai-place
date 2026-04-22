@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import {
-  buildDetailPath,
+  buildPlacePath,
   buildBlogPath,
   normalizeBlogPostMentionType,
 } from '@/lib/owner/place-mentions'
 
 describe('place-mentions URL builders', () => {
-  it('buildDetailPath — /[city]/[category]/[slug]', () => {
-    expect(buildDetailPath('cheonan', 'dermatology', 'doctor-evers'))
+  it('buildPlacePath — /[city]/[category]/[slug]', () => {
+    expect(buildPlacePath('cheonan', 'dermatology', 'doctor-evers'))
       .toBe('/cheonan/dermatology/doctor-evers')
   })
 

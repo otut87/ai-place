@@ -6,7 +6,7 @@
  * CI · Vercel postdeploy · 수동 실행 어느 쪽이든 멱등하게 돌아간다.
  *
  * 단계:
- *   1) places WHERE status='active'           → page_type='detail'  fan-out
+ *   1) places WHERE status='active'           → page_type='place'   fan-out
  *   2) blog_posts WHERE status='active'       → page_type='blog'    fan-out
  *        - places_mentioned UUID[] 가 채워져 있으면 그대로 사용
  *        - 비어 있으면 related_place_slugs → place_id 조회로 백필 후 fan-out
@@ -24,7 +24,7 @@ dotenv.config({ path: path.resolve('.env') })
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import {
   upsertPlaceMentions,
-  buildDetailPath,
+  buildPlacePath,
   buildBlogPath,
   type MentionRow,
 } from '@/lib/owner/place-mentions'
@@ -133,22 +133,22 @@ async function main() {
   const places = await fetchActivePlaces()
   console.log(`  places active: ${places.length}`)
 
-  // ── 1) places → detail ──────────────────────────────────────────
-  const detailRows: MentionRow[] = places.map((p) => ({
+  // ── 1) places → place (업체 상세 URL) ───────────────────────────
+  const placeRows: MentionRow[] = places.map((p) => ({
     placeId: p.id,
-    pagePath: buildDetailPath(p.city, p.category, p.slug),
-    pageType: 'detail',
+    pagePath: buildPlacePath(p.city, p.category, p.slug),
+    pageType: 'place',
   }))
 
   if (args.verbose) {
-    for (const r of detailRows) console.log(`    + detail ${r.pagePath}`)
+    for (const r of placeRows) console.log(`    + place ${r.pagePath}`)
   }
 
   if (args.dryRun) {
-    console.log(`  [dry-run] detail fan-out: ${detailRows.length}건 예정`)
+    console.log(`  [dry-run] place fan-out: ${placeRows.length}건 예정`)
   } else {
-    const result = await upsertPlaceMentions(detailRows)
-    console.log(`  detail fan-out upsert: ${result.inserted}/${result.total}`)
+    const result = await upsertPlaceMentions(placeRows)
+    console.log(`  place fan-out upsert: ${result.inserted}/${result.total}`)
   }
 
   // ── 2) blog_posts → blog ───────────────────────────────────────

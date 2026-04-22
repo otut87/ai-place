@@ -36,8 +36,8 @@ export interface PlaceAeoInput {
     | 'services'
   >
   /**
-   * 비교/블로그/가이드/키워드 페이지에서 이 업체가 언급된 횟수 (detail 제외).
-   * place_mentions 테이블에서 `page_type != 'detail'` 로 COUNT.
+   * 비교/블로그/가이드/키워드 페이지에서 이 업체가 언급된 횟수 (업체 상세 URL 제외).
+   * place_mentions 테이블에서 `page_type != 'place'` 로 COUNT.
    */
   mentionCount: number
   /** 지금 기준 시각 (테스트 주입용). */
@@ -75,23 +75,13 @@ export function scorePlaceAeo(input: PlaceAeoInput): PlaceAeoScore {
   const jsonldOk = name.length > 0 && address.length > 0 && phone.length > 0
   rules.push({
     id: 'jsonld-basics',
-    label: 'JSON-LD 기본 (이름·주소·전화)',
+    label: 'JSON-LD 기본 (이름·주소·연락처)',
     weight: 20,
     passed: jsonldOk,
-    detail: jsonldOk ? undefined : `누락: ${[!name && '이름', !address && '주소', !phone && '전화'].filter(Boolean).join(' · ')}`,
+    detail: jsonldOk ? undefined : `누락: ${[!name && '이름', !address && '주소', !phone && '연락처'].filter(Boolean).join(' · ')}`,
   })
 
-  // 2. 출처·lastChecked — lastUpdated 가 있고 180일 이내.
-  const fresh = isFreshEnough(place.lastUpdated, now)
-  rules.push({
-    id: 'freshness',
-    label: '최근 갱신 표기 (180일 이내)',
-    weight: 10,
-    passed: fresh,
-    detail: place.lastUpdated ? (fresh ? undefined : '180일 초과 — 갱신 필요') : '갱신일 없음',
-  })
-
-  // 3. FAQ 적정성 — 3~10개.
+  // 2. FAQ 적정성 — 3~10개. (remix 디자인 순서 기준 2번째)
   const faqCount = place.faqs?.length ?? 0
   const faqOk = faqCount >= 3 && faqCount <= 10
   rules.push({
@@ -102,12 +92,22 @@ export function scorePlaceAeo(input: PlaceAeoInput): PlaceAeoScore {
     detail: faqOk ? undefined : `현재 ${faqCount}개`,
   })
 
-  // 4. 리뷰 요약 — reviewSummaries 1건 이상 또는 reviewCount>0.
+  // 3. 출처·lastChecked — lastUpdated 가 있고 180일 이내.
+  const fresh = isFreshEnough(place.lastUpdated, now)
+  rules.push({
+    id: 'freshness',
+    label: '최근 갱신 표시 (180일 이내)',
+    weight: 10,
+    passed: fresh,
+    detail: place.lastUpdated ? (fresh ? undefined : '180일 초과 — 갱신 필요') : '갱신일 없음',
+  })
+
+  // 4. 리뷰 표시/수집 — reviewSummaries 1건 이상 또는 reviewCount>0.
   const summaryCount = place.reviewSummaries?.length ?? 0
   const reviewOk = summaryCount > 0 || (place.reviewCount ?? 0) > 0
   rules.push({
     id: 'review-summary',
-    label: '리뷰 요약/수집',
+    label: '리뷰 표시/수집',
     weight: 10,
     passed: reviewOk,
     detail: reviewOk ? undefined : '리뷰 요약 없음',
@@ -129,7 +129,7 @@ export function scorePlaceAeo(input: PlaceAeoInput): PlaceAeoScore {
   const hoursOk = hoursCount > 0
   rules.push({
     id: 'opening-hours',
-    label: '영업시간 등록',
+    label: '영업시간 정확',
     weight: 10,
     passed: hoursOk,
     detail: hoursOk ? undefined : '영업시간 없음',
@@ -140,17 +140,17 @@ export function scorePlaceAeo(input: PlaceAeoInput): PlaceAeoScore {
   const servicesOk = serviceCount >= 1
   rules.push({
     id: 'services-min',
-    label: '서비스 1개 이상',
+    label: '서비스 1가지 이상',
     weight: 10,
     passed: servicesOk,
     detail: servicesOk ? undefined : '서비스 없음',
   })
 
-  // 8. 비교/가이드 등 컨텐츠 언급 — mentionCount >= 1.
+  // 8. 브랜드·카테고리·지역 언급 — 비교/가이드/블로그/키워드 콘텐츠에 언급 (mentionCount >= 1).
   const mentionedOk = mentionCount >= 1
   rules.push({
     id: 'mentioned-in-content',
-    label: '비교·가이드·블로그 언급',
+    label: '브랜드·카테고리·지역 언급',
     weight: 10,
     passed: mentionedOk,
     detail: mentionedOk ? `${mentionCount}회 언급` : '아직 언급 없음',

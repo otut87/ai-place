@@ -74,7 +74,7 @@ describe('place-aeo-score', () => {
     })
     const rule = r.rules.find(x => x.id === 'jsonld-basics')!
     expect(rule.passed).toBe(false)
-    expect(rule.detail).toContain('전화')
+    expect(rule.detail).toContain('연락처')
     expect(r.score).toBe(80)
   })
 

@@ -248,8 +248,9 @@ export interface KeywordPage {
 
 // --- Blog (T-010 Phase 1.5) ---
 
-/** 블로그 포스트 타입 — keyword/compare/guide 통합 */
-export type BlogPostType = 'keyword' | 'compare' | 'guide' | 'general'
+/** 블로그 포스트 타입 — 파이프라인 자동 발행 4종 + admin 수동 1종.
+ *  detail: 특정 업체 1곳 심층 / keyword: 지역+업종 랜딩 / compare: 업체 비교 / guide: 선택 가이드 / general: 수동 일반 */
+export type BlogPostType = 'detail' | 'keyword' | 'compare' | 'guide' | 'general'
 export type BlogPostStatus = 'draft' | 'active' | 'archived'
 
 /** 블로그 글 전체 데이터 (상세 페이지용) */

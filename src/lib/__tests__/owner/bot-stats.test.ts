@@ -57,9 +57,9 @@ describe('aggregateOwnerBotSummary', () => {
     expect(s.aiTraining.byEngine).toEqual({ chatgpt: 0, claude: 0, gemini: 0, other: 0 })
   })
 
-  it('직접/언급 분리 — detail=direct, blog/compare/guide/keyword=mention', () => {
+  it('직접/언급 분리 — place=direct, blog/compare/guide/keyword=mention', () => {
     const rows: AnnotatedVisit[] = [
-      { botId: 'chatgpt-user', pageType: 'detail', visitedAt: '2026-04-21T10:00:00Z' },
+      { botId: 'chatgpt-user', pageType: 'place', visitedAt: '2026-04-21T10:00:00Z' },
       { botId: 'claude-web', pageType: 'blog', visitedAt: '2026-04-20T10:00:00Z' },
       { botId: 'perplexitybot', pageType: 'compare', visitedAt: '2026-04-19T10:00:00Z' },
       { botId: 'chatgpt-user', pageType: 'guide', visitedAt: '2026-04-18T10:00:00Z' },
@@ -73,9 +73,9 @@ describe('aggregateOwnerBotSummary', () => {
 
   it('엔진별 카운트', () => {
     const rows: AnnotatedVisit[] = [
-      { botId: 'chatgpt-user', pageType: 'detail', visitedAt: '2026-04-20T10:00:00Z' },
-      { botId: 'oai-searchbot', pageType: 'detail', visitedAt: '2026-04-20T10:00:00Z' },
-      { botId: 'claude-web', pageType: 'detail', visitedAt: '2026-04-20T10:00:00Z' },
+      { botId: 'chatgpt-user', pageType: 'place', visitedAt: '2026-04-20T10:00:00Z' },
+      { botId: 'oai-searchbot', pageType: 'place', visitedAt: '2026-04-20T10:00:00Z' },
+      { botId: 'claude-web', pageType: 'place', visitedAt: '2026-04-20T10:00:00Z' },
       { botId: 'perplexitybot', pageType: 'blog', visitedAt: '2026-04-20T10:00:00Z' },
       { botId: 'perplexity-user', pageType: 'blog', visitedAt: '2026-04-20T10:00:00Z' },
       { botId: 'duckassistbot', pageType: 'blog', visitedAt: '2026-04-20T10:00:00Z' },
@@ -89,7 +89,7 @@ describe('aggregateOwnerBotSummary', () => {
 
   it('ai-training — Gemini (Google-Extended) 포함', () => {
     const rows: AnnotatedVisit[] = [
-      { botId: 'gptbot', pageType: 'detail', visitedAt: '2026-04-20T09:00:00Z' },
+      { botId: 'gptbot', pageType: 'place', visitedAt: '2026-04-20T09:00:00Z' },
       { botId: 'claudebot', pageType: 'blog', visitedAt: '2026-04-21T09:00:00Z' },
       { botId: 'anthropic-ai', pageType: 'blog', visitedAt: '2026-04-21T10:00:00Z' },
       { botId: 'google-extended', pageType: 'blog', visitedAt: '2026-04-22T09:00:00Z' },
@@ -107,9 +107,9 @@ describe('aggregateOwnerBotSummary', () => {
 
   it('search / crawler-other 그룹은 집계에서 제외', () => {
     const rows: AnnotatedVisit[] = [
-      { botId: 'googlebot', pageType: 'detail', visitedAt: '2026-04-20T09:00:00Z' },
+      { botId: 'googlebot', pageType: 'place', visitedAt: '2026-04-20T09:00:00Z' },
       { botId: 'diffbot', pageType: 'blog', visitedAt: '2026-04-20T10:00:00Z' },
-      { botId: 'chatgpt-user', pageType: 'detail', visitedAt: '2026-04-20T11:00:00Z' },
+      { botId: 'chatgpt-user', pageType: 'place', visitedAt: '2026-04-20T11:00:00Z' },
     ]
     const s = run(rows)
     expect(s.aiSearch.total).toBe(1)
@@ -118,7 +118,7 @@ describe('aggregateOwnerBotSummary', () => {
 
   it('lastVisitAt — 가장 최근 시각', () => {
     const rows: AnnotatedVisit[] = [
-      { botId: 'chatgpt-user', pageType: 'detail', visitedAt: '2026-04-15T09:00:00Z' },
+      { botId: 'chatgpt-user', pageType: 'place', visitedAt: '2026-04-15T09:00:00Z' },
       { botId: 'claude-web', pageType: 'blog', visitedAt: '2026-04-22T11:30:00Z' },
       { botId: 'perplexitybot', pageType: 'blog', visitedAt: '2026-04-18T14:00:00Z' },
     ]
@@ -160,9 +160,9 @@ describe('aggregateOwnerDailyTrend', () => {
     // 2026-04-22 03:00 UTC = 2026-04-22 12:00 KST
     const rows = aggregateOwnerDailyTrend(
       [
-        { botId: 'chatgpt-user', pageType: 'detail', visitedAt: '2026-04-22T03:00:00Z' },
+        { botId: 'chatgpt-user', pageType: 'place', visitedAt: '2026-04-22T03:00:00Z' },
         { botId: 'claude-web', pageType: 'blog', visitedAt: '2026-04-22T04:00:00Z' },
-        { botId: 'gptbot', pageType: 'detail', visitedAt: '2026-04-22T05:00:00Z' },
+        { botId: 'gptbot', pageType: 'place', visitedAt: '2026-04-22T05:00:00Z' },
         { botId: 'google-extended', pageType: 'blog', visitedAt: '2026-04-22T06:00:00Z' },
       ],
       7, NOW,
@@ -178,8 +178,8 @@ describe('aggregateOwnerDailyTrend', () => {
   it('window 밖 날짜는 drop', () => {
     const rows = aggregateOwnerDailyTrend(
       [
-        { botId: 'chatgpt-user', pageType: 'detail', visitedAt: '2026-04-01T00:00:00Z' },  // 21일 전
-        { botId: 'claude-web',   pageType: 'detail', visitedAt: '2026-04-22T03:00:00Z' },  // 오늘
+        { botId: 'chatgpt-user', pageType: 'place', visitedAt: '2026-04-01T00:00:00Z' },  // 21일 전
+        { botId: 'claude-web',   pageType: 'place', visitedAt: '2026-04-22T03:00:00Z' },  // 오늘
       ],
       7, NOW,
     )
@@ -191,8 +191,8 @@ describe('aggregateOwnerDailyTrend', () => {
   it('search / crawler-other 그룹은 추이에서 제외', () => {
     const rows = aggregateOwnerDailyTrend(
       [
-        { botId: 'googlebot', pageType: 'detail', visitedAt: '2026-04-22T03:00:00Z' },
-        { botId: 'chatgpt-user', pageType: 'detail', visitedAt: '2026-04-22T03:00:00Z' },
+        { botId: 'googlebot', pageType: 'place', visitedAt: '2026-04-22T03:00:00Z' },
+        { botId: 'chatgpt-user', pageType: 'place', visitedAt: '2026-04-22T03:00:00Z' },
       ],
       7, NOW,
     )

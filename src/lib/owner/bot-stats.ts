@@ -6,7 +6,7 @@
 //   3) bot_id → BotGroup / Engine 매핑 후 카테고리별 카운트
 //
 // 분리 기준 (OWNER_DASHBOARD_PLAN.md §3.1):
-//   - direct:  page_type === 'detail'  (업체 상세 페이지 방문)
+//   - direct:  page_type === 'place'   (업체 상세 페이지 방문)
 //   - mention: 그 외 (blog/compare/guide/keyword — 본문 언급)
 
 import { getAdminClient } from '@/lib/supabase/admin-client'
@@ -14,7 +14,12 @@ import { AI_BOT_PATTERNS, type BotGroup } from '@/lib/seo/bot-detection'
 
 export type AiSearchEngine = 'chatgpt' | 'claude' | 'perplexity' | 'other'
 export type AiTrainingEngine = 'chatgpt' | 'claude' | 'gemini' | 'other'
-export type MentionType = 'detail' | 'blog' | 'compare' | 'guide' | 'keyword'
+/** place_mentions.page_type 제약과 일치.
+ *  place   : 업체 상세 URL (/[city]/[category]/[slug])
+ *  blog    : 블로그글 (/blog/[city]/[sector]/[slug]) — post_type 은 별도 컬럼
+ *  compare/guide/keyword : seed 소스 매핑
+ */
+export type MentionType = 'place' | 'blog' | 'compare' | 'guide' | 'keyword'
 export type Attribution = 'direct' | 'mention'
 
 export interface OwnerBotBucket {
@@ -110,7 +115,7 @@ export function aggregateOwnerBotSummary(
 
     const bucket = group === 'ai-search' ? aiSearch : aiTraining
     const engine = mapBotToEngine(r.botId, group)
-    const attribution: Attribution = r.pageType === 'detail' ? 'direct' : 'mention'
+    const attribution: Attribution = r.pageType === 'place' ? 'direct' : 'mention'
 
     bucket.total += 1
     if (attribution === 'direct') bucket.direct += 1
@@ -320,6 +325,84 @@ export async function getOwnerDailyTrend(
   return aggregateOwnerDailyTrend(annotated, days, now)
 }
 
+// ── 페이지(path)별 집계 — /owner/citations 페이지용 ────────────────
+export interface OwnerPathSummaryRow {
+  path: string
+  pageType: MentionType
+  attribution: Attribution
+  placeIds: string[]
+  total: number
+  bySearch: Record<AiSearchEngine, number>
+  byTraining: Record<AiTrainingEngine, number>
+  lastVisitAt: string | null
+}
+
+/**
+ * 오너 업체에 귀속된 path 별 AI 봇 방문 합계.
+ * 반환 정렬: total desc. /owner/citations 의 "상위 페이지" 테이블용.
+ */
+export async function getOwnerByPathSummary(
+  placeIds: string[],
+  days = 90,
+  now: Date = new Date(),
+): Promise<OwnerPathSummaryRow[]> {
+  if (placeIds.length === 0) return []
+  const pathMap = await fetchPathMap(placeIds)
+  if (pathMap.size === 0) return []
+
+  const admin = getAdminClient()
+  if (!admin) return []
+
+  const since = new Date(now.getTime() - days * 86_400_000).toISOString()
+  const paths = Array.from(pathMap.keys())
+
+  const { data, error } = await admin
+    .from('bot_visits')
+    .select('bot_id, path, visited_at')
+    .in('path', paths)
+    .gte('visited_at', since)
+  if (error) {
+    console.error('[bot-stats] getOwnerByPathSummary 실패:', error.message)
+    return []
+  }
+
+  const acc = new Map<string, OwnerPathSummaryRow>()
+  for (const row of (data ?? []) as Array<{ bot_id: string; path: string; visited_at: string }>) {
+    const group = ID_TO_GROUP.get(row.bot_id)
+    if (group !== 'ai-search' && group !== 'ai-training') continue
+    const info = pathMap.get(row.path)
+    if (!info) continue
+
+    let bucket = acc.get(row.path)
+    if (!bucket) {
+      bucket = {
+        path: row.path,
+        pageType: info.pageType,
+        attribution: info.pageType === 'place' ? 'direct' : 'mention',
+        placeIds: info.placeIds,
+        total: 0,
+        bySearch: emptyEngineMap(AI_SEARCH_ENGINE_KEYS),
+        byTraining: emptyEngineMap(AI_TRAINING_ENGINE_KEYS),
+        lastVisitAt: null,
+      }
+      acc.set(row.path, bucket)
+    }
+
+    bucket.total += 1
+    const engine = mapBotToEngine(row.bot_id, group)
+    if (group === 'ai-search') {
+      bucket.bySearch[engine as AiSearchEngine] = (bucket.bySearch[engine as AiSearchEngine] ?? 0) + 1
+    } else {
+      bucket.byTraining[engine as AiTrainingEngine] = (bucket.byTraining[engine as AiTrainingEngine] ?? 0) + 1
+    }
+    if (!bucket.lastVisitAt || row.visited_at > bucket.lastVisitAt) {
+      bucket.lastVisitAt = row.visited_at
+    }
+  }
+
+  return Array.from(acc.values()).sort((a, b) => b.total - a.total)
+}
+
 /** Sprint D-2 용 — 최근 N건 AI 봇 방문 이력. ai-search/ai-training 그룹만. */
 export async function listOwnerBotVisits(
   placeIds: string[],
@@ -358,7 +441,7 @@ export async function listOwnerBotVisits(
       group,
       path: row.path,
       pageType: info.pageType,
-      attribution: info.pageType === 'detail' ? 'direct' : 'mention',
+      attribution: info.pageType === 'place' ? 'direct' : 'mention',
       visitedAt: row.visited_at,
       placeIds: info.placeIds,
     })

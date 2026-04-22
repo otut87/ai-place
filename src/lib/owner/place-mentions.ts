@@ -20,7 +20,7 @@ export interface MentionRow {
 // ── URL 빌더 ────────────────────────────────────────────────────────────
 // bot_visits.path 는 쿼리/해시 제거된 pathname 기준으로 저장되므로 일치시킨다.
 
-export function buildDetailPath(city: string, category: string, slug: string): string {
+export function buildPlacePath(city: string, category: string, slug: string): string {
   return `/${city}/${category}/${slug}`
 }
 
@@ -29,12 +29,9 @@ export function buildBlogPath(city: string, sector: string, slug: string): strin
 }
 
 /**
- * 소스 타입에 대응하는 MentionType 반환.
- * blog_posts.post_type ('keyword' | 'compare' | 'guide' | 'general') 과
- * place_mentions.page_type ('blog' | 'compare' | 'guide' | 'keyword') 이 다름에 주의.
- *
- * DB blog_posts 행은 URL 상 /blog/* 로 노출되므로 통일해서 'blog' 로 귀속시킨다.
- * 'compare'/'guide'/'keyword' 는 seed 전용 매핑 (scripts/sync-place-mentions.ts).
+ * 블로그 글의 page_type 은 post_type 과 무관하게 항상 'blog'.
+ * 오너 UI 의 "업체정보/비교/가이드/키워드" 세부 분류는 blog_posts.post_type 으로 수행.
+ * seed 'compare'/'guide'/'keyword' 매핑은 scripts/sync-place-mentions.ts 에서 직접 설정.
  */
 export function normalizeBlogPostMentionType(): MentionType {
   return 'blog'
@@ -163,7 +160,7 @@ export async function countMentionsByPlace(placeIds: ReadonlyArray<string>): Pro
     if (!c) continue
     c.total += 1
     c.byType[row.page_type] += 1
-    if (row.page_type !== 'detail') c.contentMentions += 1
+    if (row.page_type !== 'place') c.contentMentions += 1
   }
 
   return out
@@ -174,6 +171,6 @@ function emptyCounts(placeId: string): MentionCounts {
     placeId,
     total: 0,
     contentMentions: 0,
-    byType: { detail: 0, blog: 0, compare: 0, guide: 0, keyword: 0 },
+    byType: { place: 0, blog: 0, compare: 0, guide: 0, keyword: 0 },
   }
 }
