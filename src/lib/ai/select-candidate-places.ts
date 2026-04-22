@@ -10,8 +10,14 @@ export interface SelectionInput {
   category: string
   places: Place[]                // 사전 조회된 후보 풀 (전체 places)
   maxCount?: number              // 기본 5
-  minRating?: number             // 기본 4.0
-  minReviewCount?: number        // 기본 10
+  /**
+   * 평점 하한. 기본 0 = 제약 없음 (T-194 Q3 반영).
+   * 이유: 사장님 결제 이유 훼손 방지 — 모든 active 업체가 블로그 후보가 된다.
+   * 예외: 호출자가 품질 높은 후보만 필요할 때 명시적으로 지정 가능.
+   */
+  minRating?: number
+  /** 리뷰 수 하한. 기본 0 = 제약 없음 (T-194 Q3 반영). */
+  minReviewCount?: number
   requireComplianceMetadata?: boolean  // 의료·법률·세무 카테고리 전용
   /** 수동 선택: 이 slug 들만 후보로 쓰고 자동 필터 생략 (city/category 일치는 유지). */
   manualSlugs?: string[]
@@ -47,8 +53,9 @@ export function selectCandidatePlaces(input: SelectionInput): SelectionResult {
   const {
     city, category, places,
     maxCount = 5,
-    minRating = 4.0,
-    minReviewCount = 10,
+    // T-194: 평점·리뷰 제약 기본 0 — 모든 active 업체가 후보.
+    minRating = 0,
+    minReviewCount = 0,
     requireComplianceMetadata = false,
     manualSlugs,
   } = input
@@ -94,7 +101,9 @@ export function selectCandidatePlaces(input: SelectionInput): SelectionResult {
   })
 
   const warning = top.length === 0
-    ? `${city}/${category} 에서 평점 ${minRating}+ / 리뷰 ${minReviewCount}+ 업체가 없습니다. 등록 업체를 확인해 주세요.`
+    ? (minRating > 0 || minReviewCount > 0)
+      ? `${city}/${category} 에서 평점 ${minRating}+ / 리뷰 ${minReviewCount}+ 업체가 없습니다. 등록 업체를 확인해 주세요.`
+      : `${city}/${category} 에 등록된 active 업체가 없습니다. 외부 업체 참조가 필요합니다.`
     : undefined
 
   return { places: top, reasoning, warning }
@@ -112,9 +121,12 @@ function buildReasoning(
   }
   const avgRating = selected.reduce((s, p) => s + (p.rating ?? 0), 0) / selected.length
   const totalReviews = selected.reduce((s, p) => s + (p.reviewCount ?? 0), 0)
+  const filterNote = (ctx.minRating > 0 || ctx.minReviewCount > 0)
+    ? `평점 ${ctx.minRating}+ / 리뷰 ${ctx.minReviewCount}+ 필터 통과 ${ctx.totalFiltered}개, `
+    : `전체 active ${ctx.totalFiltered}개 중 `
   return [
     `${city}/${category} 등록 업체 ${ctx.totalCandidates}개 중 `,
-    `평점 ${ctx.minRating}+ / 리뷰 ${ctx.minReviewCount}+ 필터 통과 ${ctx.totalFiltered}개, `,
+    filterNote,
     `상위 ${selected.length}곳 선정. `,
     `평균 평점 ${avgRating.toFixed(2)}, 리뷰 합계 ${totalReviews}건.${complianceNote}`,
   ].join('')
