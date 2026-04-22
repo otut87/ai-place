@@ -2,7 +2,8 @@
 // Vercel Cron 매주 일요일 KST 03:00 (UTC 토요일 18:00) 호출.
 //
 // 설계:
-// - 등록된 모든 place 순회 → `place.enrich_google` + `place.summarize_google_reviews` enqueue
+// - 등록된 모든 place 순회 → `place.enrich_google` 1종만 enqueue
+//   (T-191: enrich 핸들러가 reviewCount 변화 감지해서 Haiku 요약까지 내부 처리)
 // - enqueuePlaceRefresh 가 dedup 해주므로 이미 pending/running 잡은 skip
 // - 실제 실행은 5분 consumer(/api/cron/pipeline-consume)가 FIFO 로 소화
 //
@@ -45,10 +46,8 @@ export async function GET(req: Request) {
 
   for (const row of rows) {
     try {
-      const r = await enqueuePlaceRefresh(row.id, [
-        'place.enrich_google',
-        'place.summarize_google_reviews',
-      ])
+      // T-191: enrich 만 — reviewCount 변화 시 핸들러 내부에서 Haiku 요약 연쇄 수행
+      const r = await enqueuePlaceRefresh(row.id, ['place.enrich_google'])
       enqueuedTotal += r.enqueued.length
       skippedTotal += r.skipped.length
     } catch (err) {

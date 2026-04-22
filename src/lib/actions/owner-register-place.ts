@@ -297,15 +297,13 @@ export async function registerOwnerPlaceAction(draft: OwnerPlaceDraft): Promise<
 
   const placeId = (inserted as { id: string }).id
 
-  // Phase 11 — googlePlaceId 가 있으면 Google 재수집 + Haiku 리뷰 요약을 백그라운드 큐잉.
-  // 프로덕션 Vercel Cron 5분 주기로 pipeline-consume 가 처리.
+  // Phase 11 — googlePlaceId 가 있으면 Google 재수집을 백그라운드 큐잉.
+  // T-191: enrich 만 enqueue — 핸들러가 reviewCount 변화 감지 시 Haiku 요약 내부 수행.
+  //        신규 등록은 reviewCount 가 null → 무조건 "변경"으로 판정되어 첫 summary 생성됨.
   if (draft.googlePlaceId) {
     try {
       const { enqueuePlaceRefresh } = await import('@/lib/admin/pipeline-jobs')
-      await enqueuePlaceRefresh(placeId, [
-        'place.enrich_google',
-        'place.summarize_google_reviews',
-      ])
+      await enqueuePlaceRefresh(placeId, ['place.enrich_google'])
     } catch (e) {
       console.error('[registerOwnerPlaceAction] enqueue refresh failed:', e)
     }

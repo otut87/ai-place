@@ -762,14 +762,12 @@ export async function registerPlace(input: RegisterPlaceInput): Promise<ActionRe
   const insertedId = (insertedRow as { id?: string } | null)?.id
 
   // Phase 11: 무거운 작업은 background 워커로 이관 — 등록 요청은 DB insert 만으로 완료.
-  // Google Places 재수집 + Haiku 리뷰 요약은 pipeline-consume 크론이 처리.
+  // T-191: enrich 만 enqueue — 핸들러가 reviewCount 변화 감지 시 Haiku 요약 내부 수행.
+  //        신규 등록은 reviewCount 가 null → 무조건 "변경"으로 판정되어 첫 summary 생성됨.
   if (insertedId && input.googlePlaceId) {
     try {
       const { enqueuePlaceRefresh } = await import('@/lib/admin/pipeline-jobs')
-      await enqueuePlaceRefresh(insertedId, [
-        'place.enrich_google',
-        'place.summarize_google_reviews',
-      ])
+      await enqueuePlaceRefresh(insertedId, ['place.enrich_google'])
     } catch (e) {
       console.error('[register-place] enqueue refresh failed:', e)
     }

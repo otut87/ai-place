@@ -66,6 +66,7 @@ describe('runPlaceEnrichGoogle', () => {
         name: 'X',
         category: 'c',
         google_place_id: null,
+        review_count: null,
         review_summaries: null,
       }),
     })
@@ -73,9 +74,10 @@ describe('runPlaceEnrichGoogle', () => {
     expect(r.slug).toBe('s1')
     expect(r.rating).toBeNull()
     expect(r.reviewsFetched).toBe(0)
+    expect(r.summaryWritten).toBe(false)
   })
 
-  it('Google API 성공 시 DB 업데이트 후 결과 반환', async () => {
+  it('신규 등록 (review_count=null, summary 없음) → Haiku 호출 + summary 작성', async () => {
     const updateFn = mockUpdate()
     mockAdmin.from.mockImplementation(() => ({
       select: mockSelectSingle({
@@ -84,29 +86,133 @@ describe('runPlaceEnrichGoogle', () => {
         name: 'X',
         category: 'c',
         google_place_id: 'gp1',
+        review_count: null,
         review_summaries: null,
       }),
       update: updateFn,
     }))
     vi.mocked(getPlaceDetails).mockResolvedValue({
-      name: 'X',
-      nameEn: 'X',
-      rating: 4.7,
-      reviewCount: 230,
+      name: 'X', nameEn: 'X', rating: 4.7, reviewCount: 230,
       reviews: [{ text: 'good', rating: 5, relativeTime: '1달 전', language: 'ko' }],
-      phone: '',
-      websiteUri: '',
-      openingHours: [],
-      editorialSummary: '',
-      googleMapsUri: 'https://maps.google/x',
-      photoRefs: [],
+      phone: '', websiteUri: '', openingHours: [], editorialSummary: '',
+      googleMapsUri: 'https://maps.google/x', photoRefs: [],
     } as unknown as Awaited<ReturnType<typeof getPlaceDetails>>)
+    vi.mocked(summarizeReviewsForSource).mockResolvedValue({
+      summary: { source: 'Google', positiveThemes: ['친절'], negativeThemes: [], lastChecked: '2026-04-22' },
+      inputTokens: 500, outputTokens: 50, latencyMs: 123,
+    })
 
     const r = await runPlaceEnrichGoogle('p1')
     expect(r.rating).toBe(4.7)
     expect(r.reviewCount).toBe(230)
-    expect(r.reviewsFetched).toBe(1)
-    expect(updateFn).toHaveBeenCalled()
+    expect(r.reviewsChanged).toBe(true)  // null → 230
+    expect(r.summaryWritten).toBe(true)
+    expect(summarizeReviewsForSource).toHaveBeenCalledTimes(1)
+  })
+
+  it('reviewCount 변경 없고 summary 있으면 Haiku 호출 skip', async () => {
+    const updateFn = mockUpdate()
+    mockAdmin.from.mockImplementation(() => ({
+      select: mockSelectSingle({
+        id: 'p1', slug: 's1', name: 'X', category: 'c',
+        google_place_id: 'gp1',
+        review_count: 100,  // 기존 100
+        review_summaries: [{
+          source: 'Google', positiveThemes: ['기존'], negativeThemes: [], lastChecked: '2026-04-15',
+        }],
+      }),
+      update: updateFn,
+    }))
+    vi.mocked(getPlaceDetails).mockResolvedValue({
+      name: 'X', nameEn: 'X', rating: 4.5, reviewCount: 100,  // 변화 없음
+      reviews: [{ text: 'good', rating: 5, relativeTime: '1달', language: 'ko' }],
+      phone: '', websiteUri: '', openingHours: [], editorialSummary: '', googleMapsUri: '',
+      photoRefs: [],
+    } as unknown as Awaited<ReturnType<typeof getPlaceDetails>>)
+
+    const r = await runPlaceEnrichGoogle('p1')
+    expect(r.reviewsChanged).toBe(false)
+    expect(r.summaryWritten).toBe(false)
+    expect(r.summarySkipReason).toBe('unchanged')
+    expect(summarizeReviewsForSource).not.toHaveBeenCalled()
+  })
+
+  it('reviewCount 증가하면 Haiku 재호출', async () => {
+    const updateFn = mockUpdate()
+    mockAdmin.from.mockImplementation(() => ({
+      select: mockSelectSingle({
+        id: 'p1', slug: 's1', name: 'X', category: 'c',
+        google_place_id: 'gp1',
+        review_count: 100,  // 기존 100
+        review_summaries: [{
+          source: 'Google', positiveThemes: ['기존'], negativeThemes: [], lastChecked: '2026-04-15',
+        }],
+      }),
+      update: updateFn,
+    }))
+    vi.mocked(getPlaceDetails).mockResolvedValue({
+      name: 'X', nameEn: 'X', rating: 4.6, reviewCount: 105,  // +5 증가
+      reviews: [{ text: 'new review', rating: 5, relativeTime: '3일', language: 'ko' }],
+      phone: '', websiteUri: '', openingHours: [], editorialSummary: '', googleMapsUri: '',
+      photoRefs: [],
+    } as unknown as Awaited<ReturnType<typeof getPlaceDetails>>)
+    vi.mocked(summarizeReviewsForSource).mockResolvedValue({
+      summary: { source: 'Google', positiveThemes: ['신규 언급'], negativeThemes: [], lastChecked: '2026-04-22' },
+      inputTokens: 500, outputTokens: 50, latencyMs: 123,
+    })
+
+    const r = await runPlaceEnrichGoogle('p1')
+    expect(r.reviewsChanged).toBe(true)
+    expect(r.summaryWritten).toBe(true)
+    expect(summarizeReviewsForSource).toHaveBeenCalledTimes(1)
+  })
+
+  it('reviewCount 동일하지만 summary 없으면 첫 요약 수행', async () => {
+    mockAdmin.from.mockImplementation(() => ({
+      select: mockSelectSingle({
+        id: 'p1', slug: 's1', name: 'X', category: 'c',
+        google_place_id: 'gp1',
+        review_count: 50,
+        review_summaries: null,  // summary 없음 (과거 실패 복구 케이스)
+      }),
+      update: mockUpdate(),
+    }))
+    vi.mocked(getPlaceDetails).mockResolvedValue({
+      name: 'X', nameEn: 'X', rating: 4.2, reviewCount: 50,  // 동일
+      reviews: [{ text: 'ok', rating: 4, relativeTime: '7일', language: 'ko' }],
+      phone: '', websiteUri: '', openingHours: [], editorialSummary: '', googleMapsUri: '',
+      photoRefs: [],
+    } as unknown as Awaited<ReturnType<typeof getPlaceDetails>>)
+    vi.mocked(summarizeReviewsForSource).mockResolvedValue({
+      summary: { source: 'Google', positiveThemes: ['보통'], negativeThemes: [], lastChecked: '2026-04-22' },
+      inputTokens: 500, outputTokens: 50, latencyMs: 123,
+    })
+
+    const r = await runPlaceEnrichGoogle('p1')
+    expect(r.reviewsChanged).toBe(false)
+    expect(r.summaryWritten).toBe(true)
+    expect(summarizeReviewsForSource).toHaveBeenCalledTimes(1)
+  })
+
+  it('Google reviews 배열이 비어있으면 Haiku 호출 skip', async () => {
+    mockAdmin.from.mockImplementation(() => ({
+      select: mockSelectSingle({
+        id: 'p1', slug: 's1', name: 'X', category: 'c',
+        google_place_id: 'gp1',
+        review_count: null,
+        review_summaries: null,
+      }),
+      update: mockUpdate(),
+    }))
+    vi.mocked(getPlaceDetails).mockResolvedValue({
+      name: 'X', nameEn: 'X', rating: null, reviewCount: 0, reviews: [],
+      phone: '', websiteUri: '', openingHours: [], editorialSummary: '', googleMapsUri: '', photoRefs: [],
+    } as unknown as Awaited<ReturnType<typeof getPlaceDetails>>)
+
+    const r = await runPlaceEnrichGoogle('p1')
+    expect(r.summaryWritten).toBe(false)
+    expect(r.summarySkipReason).toBe('no_reviews')
+    expect(summarizeReviewsForSource).not.toHaveBeenCalled()
   })
 })
 
