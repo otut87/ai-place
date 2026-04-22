@@ -18,9 +18,9 @@ describe('BILLING_POLICY_TEXTS', () => {
 })
 
 describe('BILLING_PRODUCT', () => {
-  it('월 33,000원 고정', () => {
-    expect(BILLING_PRODUCT.amount).toBe(33000)
-    expect(BILLING_PRODUCT.amountText).toBe('33,000원')
+  it('월 9,900원 고정 (T-205 단일 요금제)', () => {
+    expect(BILLING_PRODUCT.amount).toBe(9900)
+    expect(BILLING_PRODUCT.amountText).toBe('9,900원')
   })
 })
 
@@ -35,6 +35,6 @@ describe('buildReceiptFooter', () => {
 
 describe('summarizeBillingCycle', () => {
   it('한 줄 요약', () => {
-    expect(summarizeBillingCycle()).toBe('월 1회 자동결제 · 33,000원')
+    expect(summarizeBillingCycle()).toBe('월 1회 자동결제 · 9,900원')
   })
 })

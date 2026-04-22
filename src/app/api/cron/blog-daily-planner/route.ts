@@ -1,18 +1,21 @@
-// T-196 — 일일 블로그 토픽 플래너 크론 (Phase 4).
+// T-205 — 일일 블로그 토픽 플래너 (단일 요금제 · 업체별 월 5편 할당).
 //
 // 실행: 매일 KST 00:05 (UTC 15:05 전날).
-// 동작: planDailyTopics 로 10편 결정 → blog_topic_queue INSERT.
-// 그 후 pipeline-consume 크론이 15분마다 scheduled_for <= now() 인 토픽을 pop.
+// 동작:
+//   1) planMonthlyBlogs 가 "오늘 할당된 구독 업체" 만큼 rows 반환
+//   2) blog_topic_queue INSERT (이미 같은 날 행 있으면 skip — force=1 재계획)
+//   3) pipeline-consume 크론이 15분마다 scheduled_for <= now() 토픽 pop
+//
+// 이전 T-196 (공용풀 하루 10편 고정) 폐기 — 구독 업체 없으면 0편 발행.
 
 import { NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin-client'
-import { planDailyTopics } from '@/lib/blog/topic-planner'
+import { planMonthlyBlogs } from '@/lib/blog/monthly-blog-planner'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 function kstDateToday(): string {
-  // 서버 UTC 에서 KST 오늘 날짜 계산.
   const now = Date.now()
   const kstMs = now + 9 * 60 * 60 * 1000
   const d = new Date(kstMs)
@@ -32,23 +35,15 @@ export async function GET(req: Request) {
   const admin = getAdminClient()
   if (!admin) return NextResponse.json({ error: 'admin_unavailable' }, { status: 500 })
 
-  // ?date=YYYY-MM-DD override 지원 (관리자 수동 재계획용)
   const url = new URL(req.url)
   const plannedDate = url.searchParams.get('date') || kstDateToday()
-
-  // 중복 방지 — 같은 날짜 이미 계획됐으면 건너뜀 (관리자 수동 재계획 시 ?force=1).
   const force = url.searchParams.get('force') === '1'
+
   if (!force) {
-    const { data: existing } = await admin
-      .from('blog_topic_queue')
-      .select('id', { count: 'exact', head: true })
-      .eq('planned_date', plannedDate)
-    // head:true + count 는 data 없음, 대신 위 쿼리는 배열 — 방어적 처리.
     const { count: existingCount } = await admin
       .from('blog_topic_queue')
       .select('id', { count: 'exact', head: true })
       .eq('planned_date', plannedDate)
-    void existing
     if ((existingCount ?? 0) > 0) {
       return NextResponse.json({
         ok: true, skipped: true, plannedDate,
@@ -57,17 +52,20 @@ export async function GET(req: Request) {
     }
   }
 
-  const plan = await planDailyTopics({ plannedDate })
+  const plan = await planMonthlyBlogs({ plannedDate })
 
   if (plan.rows.length === 0) {
+    // T-205: 구독 업체가 없거나 오늘 할당일이 아닐 수 있음 — 정상 흐름.
     return NextResponse.json({
-      ok: false, plannedDate, inserted: 0,
+      ok: true,
+      plannedDate,
+      inserted: 0,
       skipped: plan.skipped,
-      message: '계획 가능한 토픽 0개 — 업체/키워드 풀 확인 필요',
-    }, { status: 500 })
+      usageByPlace: plan.usageByPlace,
+      message: '오늘 할당된 업체 없음 (구독 없음 혹은 분산일 외).',
+    })
   }
 
-  // bulk INSERT
   const { error } = await admin.from('blog_topic_queue').insert(plan.rows)
   if (error) {
     return NextResponse.json({
@@ -83,7 +81,7 @@ export async function GET(req: Request) {
       acc[r.post_type] = (acc[r.post_type] ?? 0) + 1
       return acc
     }, {} as Record<string, number>),
-    cityCategoryUsage: plan.cityCategoryUsage,
+    usageByPlace: plan.usageByPlace,
     skipped: plan.skipped,
   })
 }

@@ -14,8 +14,11 @@ export type BillingKeyStatus = 'active' | 'revoked' | 'expired'
 
 export type PaymentStatus = 'succeeded' | 'failed' | 'canceled'
 
-export const STANDARD_PLAN_AMOUNT = 33000 as const
+// T-205 — 단일 요금제 9,900원 (2026-04-22 확정).
+// 월 블로그 5편/업체 · 월간 리포트 · AEO 점검 · AI 인용 대시보드 포함.
+export const STANDARD_PLAN_AMOUNT = 9900 as const
 export const STANDARD_PLAN_NAME = 'standard' as const
+export const MONTHLY_BLOG_QUOTA_PER_PLACE = 5 as const
 
 export interface DbCustomer {
   id: string
