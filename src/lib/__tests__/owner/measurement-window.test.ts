@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   MEASUREMENT_WINDOW_DAYS,
   getMeasurementWindow,
+  isMeasuringBypassEmail,
 } from '@/lib/owner/measurement-window'
 
 const NOW = new Date('2026-04-22T12:00:00Z')
@@ -90,5 +91,32 @@ describe('measurement-window', () => {
     expect(w.isMeasuring).toBe(true)
     // 잘못된 문자열도 earliest 로 남아 referenceCreatedAt 에 들어감 (정렬 기준).
     expect(w.referenceCreatedAt).toBe('not-a-date')
+  })
+
+  describe('바이패스 이메일 (운영/테스트 계정)', () => {
+    it('support@dedo.kr 은 D-0 이어도 isMeasuring=false', () => {
+      const w = getMeasurementWindow([isoMinusDays(0)], NOW, { ownerEmail: 'support@dedo.kr' })
+      expect(w.isMeasuring).toBe(false)
+      expect(w.label).toBe('측정 완료')
+    })
+
+    it('바이패스 이메일은 업체 0건이어도 isMeasuring=false', () => {
+      const w = getMeasurementWindow([], NOW, { ownerEmail: 'support@dedo.kr' })
+      expect(w.isMeasuring).toBe(false)
+    })
+
+    it('대소문자 섞여도 매칭', () => {
+      expect(isMeasuringBypassEmail('Support@DEDO.kr')).toBe(true)
+    })
+
+    it('일반 이메일은 평소대로 측정 윈도 적용', () => {
+      const w = getMeasurementWindow([isoMinusDays(0)], NOW, { ownerEmail: 'owner@example.com' })
+      expect(w.isMeasuring).toBe(true)
+    })
+
+    it('null/undefined ownerEmail 은 기본 동작', () => {
+      const w = getMeasurementWindow([isoMinusDays(0)], NOW, { ownerEmail: null })
+      expect(w.isMeasuring).toBe(true)
+    })
   })
 })

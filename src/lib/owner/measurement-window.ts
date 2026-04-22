@@ -8,6 +8,24 @@
 
 export const MEASUREMENT_WINDOW_DAYS = 15
 
+/**
+ * 내부 운영/테스트 계정은 항상 실수치 노출.
+ * - D<15 라도 "측정 중" 배너/오버레이 우회
+ * - 환경변수 OWNER_MEASURING_BYPASS_EMAILS(콤마 구분)로 확장 가능
+ */
+const DEFAULT_BYPASS_EMAILS = ['support@dedo.kr']
+
+function getBypassEmails(): Set<string> {
+  const env = process.env.OWNER_MEASURING_BYPASS_EMAILS ?? ''
+  const extra = env.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+  return new Set([...DEFAULT_BYPASS_EMAILS.map((e) => e.toLowerCase()), ...extra])
+}
+
+export function isMeasuringBypassEmail(email: string | null | undefined): boolean {
+  if (!email) return false
+  return getBypassEmails().has(email.toLowerCase())
+}
+
 export interface MeasurementWindow {
   /** 경과 일수 (소수점 버림, 미래 날짜는 0 으로 보정). */
   daysElapsed: number
@@ -35,16 +53,34 @@ function computeDaysElapsed(createdAtIso: string, nowMs: number): number {
   return Math.floor(diff / DAY_MS)
 }
 
+export interface GetMeasurementWindowOptions {
+  /** 바이패스 계정(운영/테스트)은 항상 isMeasuring=false 반환. */
+  ownerEmail?: string | null
+}
+
 /** 여러 업체 생성 시각 중 가장 이른 것을 기준으로 측정 윈도 계산. */
 export function getMeasurementWindow(
   placeCreatedAts: ReadonlyArray<string | null | undefined>,
   now: Date = new Date(),
+  opts: GetMeasurementWindowOptions = {},
 ): MeasurementWindow {
   const nowMs = now.getTime()
   let earliest: string | null = null
   for (const iso of placeCreatedAts) {
     if (!iso) continue
     if (!earliest || iso < earliest) earliest = iso
+  }
+
+  // 운영/테스트 계정은 측정 윈도 우회.
+  if (isMeasuringBypassEmail(opts.ownerEmail)) {
+    const daysElapsed = earliest ? computeDaysElapsed(earliest, nowMs) : MEASUREMENT_WINDOW_DAYS
+    return {
+      daysElapsed,
+      daysRemaining: 0,
+      isMeasuring: false,
+      referenceCreatedAt: earliest,
+      label: '측정 완료',
+    }
   }
 
   if (!earliest) {

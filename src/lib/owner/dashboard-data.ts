@@ -4,7 +4,7 @@
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { requireOwnerUser, type OwnerUser } from '@/lib/owner/auth'
 import { listOwnerPlaces } from '@/lib/actions/owner-places'
-import { scorePlaceAeo, type AeoGrade } from '@/lib/owner/place-aeo-score'
+import { scorePlaceAeo, type AeoGrade, type AeoRuleResult } from '@/lib/owner/place-aeo-score'
 import { getMeasurementWindow, type MeasurementWindow } from '@/lib/owner/measurement-window'
 import { countMentionsByPlace } from '@/lib/owner/place-mentions'
 import {
@@ -28,6 +28,7 @@ export interface OwnerPlaceSummary {
   aeoGrade: AeoGrade
   missingCount: number
   aeoDeficiencies: string[]
+  aeoRules: AeoRuleResult[]
   mentionCount: number
 }
 
@@ -50,6 +51,8 @@ export interface OwnerDashboardData {
   todos: OwnerTodo[]
   billing: OwnerBillingState
   averageAeoScore: number | null
+  /** 이 로드에서 사용된 기간 (기본 30일). */
+  trendDays: number
 }
 
 interface PlaceDbRow {
@@ -169,8 +172,17 @@ async function loadSectorMap(): Promise<Map<string, string>> {
   return map
 }
 
-export async function loadOwnerDashboard(now: Date = new Date()): Promise<OwnerDashboardData> {
+export interface LoadOwnerDashboardOptions {
+  /** 일자별 추이 기간 (기본 30일). 7/30/90 권장. */
+  trendDays?: number
+}
+
+export async function loadOwnerDashboard(
+  now: Date = new Date(),
+  opts: LoadOwnerDashboardOptions = {},
+): Promise<OwnerDashboardData> {
   const user = await requireOwnerUser()
+  const trendDays = opts.trendDays ?? 30
 
   // 1. 오너 업체 목록 (owner_id / owner_email / customer_id 매칭)
   const ownerRows = await listOwnerPlaces()
@@ -180,9 +192,9 @@ export async function loadOwnerDashboard(now: Date = new Date()): Promise<OwnerD
   const [fullPlaces, mentionMap, botSummary, dailyTrend, recentBotVisits, billing, sectorMap] = await Promise.all([
     loadFullPlacesForOwner(placeIds),
     countMentionsByPlace(placeIds),
-    getOwnerBotSummary(placeIds, 30, now),
-    getOwnerDailyTrend(placeIds, 30, now),
-    listOwnerBotVisits(placeIds, 10, 30, now),
+    getOwnerBotSummary(placeIds, trendDays, now),
+    getOwnerDailyTrend(placeIds, trendDays, now),
+    listOwnerBotVisits(placeIds, 10, trendDays, now),
     loadBillingState(user.id, now),
     loadSectorMap(),
   ])
@@ -226,12 +238,17 @@ export async function loadOwnerDashboard(now: Date = new Date()): Promise<OwnerD
       aeoGrade: aeo.grade,
       missingCount: aeo.rules.filter((r) => !r.passed).length,
       aeoDeficiencies: aeo.rules.filter((r) => !r.passed).map((r) => r.label),
+      aeoRules: aeo.rules,
       mentionCount: contentMentions,
     })
   }
 
-  // 4. 측정 윈도
-  const window = getMeasurementWindow(places.map((p) => p.createdAt), now)
+  // 4. 측정 윈도 (운영/테스트 계정은 measurement-window 에서 우회)
+  const window = getMeasurementWindow(
+    places.map((p) => p.createdAt),
+    now,
+    { ownerEmail: user.email },
+  )
 
   // 5. 할 일 (full place 정보를 todos 입력으로 변환)
   const todos = detectOwnerTodos({
@@ -276,5 +293,6 @@ export async function loadOwnerDashboard(now: Date = new Date()): Promise<OwnerD
     todos,
     billing,
     averageAeoScore,
+    trendDays,
   }
 }
