@@ -9,6 +9,7 @@ import {
   type DbBlogPost,
 } from '../supabase-types'
 import { getReadClient } from '../supabase/read-client'
+import { slugMatchCandidates } from '../slug-match'
 
 const ACTIVE = 'active'
 
@@ -47,23 +48,29 @@ async function runListQuery(
 
 // --- 단일 조회 ---
 
-/** city + sector + slug 단건 조회. 없으면 null. */
+/** city + sector + slug 단건 조회. 없으면 null.
+ *  T-190: 한글 slug 의 Unicode 정규화(NFC/NFD) 불일치 방어 — 후보 순차 시도.
+ */
 export async function getBlogPost(
   city: string,
   sector: string,
   slug: string,
 ): Promise<BlogPost | null> {
   try {
-    const q = startQuery()
-    if (!q) return null
-    const { data, error } = (await q
-      .eq('city', city)
-      .eq('sector', sector)
-      .eq('slug', slug)
-      .eq('status', ACTIVE)) as unknown as { data: DbBlogPost[] | null; error: unknown }
+    for (const candidate of slugMatchCandidates(slug)) {
+      const q = startQuery()
+      if (!q) return null
+      const { data, error } = (await q
+        .eq('city', city)
+        .eq('sector', sector)
+        .eq('slug', candidate)
+        .eq('status', ACTIVE)) as unknown as { data: DbBlogPost[] | null; error: unknown }
 
-    if (error || !data || data.length === 0) return null
-    return dbBlogPostToBlogPost(data[0])
+      if (!error && data && data.length > 0) {
+        return dbBlogPostToBlogPost(data[0])
+      }
+    }
+    return null
   } catch (err) {
     console.error('[blog/data.supabase] getBlogPost failed:', err)
     return null

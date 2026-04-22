@@ -2,6 +2,7 @@
 // 원칙: blog_posts(004) 만 사용. 토픽 큐는 status='draft' 글을 가리킴.
 
 import { getAdminClient } from '@/lib/supabase/admin-client'
+import { slugMatchCandidates } from '@/lib/slug-match'
 
 export interface BlogTopicRow {
   id: string
@@ -46,15 +47,19 @@ export interface BlogPostLoaded {
 export async function loadBlogPostForEdit(slug: string): Promise<BlogPostLoaded | null> {
   const admin = getAdminClient()
   if (!admin) return null
-  const { data } = await admin
-    .from('blog_posts')
-    .select('id, slug, title, summary, content, city, sector, category, status, post_type, target_query, tags, published_at, related_place_slugs')
-    .eq('slug', slug)
-    .maybeSingle()
-  if (!data) return null
-  // related_place_slugs null 방어
-  const row = data as BlogPostLoaded
-  return { ...row, related_place_slugs: row.related_place_slugs ?? [] }
+  // T-190: 한글 slug Unicode 정규화(NFC/NFD) 불일치 방어 — 후보 순차 조회.
+  for (const candidate of slugMatchCandidates(slug)) {
+    const { data } = await admin
+      .from('blog_posts')
+      .select('id, slug, title, summary, content, city, sector, category, status, post_type, target_query, tags, published_at, related_place_slugs')
+      .eq('slug', candidate)
+      .maybeSingle()
+    if (data) {
+      const row = data as BlogPostLoaded
+      return { ...row, related_place_slugs: row.related_place_slugs ?? [] }
+    }
+  }
+  return null
 }
 
 /** 같은 city+category 의 active 업체를 체크박스 후보로 반환. */

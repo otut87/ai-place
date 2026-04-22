@@ -86,15 +86,18 @@ export default async function AdminBlogPage({
                 </div>
                 <ul className="space-y-0.5">
                   {day.posts.map((p) => (
-                    <li key={p.id}>
+                    <li key={p.id} className="group/post flex items-center gap-0.5 rounded-sm hover:bg-[#f3f4f6]">
                       <AdminLink
-                        href={`/admin/blog/${p.slug}/edit`}
-                        className="block truncate rounded-sm px-1 text-[11px] hover:bg-[#f3f4f6]"
+                        href={`/admin/blog/${encodeURIComponent(p.slug)}/edit`}
+                        className="block min-w-0 flex-1 truncate px-1 text-[11px]"
                         title={p.title}
                       >
                         <StatusDot status={p.status} />
                         {p.title}
                       </AdminLink>
+                      <span className="pr-0.5 opacity-0 transition-opacity group-hover/post:opacity-100">
+                        <DeleteTopicButton id={p.id} title={p.title} />
+                      </span>
                     </li>
                   ))}
                 </ul>
