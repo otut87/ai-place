@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, Eye, FileText, LinkIcon, Calendar } from 'lucide-react'
-import { saveBlogPost, deleteBlogPost, type SaveBlogInput } from '@/lib/actions/blog-edit'
+import { saveBlogPost, deleteBlogPostById, type SaveBlogInput } from '@/lib/actions/blog-edit'
 import { renderMarkdown } from '@/lib/admin/blog-editor'
 import { getBlockChecklist } from '@/lib/blog/template'
 import { Trash2, ExternalLink } from 'lucide-react'
@@ -11,6 +11,7 @@ import { useToast } from '@/components/admin/toast'
 import { AdminLink } from '@/components/admin/admin-link'
 
 interface PostData {
+  id: string
   slug: string
   title: string
   summary: string
@@ -85,9 +86,17 @@ export function BlogEditorClient({
   function onDelete() {
     if (!window.confirm(`"${post.title}" 을(를) 영구 삭제합니다. 되돌릴 수 없습니다. 계속할까요?`)) return
     start(async () => {
-      const r = await deleteBlogPost(post.slug)
-      if (r.success) { toast.success('삭제됨'); router.push('/admin/blog') }
-      else toast.error(r.error ?? '삭제 실패')
+      // id 기반 삭제 — 한글 slug 의 Unicode 정규화(NFC/NFD) 불일치 회피.
+      const r = await deleteBlogPostById(post.id)
+      if (r.success) {
+        toast.success('삭제됨')
+        router.push('/admin/blog')
+      } else {
+        const msg = r.error ?? '삭제 실패'
+        toast.error(`삭제 실패: ${msg}`)
+        // eslint-disable-next-line no-console
+        console.error('[blog-delete] id=', post.id, 'error=', msg)
+      }
     })
   }
 
