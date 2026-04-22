@@ -11,7 +11,7 @@ import { getAllPlaces, getCities, getSectors, getCategories } from '@/lib/data.s
 import { selectCandidatePlaces } from '@/lib/ai/select-candidate-places'
 import { generateBlogDraft } from '@/lib/ai/generate-blog-draft'
 import { revalidatePath } from 'next/cache'
-import type { Place } from '@/lib/types'
+import type { Place, BlogPostType } from '@/lib/types'
 
 // T-135: 초안 생성 모달에서 카테고리가 바뀔 때마다 업체 목록 조회.
 export interface PlaceCandidateListing {
@@ -45,7 +45,7 @@ export interface GenerateBlogDraftActionInput {
   city: string
   sector: string
   category?: string | null
-  postType: 'keyword' | 'compare' | 'guide' | 'general'
+  postType: BlogPostType
   scheduledDate?: string | null
   /** 자동 선정 임계값 override. 미지정 시 기본(평점 4+, 리뷰 10+). */
   minRating?: number

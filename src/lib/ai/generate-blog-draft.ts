@@ -8,7 +8,7 @@
 // - 후보 업체만 언급, 외부 업체 환각 금지
 // - 의료·법률·세무 카테고리는 면책 필수
 
-import type { Place, FAQ } from '@/lib/types'
+import type { Place, FAQ, BlogPostType } from '@/lib/types'
 import { validateSevenBlocks } from '@/lib/blog/template'
 import { scoreBlogPostV2 } from '@/lib/blog/quality-v2'
 
@@ -18,7 +18,7 @@ export interface GenerateBlogDraftInput {
   category: string                  // 'dermatology'
   categoryName: string              // '피부과'
   sector: string                    // 'medical'
-  postType: 'keyword' | 'compare' | 'guide' | 'general'
+  postType: BlogPostType
   candidatePlaces: Place[]          // T-130 결과 (3~5곳)
   selectionReasoning: string        // T-130 reasoning 문자열
   apiKey?: string                   // 테스트용 override
@@ -111,17 +111,19 @@ function buildUserMessage(input: GenerateBlogDraftInput): string {
     ].filter(Boolean).join('\n')
   }).join('\n\n')
 
-  const postTypeHint = {
+  const postTypeHint: Record<BlogPostType, string> = {
+    detail: '특정 업체 1곳을 주인공으로 한 심층 소개 글 (강점·약점·후기 요약)',
     keyword: '특정 키워드에 최적화된 검색·답변용 랜딩 글',
     compare: '업체·시술·가격을 나란히 비교하는 글',
     guide: '처음 이용하는 독자를 위한 선택 가이드 글',
     general: '일반 추천·분석 글',
-  }[input.postType]
+  }
+  const postTypeDescription = postTypeHint[input.postType]
 
   return `**도시**: ${input.cityName} (${input.city})
 **업종**: ${input.categoryName} (${input.category})
 **섹터**: ${input.sector}
-**글 유형**: ${input.postType} — ${postTypeHint}
+**글 유형**: ${input.postType} — ${postTypeDescription}
 
 **선정 근거** (T-130 자동 선정):
 ${input.selectionReasoning}

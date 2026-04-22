@@ -33,7 +33,8 @@ export function CreateTopicButton({ cities, sectors, categories, initialDate = n
   const [city, setCity] = useState(cities[0]?.value ?? 'cheonan')
   const [sector, setSector] = useState(sectors[0]?.value ?? 'medical')
   const [category, setCategory] = useState('')
-  const [postType, setPostType] = useState<'keyword' | 'compare' | 'guide' | 'general'>('general')
+  // 파이프라인 post_type 과 동일한 4종.
+  const [postType, setPostType] = useState<'detail' | 'compare' | 'guide' | 'keyword'>('detail')
   const [scheduledDate, setScheduledDate] = useState(initialDate ?? '')
 
   const filteredCategories = categories.filter(c => c.sector === sector)
@@ -155,10 +156,10 @@ export function CreateTopicButton({ cities, sectors, categories, initialDate = n
                     onChange={e => setPostType(e.target.value as typeof postType)}
                     className="h-9 w-full rounded border border-[#e7e7e7] bg-white px-2 text-sm"
                   >
-                    <option value="general">일반</option>
-                    <option value="keyword">키워드</option>
+                    <option value="detail">업체 정보</option>
                     <option value="compare">비교</option>
                     <option value="guide">가이드</option>
+                    <option value="keyword">키워드</option>
                   </select>
                 </label>
 

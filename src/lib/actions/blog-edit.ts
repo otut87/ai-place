@@ -10,6 +10,7 @@ import {
   buildBlogPath,
   removeMentionsForPath,
 } from '@/lib/owner/place-mentions'
+import type { BlogPostType } from '@/lib/types'
 
 export interface SaveBlogInput {
   slug: string
@@ -153,7 +154,7 @@ export interface CreateBlogTopicInput {
   city: string
   sector: string
   category?: string | null
-  postType: 'keyword' | 'compare' | 'guide' | 'general'
+  postType: BlogPostType
   scheduledDate?: string | null   // YYYY-MM-DD 형식
 }
 
