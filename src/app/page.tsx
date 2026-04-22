@@ -28,10 +28,13 @@ const BASE_URL = 'https://aiplace.kr'
 
 // NOTE: openGraph.images / twitter.images 를 명시하면 file-based opengraph-image.tsx
 // 자동 주입이 꺼짐. images 를 생략해 자동 주입 유지.
+// T-192: title 앞쪽에 한글 브랜드명 — "ai플레이스" 쿼리와 더 강하게 매칭.
+//        description 에도 "AI 플레이스" 자연스럽게 포함.
 export const metadata: Metadata = {
-  title: 'AI Place — AI 검색에서 추천받는 로컬 업체',
+  title: 'AI 플레이스 (AI Place) — AI 검색에서 추천받는 로컬 업체',
   description:
-    'ChatGPT · Claude · Gemini가 내 업체를 답변으로 인용하도록. 구조화 데이터 · FAQ · 비교 콘텐츠를 자동으로 만들어, AI 검색에 최적화된 프로필을 완성합니다.',
+    'AI 플레이스(에이아이플레이스)는 ChatGPT · Claude · Gemini 가 내 업체를 답변으로 인용하도록 돕습니다. 구조화 데이터 · FAQ · 비교 콘텐츠를 자동으로 만들어, AI 검색에 최적화된 프로필을 완성합니다.',
+  keywords: ['AI 플레이스', 'AI Place', '에이아이플레이스', 'aiplace', 'AI 검색 최적화', 'AEO', 'GEO', '천안 피부과', '로컬 AI SEO'],
   alternates: {
     canonical: '/',
     languages: { 'ko-KR': BASE_URL + '/', 'x-default': BASE_URL + '/' },
@@ -39,21 +42,28 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     url: BASE_URL + '/',
-    siteName: 'AI Place',
+    siteName: 'AI 플레이스 (AI Place)',
     locale: 'ko_KR',
-    title: 'AI Place — AI 검색에서 추천받는 로컬 업체',
+    title: 'AI 플레이스 (AI Place) — AI 검색에서 추천받는 로컬 업체',
     description:
-      'ChatGPT · Claude · Gemini가 내 업체를 답변으로 인용하도록. 구조화 데이터 · FAQ 자동 생성.',
+      'AI 플레이스는 ChatGPT · Claude · Gemini 가 내 업체를 답변으로 인용하도록. 구조화 데이터 · FAQ 자동 생성.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AI Place — AI 검색에서 추천받는 로컬 업체',
-    description: 'ChatGPT · Claude · Gemini에서 추천받는 로컬 업체 디렉토리.',
+    title: 'AI 플레이스 (AI Place) — AI 검색에서 추천받는 로컬 업체',
+    description: 'AI 플레이스(에이아이플레이스) — ChatGPT · Claude · Gemini 에서 추천받는 로컬 업체 디렉토리.',
   },
 }
 
 // FAQ — 단일 소스 (본문 렌더 + FAQPage JSON-LD 에 동시 사용).
+// T-192: 첫 번째 질문은 "AI 플레이스가 무엇인가요" — 브랜드 정의 문장을
+//        FAQPage 구조화 데이터에 포함시켜 Google 이 한글 브랜드 엔터티로 학습하게 함.
 const FAQS: FAQ[] = [
+  {
+    question: 'AI 플레이스(AI Place)가 뭔가요?',
+    answer:
+      'AI 플레이스(에이아이플레이스, 영문 AI Place)는 ChatGPT·Claude·Gemini 같은 생성형 AI 검색에서 내 업체가 답변으로 추천되도록 돕는 AEO(AI Engine Optimization) 디렉토리 서비스입니다. 업체 정보를 AI 가 읽기 좋은 구조화된 형식으로 자동 변환하고, 업종별 FAQ·비교 콘텐츠를 생성해 AI 인용 가능성을 높입니다.',
+  },
   {
     question: '정말 AI가 제 가게를 추천하게 되나요?',
     answer:
@@ -118,15 +128,18 @@ export default async function HomePage() {
   const updatedMonth = s.updatedAt.slice(0, 7)
 
   // --- JSON-LD (4종) ---
+  // T-192: alternateName 으로 한글 브랜드 변형 명시 — Google 이 "ai 플레이스",
+  //        "에이아이 플레이스" 등 한국어 검색을 이 엔터티와 동일하게 인식.
   const organizationJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     '@id': `${BASE_URL}/#organization`,
     name: 'AI Place',
+    alternateName: ['AI 플레이스', '에이아이 플레이스', '에이아이플레이스', 'AIPlace', 'aiplace'],
     url: BASE_URL + '/',
-    description: 'ChatGPT, Claude, Gemini 등 AI 검색에서 추천되는 로컬 업체 디렉토리.',
+    description: 'AI 플레이스(AI Place) — ChatGPT, Claude, Gemini 등 AI 검색에서 추천되는 로컬 업체 디렉토리.',
     areaServed: { '@type': 'City', name: '천안', alternateName: 'Cheonan' },
-    knowsAbout: ['AI Engine Optimization', 'AEO', 'Schema.org', 'LocalBusiness SEO'],
+    knowsAbout: ['AI Engine Optimization', 'AEO', 'GEO', 'Schema.org', 'LocalBusiness SEO'],
   }
 
   const websiteJsonLd = generateWebSite(BASE_URL)
@@ -199,7 +212,7 @@ export default async function HomePage() {
               <span className="it">AI</span>에게 <span className="u">묻습니다.</span>
             </h1>
             <p className="lede">
-              ChatGPT · Claude · Gemini가 내 업체를 답변으로 인용하도록. AI Place는{' '}
+              ChatGPT · Claude · Gemini가 내 업체를 답변으로 인용하도록. <b>AI 플레이스</b>(AI Place)는{' '}
               <b>구조화 데이터 · FAQ · 비교 콘텐츠</b>를 자동으로 만들어, AI 검색에 최적화된 프로필을 완성합니다.
             </p>
             <div className="cta-row">
@@ -680,7 +693,7 @@ export default async function HomePage() {
                 <span className="mark" /> AI Place
               </Link>
               <p>
-                천안 파일럿 · AI 검색 최적화 디렉토리. 현재 {s.totalCategories}개 업종 · {s.totalPlaces}개 업체.
+                <b>AI 플레이스</b>(에이아이플레이스) · AI 검색 최적화 디렉토리. 천안 파일럿 운영 중 · {s.totalCategories}개 업종 · {s.totalPlaces}개 업체.
               </p>
             </div>
             <div>

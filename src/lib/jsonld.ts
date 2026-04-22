@@ -199,15 +199,20 @@ export function generateArticle(opts: {
   }
 }
 
-/** WebSite schema — 메인 페이지용 */
+/** WebSite schema — 메인 페이지용.
+ *  T-192: alternateName 배열로 한글 브랜드 동의어 선언 — Google 이 "ai 플레이스",
+ *  "에이아이 플레이스" 같은 한국어 검색 쿼리를 영문 브랜드와 동일 엔터티로 매핑.
+ */
 export function generateWebSite(baseUrl: string): JsonLd {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     '@id': `${baseUrl}/#website`,
     name: 'AI Place',
+    alternateName: ['AI 플레이스', '에이아이 플레이스', '에이아이플레이스', 'AIPlace', 'aiplace'],
     url: baseUrl,
-    description: 'AI가 추천하는 로컬 업체 디렉토리',
+    description: 'AI 플레이스 (AI Place) — AI 가 추천하는 로컬 업체 디렉토리',
+    inLanguage: 'ko-KR',
   }
 }
 

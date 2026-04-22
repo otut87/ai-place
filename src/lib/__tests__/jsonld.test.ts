@@ -208,6 +208,15 @@ describe('JSON-LD Generation', () => {
       expect(jsonld.name).toBe('AI Place')
       expect(jsonld.url).toBe('https://aiplace.kr')
     })
+
+    it('T-192: alternateName 에 한글 브랜드 동의어 포함', async () => {
+      const { generateWebSite } = await import('@/lib/jsonld')
+      const jsonld = generateWebSite('https://aiplace.kr')
+      expect(jsonld.alternateName).toContain('AI 플레이스')
+      expect(jsonld.alternateName).toContain('에이아이 플레이스')
+      expect(jsonld.alternateName).toContain('에이아이플레이스')
+      expect(jsonld.inLanguage).toBe('ko-KR')
+    })
   })
 
   // --- P0: Person author in Article schema ---
