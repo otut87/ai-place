@@ -52,6 +52,9 @@ docs/
 # Design handoff bundles (작업 참조용, 소스는 /tmp 에 백업)
 /tmp-design/
 
+# 임시 작업 파일 (썸네일·프롬프트 백업 등)
+/tmp/
+
 # 검수 스냅샷 HTML (디버깅용, 커밋 제외)
 .harness/*.html
 

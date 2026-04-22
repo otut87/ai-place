@@ -28,6 +28,11 @@ function classifyPage(relativePath: string): PageType {
   if (relativePath.match(/^guide\//)) return 'guide'
   if (relativePath.match(/\/k\//)) return 'keyword'
   if (relativePath.match(/^admin\//)) return 'other'
+  // T-207: 로그인/계정/오너 포털 페이지는 noindex 라 SEO 프로파일 미적용.
+  if (relativePath.match(/^account\//)) return 'other'
+  if (relativePath.match(/^owner\//)) return 'other'
+  if (relativePath.match(/^login/)) return 'other'
+  if (relativePath.match(/^signup/)) return 'other'
   // T-097: 블로그 허브/글은 'other' — 별도 SEO 프로파일 미적용 (기존 블로그 글은 기본
   // Article 스키마 검증만 별도로 있음)
   if (relativePath.match(/^blog\//)) return 'other'
