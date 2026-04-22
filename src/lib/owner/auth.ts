@@ -16,9 +16,9 @@ export async function getOwnerUser(): Promise<OwnerUser | null> {
   return { id: user.id, email: user.email ?? null }
 }
 
-export async function requireOwnerUser(): Promise<OwnerUser> {
+export async function requireOwnerUser(nextPath = '/owner'): Promise<OwnerUser> {
   const user = await getOwnerUser()
-  if (!user) redirect('/admin/login?next=/owner')
+  if (!user) redirect(`/login?next=${encodeURIComponent(nextPath)}`)
   return user
 }
 

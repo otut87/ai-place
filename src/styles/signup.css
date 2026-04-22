@@ -1,0 +1,613 @@
+/* ============================================================
+   /signup · /login · 2단 레이아웃 (promo 좌측 + 폼 우측)
+   Claude Design 기반, 우리 플로우에 맞춰 OAuth·추천코드·언어 피커 제거
+
+   모든 셀렉터는 .auth-root (= .signup-root) 하위로 스코프.
+   Next.js App Router 의 글로벌 CSS 누적으로 홈·다른 페이지에
+   스타일이 누출되지 않도록 경계를 엄격히 닫는다.
+   ============================================================ */
+
+/* auth-root: 뷰포트 높이 고정 + 문서 스크롤 차단.
+   폼이 길어져도 좌측 width 가 변하지 않도록 스크롤바를 form-side 내부에서만 노출. */
+.auth-root {
+  background: var(--bg);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.auth-root .split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 100vh;
+}
+@media (max-width: 960px) {
+  .auth-root { height: auto; overflow: visible; }
+  .auth-root .split { grid-template-columns: 1fr; height: auto; }
+  .auth-root .promo { display: none !important; }
+}
+
+/* ===== PROMO (left) — login.html 디자인 충실 재현 ===== */
+.auth-root .promo {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--ink) 0%, #1a1310 100%);
+  color: #f3f1ea;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.auth-root .promo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(500px 300px at 80% 90%, color-mix(in oklab, var(--accent) 40%, transparent), transparent 60%);
+  pointer-events: none;
+}
+.auth-root .promo > * { position: relative; z-index: 1; }
+
+.auth-root .promo .logo-top {
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -.015em;
+}
+.auth-root .promo .logo-top .mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 32%, #fff 0 24%, transparent 26%),
+    conic-gradient(from 200deg, var(--accent), #ffb392, var(--accent));
+  position: relative;
+}
+.auth-root .promo .logo-top .mark::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: #1a1310;
+}
+
+.auth-root .promo .pitch { max-width: 460px; }
+.auth-root .promo h2 {
+  font-size: clamp(32px, 3.5vw, 44px);
+  font-weight: 700;
+  letter-spacing: -.025em;
+  line-height: 1.08;
+  margin: 0 0 18px;
+  max-width: 14ch;
+}
+.auth-root .promo h2 .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
+.auth-root .promo .lede {
+  font-size: 16px;
+  color: #c4c2bb;
+  max-width: 44ch;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* stats — flex (design 파일 그대로) */
+.auth-root .promo .stats {
+  display: flex;
+  gap: 40px;
+  margin-top: 40px;
+  flex-wrap: wrap;
+}
+.auth-root .promo .stats .n {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -.025em;
+  line-height: 1;
+}
+.auth-root .promo .stats .n .star { color: var(--accent); font-size: 16px; margin-left: 2px; }
+.auth-root .promo .stats .s {
+  font-size: 12px;
+  color: #b9b6ae;
+  font-family: var(--mono);
+  margin-top: 4px;
+}
+
+.auth-root .promo .promo-foot {
+  font-size: 12px;
+  color: #858380;
+  font-family: var(--mono);
+}
+
+/* ===== FORM (right) — 독립 스크롤 영역 ===== */
+.auth-root .form-side {
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 40px 56px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  /* 스크롤바 공간 항상 확보 — 폼 길이 변화시 좌측 width 흔들림 방지 */
+  scrollbar-gutter: stable;
+}
+@media (max-width: 640px) { .auth-root .form-side { padding: 32px 22px; } }
+.auth-root .form-wrap { width: 100%; max-width: 440px; padding: 24px 0; }
+
+.auth-root .top-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+.auth-root .top-line .mini-logo { display: none; font-weight: 700; font-size: 15px; align-items: center; gap: 8px; }
+@media (max-width: 960px) { .auth-root .top-line .mini-logo { display: flex; } }
+.auth-root .top-line .mini-logo .mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 32%, #fff 0 24%, transparent 26%),
+    conic-gradient(from 200deg, var(--accent), #ffb392, var(--accent));
+  position: relative;
+}
+.auth-root .top-line .mini-logo .mark::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--bg);
+}
+.auth-root .top-line .help { font-size: 12.5px; color: var(--muted); font-family: var(--mono); }
+.auth-root .top-line .help a { color: var(--ink); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+
+.auth-root .tab-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 28px;
+  border: 1px solid var(--line-2);
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--bg-2);
+}
+.auth-root .tab-row a {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-2);
+  transition: all .15s;
+}
+.auth-root .tab-row a:hover { color: var(--ink); }
+.auth-root .tab-row a.active { background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm); font-weight: 600; }
+
+.auth-root h1.ttl {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -.028em;
+  margin: 6px 0 10px;
+  line-height: 1.12;
+}
+.auth-root h1.ttl .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
+.auth-root .subtitle { color: var(--ink-2); margin: 0 0 24px; font-size: 14.5px; line-height: 1.55; }
+.auth-root .subtitle b { color: var(--ink); }
+
+/* fields */
+.auth-root .field { margin-bottom: 14px; }
+.auth-root .field .lbl-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.auth-root .field label { display: block; font-weight: 600; font-size: 13px; color: var(--ink); }
+.auth-root .field .lbl-row .hint { font-size: 11.5px; color: var(--muted); font-family: var(--mono); }
+.auth-root .field .in-wrap { position: relative; }
+.auth-root .field input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 14.5px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--bg);
+  font-family: var(--font);
+  transition: all .15s;
+}
+.auth-root .field input::placeholder { color: var(--muted-2); }
+.auth-root .field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent);
+  background: var(--card);
+}
+.auth-root .field input.valid {
+  border-color: var(--good);
+  background: color-mix(in oklab, var(--good) 5%, var(--card));
+}
+.auth-root .field input.valid + .in-icon { color: var(--good); }
+.auth-root .field .in-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+.auth-root .field .in-icon svg { width: 16px; height: 16px; }
+.auth-root .field .pw-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+}
+.auth-root .field .pw-toggle:hover { color: var(--ink); }
+.auth-root .field .pw-toggle svg { width: 16px; height: 16px; }
+.auth-root .field .err { display: none; font-size: 11.5px; color: #b42318; margin-top: 5px; font-family: var(--mono); }
+.auth-root .field.has-err input { border-color: #b42318; }
+.auth-root .field.has-err .err { display: block; }
+
+/* password strength */
+.auth-root .pw-meter { display: flex; gap: 3px; margin-top: 8px; }
+.auth-root .pw-meter span { flex: 1; height: 4px; background: var(--line); border-radius: 2px; transition: background .2s; }
+.auth-root .pw-meter[data-s="1"] span:nth-child(-n+1) { background: #d92d20; }
+.auth-root .pw-meter[data-s="2"] span:nth-child(-n+2) { background: var(--warn); }
+.auth-root .pw-meter[data-s="3"] span:nth-child(-n+3) { background: #eaaa2f; }
+.auth-root .pw-meter[data-s="4"] span { background: var(--good); }
+.auth-root .pw-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 8px;
+  font-size: 11.5px;
+  font-family: var(--mono);
+  color: var(--muted);
+}
+.auth-root .pw-checks span { display: inline-flex; align-items: center; gap: 4px; }
+.auth-root .pw-checks span.ok { color: var(--good); }
+.auth-root .pw-checks span::before { content: "○"; font-weight: 700; font-size: 12px; }
+.auth-root .pw-checks span.ok::before { content: "✓"; }
+
+/* phone */
+.auth-root .phone-wrap { display: flex; gap: 0; }
+.auth-root .phone-wrap .cc {
+  padding: 12px 12px 12px 14px;
+  border: 1px solid var(--line-2);
+  border-right: none;
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  background: var(--bg-2);
+  font-size: 14px;
+  color: var(--ink-2);
+  font-family: var(--mono);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.auth-root .phone-wrap input { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+
+/* terms */
+.auth-root .terms {
+  margin: 18px 0 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-2);
+  padding: 14px 16px;
+}
+.auth-root .terms-all {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 10px;
+  border-bottom: 1px dashed var(--line-2);
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.auth-root .terms-all input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+.auth-root .terms-list { display: flex; flex-direction: column; gap: 8px; }
+.auth-root .terms-list label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+  line-height: 1.5;
+}
+.auth-root .terms-list label input { width: 14px; height: 14px; accent-color: var(--accent); margin: 0; flex: 0 0 14px; }
+.auth-root .terms-list label .req { color: var(--accent); font-family: var(--mono); font-size: 10.5px; margin-right: 2px; font-weight: 500; }
+.auth-root .terms-list label .opt { color: var(--muted); font-family: var(--mono); font-size: 10.5px; margin-right: 2px; font-weight: 500; }
+.auth-root .terms-list label a {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-family: var(--mono);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.auth-root .terms-list label a:hover { color: var(--accent); }
+
+/* 파일럿 고지 배너 (AUDIT I-4) */
+.auth-root .pilot-note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--accent) 7%, var(--bg-2));
+  border: 1px solid color-mix(in oklab, var(--accent) 20%, transparent);
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+.auth-root .pilot-note b { color: var(--ink); }
+
+/* submit */
+.auth-root .submit-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: 11px;
+  font: 600 15px var(--font);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all .15s;
+}
+.auth-root .submit-btn:hover:not([disabled]) { background: var(--accent); }
+.auth-root .submit-btn[disabled] { opacity: .45; cursor: not-allowed; background: var(--ink-3); }
+.auth-root .submit-btn svg { width: 16px; height: 16px; }
+
+.auth-root .form-error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 13px;
+}
+.auth-root .form-success {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--good) 8%, var(--card));
+  border: 1px solid color-mix(in oklab, var(--good) 30%, transparent);
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.auth-root .form-success b { color: var(--good); }
+
+.auth-root .foot-row { font-size: 13px; color: var(--muted); text-align: center; margin-top: 20px; }
+.auth-root .foot-row a { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ===== OAuth + divider — login.html 디자인 충실 재현 ===== */
+.auth-root .divider-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: var(--mono);
+}
+.auth-root .divider-or::before,
+.auth-root .divider-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.auth-root .oauth {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 20px 0;
+}
+.auth-root .oauth button {
+  width: 100%;
+  padding: 11px;
+  border: 1px solid var(--line-2);
+  background: var(--card);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: border-color .15s, filter .15s;
+}
+.auth-root .oauth button:hover { border-color: var(--ink); }
+.auth-root .oauth button svg { width: 16px; height: 16px; flex: 0 0 16px; }
+.auth-root .oauth .n {
+  background: #03c75a;
+  color: #fff;
+  border-color: #03c75a;
+  font-weight: 600;
+}
+.auth-root .oauth .n:hover { filter: brightness(.96); border-color: #03c75a; }
+.auth-root .oauth .k {
+  background: #fee500;
+  color: #000;
+  border-color: #fee500;
+  font-weight: 600;
+}
+.auth-root .oauth .k:hover { filter: brightness(.96); border-color: #fee500; }
+
+.oauth-toast {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: color-mix(in oklab, var(--accent) 8%, var(--bg-2));
+  border: 1px solid color-mix(in oklab, var(--accent) 25%, transparent);
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  text-align: center;
+}
+
+/* ===== /login 전용 — 로그인 유지 + 비밀번호 찾기 ===== */
+.auth-root .options-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 6px 0 18px;
+}
+.auth-root .options-row label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.auth-root .options-row label input { accent-color: var(--accent); margin: 0; }
+.auth-root .options-row button {
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  font-family: var(--font);
+}
+.auth-root .options-row button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.auth-root .options-row button:disabled { color: var(--muted); cursor: default; }
+
+/* 아이디/비밀번호 찾기 링크 그룹 */
+.auth-root .recovery-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.auth-root .recovery-links > span { color: var(--line-3); }
+.auth-root .recovery-links a {
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 500;
+  padding: 4px 0;
+  text-decoration: none;
+  transition: text-decoration .15s;
+}
+.auth-root .recovery-links a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* /account/* 뒤로가기 링크 */
+.auth-root .auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+  font-family: var(--mono);
+  margin-bottom: 20px;
+  text-decoration: none;
+  transition: color .15s;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.auth-root .auth-back:hover { color: var(--ink); }
+
+/* 결과 카드 (아이디 찾기 성공 / 메일 발송 완료 / 만료 링크) */
+.auth-root .result-card {
+  padding: 32px 28px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  text-align: center;
+}
+.auth-root .result-card h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 14px 0 10px;
+  letter-spacing: -.015em;
+}
+.auth-root .result-card .result-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  margin: 0 auto;
+  font-size: 22px;
+  font-weight: 700;
+  background: color-mix(in oklab, var(--good) 14%, var(--card));
+  color: var(--good);
+}
+.auth-root .result-card .result-icon.err {
+  background: #fef2f2;
+  color: #b42318;
+}
+.auth-root .result-card .masked-email {
+  margin: 12px 0 8px;
+  padding: 14px 16px;
+  background: var(--bg-2);
+  border: 1px dashed var(--line-2);
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: .02em;
+}
+.auth-root .result-card .result-hint {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.65;
+  margin: 8px 0 0;
+}
+.auth-root .result-card .result-hint b { color: var(--ink-2); font-weight: 600; }
+.auth-root .result-card .result-note {
+  margin-top: 18px;
+  padding: 12px 14px;
+  text-align: left;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+.auth-root .result-card .result-note strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-weight: 600;
+}
+.auth-root .result-card .result-note ul {
+  margin: 0;
+  padding-left: 16px;
+}
+.auth-root .result-card .result-note code {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--card);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+}
+.auth-root .result-card .result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+.auth-root .result-card .result-actions .submit-btn {
+  text-decoration: none;
+}
+
+/* submit-btn 의 ghost variant — Link/button 에 둘 다 대응 */
+.auth-root .submit-btn.ghost {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+}
+.auth-root .submit-btn.ghost:hover:not([disabled]) {
+  background: var(--bg-2);
+  border-color: var(--ink-3);
+}

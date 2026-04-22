@@ -84,7 +84,8 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    const loginUrl = new URL('/admin/login', request.url)
+    // owner 경로는 사장님용 /login 으로, admin 경로는 관리자용 /admin/login 으로.
+    const loginUrl = new URL(isOwnerRoute ? '/login' : '/admin/login', request.url)
     if (isOwnerRoute) loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
   }

@@ -40,10 +40,18 @@ describe('getOwnerUser', () => {
 })
 
 describe('requireOwnerUser', () => {
-  it('미인증 → /admin/login?next=/owner 로 redirect', async () => {
+  it('미인증 → /login?next=/owner 로 redirect (owner 전용 로그인, AUDIT C-2)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     const { requireOwnerUser } = await import('@/lib/owner/auth')
-    await expect(requireOwnerUser()).rejects.toThrow(/REDIRECT:\/admin\/login/)
+    await expect(requireOwnerUser()).rejects.toThrow(/REDIRECT:\/login\?next=/)
+  })
+
+  it('nextPath 커스텀 → /login?next=<encoded> 로 redirect', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    const { requireOwnerUser } = await import('@/lib/owner/auth')
+    await expect(requireOwnerUser('/owner/places/new')).rejects.toThrow(
+      /REDIRECT:\/login\?next=%2Fowner%2Fplaces%2Fnew/,
+    )
   })
 
   it('인증 됨 → user 반환', async () => {

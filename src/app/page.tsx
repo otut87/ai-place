@@ -702,7 +702,7 @@ export default async function HomePage() {
                 <li><Link href="/owner/places/new">업체 등록</Link></li>
                 <li><Link href="/pricing">가격·플랜</Link></li>
                 <li><Link href="/owner">대시보드</Link></li>
-                <li><Link href="/admin/login">로그인</Link></li>
+                <li><Link href="/login">로그인</Link></li>
               </ul>
             </div>
             <div>

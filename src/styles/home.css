@@ -135,25 +135,28 @@ h1.hero-title {
   font-family: var(--mono); letter-spacing: .04em;
 }
 
-/* AI ENGINE strip */
-.engine-strip { padding: 32px 0 8px; border-top: 1px solid var(--line); margin-top: 40px }
-.engine-strip .label {
+/* AI ENGINE strip
+   NOTE: 셀렉터에 .aip-root 를 prepend 해서 specificity 를 0-2-0 으로 올림.
+   .wrap (aip.css, 0-1-0) 과 같은 element 에 클래스가 같이 붙어 있을 때,
+   Next.js 라우트 재진입으로 CSS 로드 순서가 뒤바뀌어도 승자 고정됨. */
+.aip-root .engine-strip { padding: 32px 0 8px; border-top: 1px solid var(--line); margin-top: 40px }
+.aip-root .engine-strip .label {
   font-family: var(--mono); font-size: 11px;
   letter-spacing: .12em; text-transform: uppercase;
   color: var(--muted);
 }
-.engine-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 16px }
-@media (max-width: 780px) { .engine-row { grid-template-columns: repeat(3, 1fr) } }
-@media (max-width: 460px) { .engine-row { grid-template-columns: repeat(2, 1fr) } }
+.aip-root .engine-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 16px }
+@media (max-width: 780px) { .aip-root .engine-row { grid-template-columns: repeat(3, 1fr) } }
+@media (max-width: 460px) { .aip-root .engine-row { grid-template-columns: repeat(2, 1fr) } }
 
-.lg-pill {
+.aip-root .lg-pill {
   border: 1px solid var(--line-2); border-radius: 999px;
   padding: 10px 14px; font-size: 13.5px;
   color: var(--ink-2);
   display: flex; align-items: center; gap: 10px; justify-content: center;
   background: var(--card);
 }
-.lg-pill .d { width: 10px; height: 10px; border-radius: 3px }
+.aip-root .lg-pill .d { width: 10px; height: 10px; border-radius: 3px }
 
 /* evidence grid */
 .proof-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px }
@@ -268,16 +271,16 @@ h1.hero-title {
   width: 10px; height: 1px; background: var(--accent);
 }
 
-/* stats */
-.stats {
+/* stats — .aip-root 스코프 (auth 페이지 등 타 페이지로 누출 차단) */
+.aip-root .stats {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
   padding: 40px 32px; border: 1px solid var(--line-2);
   border-radius: var(--r-lg); background: var(--card);
 }
-@media (max-width: 860px) { .stats { grid-template-columns: repeat(2, 1fr) } }
-.stat .num { font-size: 44px; font-weight: 700; letter-spacing: -.03em; line-height: 1 }
-.stat .num .unit { font-size: 18px; color: var(--muted); font-weight: 500; margin-left: 4px }
-.stat .lbl { font-size: 13px; color: var(--muted); margin-top: 6px; font-family: var(--mono) }
+@media (max-width: 860px) { .aip-root .stats { grid-template-columns: repeat(2, 1fr) } }
+.aip-root .stat .num { font-size: 44px; font-weight: 700; letter-spacing: -.03em; line-height: 1 }
+.aip-root .stat .num .unit { font-size: 18px; color: var(--muted); font-weight: 500; margin-left: 4px }
+.aip-root .stat .lbl { font-size: 13px; color: var(--muted); margin-top: 6px; font-family: var(--mono) }
 
 /* quotes */
 .quotes { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px }
