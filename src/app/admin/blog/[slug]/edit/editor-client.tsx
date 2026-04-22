@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Save, Eye, FileText, LinkIcon, Calendar } from 'lucide-react'
 import { saveBlogPost, deleteBlogPostById, type SaveBlogInput } from '@/lib/actions/blog-edit'
 import { renderMarkdown } from '@/lib/admin/blog-editor'
-import { getBlockChecklist } from '@/lib/blog/template'
+import { QualityPanel } from '@/components/admin/blog/quality-panel'
 import { Trash2, ExternalLink } from 'lucide-react'
 import { useToast } from '@/components/admin/toast'
 import { AdminLink } from '@/components/admin/admin-link'
@@ -109,9 +109,12 @@ export function BlogEditorClient({
     toast.info(`${sug.label} 링크 추가됨`)
   }
 
-  // T-111: 7블록 체크리스트 (Admin 사이드바)
-  const blockChecklist = getBlockChecklist(content, post.category ?? undefined)
-  const blockPassed = blockChecklist.filter(b => b.status === 'ok').length
+  // T-193: QualityPanel 에 전달할 allowedPlaceNames.
+  // verifiedPlaces(= relatedPlaces 로 선택된 항목의 이름) 만 현재 탐지 대상.
+  // Phase 3 에서 externalReferences 합류 예정.
+  const allowedPlaceNames = placeCandidates
+    .filter(p => relatedPlaces.includes(p.slug))
+    .map(p => p.name)
 
   return (
     <div className="flex h-[calc(100vh-3rem)] flex-col">
@@ -272,33 +275,20 @@ export function BlogEditorClient({
             )}
           </div>
 
-          {/* T-111: 7블록 체크리스트 */}
-          <div className="border-t border-[#e7e7e7] bg-[#fafafa] p-4">
-            <div className="mb-2 flex items-center gap-1 text-xs font-medium text-[#6b6b6b]">
-              <FileText className="h-3 w-3" /> 7블록 체크리스트 ({blockPassed}/7)
-            </div>
-            <ul className="space-y-0.5">
-              {blockChecklist.map(({ block, status }) => (
-                <li key={block.id} className="flex items-center gap-1.5 text-xs">
-                  <span
-                    className={
-                      status === 'ok' ? 'text-[#22aa77]' :
-                      status === 'short' ? 'text-[#d4a84a]' :
-                      'text-[#c26a6a]'
-                    }
-                    aria-label={status}
-                  >
-                    {status === 'ok' ? '●' : status === 'short' ? '◐' : '○'}
-                  </span>
-                  <span className="text-[#191919]">{block.title}</span>
-                  {status !== 'ok' && (
-                    <span className="text-[10px] text-[#9a9a9a]">
-                      {status === 'missing' ? '미작성' : '본문 부족'}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
+          {/* T-193: QualityPanel — 16 결정론 룰 + 7블록 흡수 */}
+          <div className="border-t border-[#e7e7e7]">
+            <QualityPanel
+              title={title}
+              summary={summary}
+              content={content}
+              slug={post.slug}
+              tags={tags.split(',').map(t => t.trim()).filter(Boolean)}
+              targetQuery={targetQuery || null}
+              categoryOrSector={post.category ?? post.sector}
+              cityName={post.city}
+              allowedPlaceNames={allowedPlaceNames}
+              forbiddenPlaceNames={[]}
+            />
           </div>
 
           <div className="border-t border-[#e7e7e7] bg-[#fafafa] p-4">

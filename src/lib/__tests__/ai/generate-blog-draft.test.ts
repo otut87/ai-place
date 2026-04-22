@@ -119,7 +119,9 @@ describe('T-129 generateBlogDraft', () => {
     expect(r.tags.length).toBeGreaterThan(0)
     // sevenBlockPassed 는 엄격 검증 — 일부 섹션 본문 부족 가능. 타입만 확인.
     expect(typeof r.sevenBlockPassed).toBe('boolean')
-    expect(r.qualityScore).toBeGreaterThan(50)
+    // T-193: v2 는 환각/중립/외부링크/길이 등 16룰 기반으로 v1 대비 점수가 낮게 나옴.
+    // mock draft 는 간소하므로 30점 이상이면 "tool_use 결과 파싱" 성공 검증으로 충분.
+    expect(r.qualityScore).toBeGreaterThan(30)
     expect(r.tokensUsed.input).toBe(1200)
   })
 

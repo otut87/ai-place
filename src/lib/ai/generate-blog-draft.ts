@@ -10,7 +10,7 @@
 
 import type { Place, FAQ } from '@/lib/types'
 import { validateSevenBlocks } from '@/lib/blog/template'
-import { scoreBlogPost } from '@/lib/blog/quality'
+import { scoreBlogPostV2 } from '@/lib/blog/quality-v2'
 
 export interface GenerateBlogDraftInput {
   city: string                      // 'cheonan'
@@ -172,13 +172,18 @@ export async function generateBlogDraft(
     faqs: Array<{ question: string; answer: string }>
   }
 
-  // 7블록 검증 + 품질 스코어
+  // 7블록 검증 + 결정론 품질 스코어 v2 (T-193).
+  // draft 단계에서는 slug 미정이므로 slug 룰은 스킵. city/allowedPlaces 는 주입.
   const sevenBlockValidation = validateSevenBlocks(draft.content, input.sector)
-  const quality = scoreBlogPost({
+  const quality = scoreBlogPostV2({
     title: draft.title,
     summary: draft.summary,
     content: draft.content,
+    tags: draft.tags,
+    faqs: draft.faqs,
     categoryOrSector: input.sector,
+    cityName: input.cityName,
+    allowedPlaceNames: input.candidatePlaces.map(p => p.name),
   })
 
   return {
