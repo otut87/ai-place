@@ -251,4 +251,270 @@ describe('runBlogPipeline', () => {
     const stages = r.pipelineLog.stages.map(s => s.stage)
     expect(stages).not.toContain('medical-law-checker')
   })
+
+  it('researcher 0단계 — verifiedPlaces 있으면 researchPack 추출', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'generate_blog', input: HEALTHY_DRAFT }],
+      usage: { input_tokens: 100, output_tokens: 100 },
+    })
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'compliance_check', input: { issues: [], disclaimerNeeded: false } }],
+      usage: { input_tokens: 50, output_tokens: 50 },
+    })
+    mockFrom.mockReturnValueOnce(blogPostsEmpty())
+
+    const r = await runBlogPipeline({
+      city: 'cheonan', cityName: '천안시',
+      category: 'dermatology', categoryName: '피부과', sector: 'medical',
+      postType: 'detail', angle: 'review-deepdive',
+      targetQuery: '천안 피부과',
+      slug: 's',
+      verifiedPlaces: [mkPlace('a'), mkPlace('b')],
+      externalReferences: [],
+      skipImage: true,
+      apiKey: 'k',
+    })
+
+    const stages = r.pipelineLog.stages.map(s => s.stage)
+    expect(stages).toContain('researcher')
+  })
+
+  it('researchPack 명시 제공 시 researcher 단계 skip', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'generate_blog', input: HEALTHY_DRAFT }],
+      usage: { input_tokens: 100, output_tokens: 100 },
+    })
+    mockFrom.mockReturnValueOnce(blogPostsEmpty())
+
+    const r = await runBlogPipeline({
+      city: 'cheonan', cityName: '천안시',
+      category: 'hairsalon', categoryName: '미용실', sector: 'beauty',
+      postType: 'detail', angle: 'review-deepdive',
+      targetQuery: '천안 미용실',
+      slug: 's',
+      verifiedPlaces: [mkPlace('a')],
+      externalReferences: [],
+      researchPack: { reviewHighlights: ['친절'], priceBands: [], channels: {} },
+      skipImage: true,
+      apiKey: 'k',
+    })
+
+    const stages = r.pipelineLog.stages.map(s => s.stage)
+    expect(stages).not.toContain('researcher')
+  })
+
+  it('rewritePatches 있으면 writer-rewrite + quality-score-final 단계 진입', async () => {
+    // 최초 draft — 품질 낮게 (hardFailures 유도 위해 짧은 title)
+    const badDraft = { ...HEALTHY_DRAFT, title: '짧음', summary: '요약' }
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'generate_blog', input: badDraft }],
+      usage: { input_tokens: 100, output_tokens: 100 },
+    })
+    // quality-reviewer → rewritePatches 반환
+    mockCreate.mockResolvedValueOnce({
+      content: [{
+        type: 'tool_use', name: 'review_blog',
+        input: {
+          issues: ['제목 짧음'],
+          rewritePatches: [{ block: 'title', instruction: '30자+ 로 확장' }],
+        },
+      }],
+      usage: { input_tokens: 200, output_tokens: 100 },
+    })
+    // medical-law-checker
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'compliance_check', input: { issues: [], disclaimerNeeded: false } }],
+      usage: { input_tokens: 100, output_tokens: 50 },
+    })
+    // writer-rewrite — 개선된 draft 반환
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'generate_blog', input: HEALTHY_DRAFT }],
+      usage: { input_tokens: 1000, output_tokens: 800 },
+    })
+    mockFrom.mockReturnValueOnce(blogPostsEmpty())
+
+    const r = await runBlogPipeline({
+      city: 'cheonan', cityName: '천안시',
+      category: 'dermatology', categoryName: '피부과', sector: 'medical',
+      postType: 'detail', angle: 'review-deepdive',
+      targetQuery: '천안 피부과',
+      slug: 's',
+      verifiedPlaces: [mkPlace('a')],
+      externalReferences: [],
+      skipImage: true,
+      apiKey: 'k',
+    })
+
+    const stages = r.pipelineLog.stages.map(s => s.stage)
+    expect(stages).toContain('quality-reviewer')
+    expect(stages).toContain('writer-rewrite')
+    expect(stages).toContain('quality-score-final')
+  })
+
+  it('similarity block → status=failed_similarity', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'generate_blog', input: HEALTHY_DRAFT }],
+      usage: { input_tokens: 100, output_tokens: 100 },
+    })
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'compliance_check', input: { issues: [], disclaimerNeeded: false } }],
+      usage: { input_tokens: 50, output_tokens: 50 },
+    })
+    // similarity-guard 쿼리 → 매우 유사한 블로그 1건
+    const similarRow = {
+      id: 'b1', slug: 'other', title: HEALTHY_DRAFT.title,
+      content: HEALTHY_DRAFT.content,
+    }
+    mockFrom.mockReturnValueOnce({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
+      then: (cb: (r: unknown) => void) => cb({ data: [similarRow], error: null }),
+    })
+
+    const r = await runBlogPipeline({
+      city: 'cheonan', cityName: '천안시',
+      category: 'dermatology', categoryName: '피부과', sector: 'medical',
+      postType: 'detail', angle: 'review-deepdive',
+      targetQuery: '천안 피부과',
+      slug: 's',
+      verifiedPlaces: [mkPlace('a')],
+      externalReferences: [],
+      skipImage: true,
+      apiKey: 'k',
+    })
+
+    expect(r.status).toBe('failed_similarity')
+    expect(r.similarity?.verdict).toBe('block')
+  })
+
+  it('draft 있고 rewrite 불필요 → 짧은 파이프라인으로 success/warn', async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'generate_blog', input: HEALTHY_DRAFT }],
+      usage: { input_tokens: 100, output_tokens: 100 },
+    })
+    // medical-law-checker
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'compliance_check', input: { issues: [], disclaimerNeeded: false } }],
+      usage: { input_tokens: 50, output_tokens: 50 },
+    })
+    mockFrom.mockReturnValueOnce(blogPostsEmpty())
+
+    const r = await runBlogPipeline({
+      city: 'cheonan', cityName: '천안시',
+      category: 'dermatology', categoryName: '피부과', sector: 'medical',
+      postType: 'detail', angle: 'review-deepdive',
+      targetQuery: '천안 피부과',
+      slug: 's',
+      verifiedPlaces: [mkPlace('a')],
+      externalReferences: [],
+      skipImage: true,
+      apiKey: 'k',
+    })
+
+    expect(r.draft).not.toBeNull()
+    expect(r.pipelineLog.stages.some(s => s.stage === 'quality-score')).toBe(true)
+  })
+
+  it('skipImage=false — image-generator 호출 + Place photos 추출 (detail)', async () => {
+    // global fetch mock — OpenAI gpt-image-2 성공 응답
+    const pngB64 = Buffer.from('fake-png-bytes').toString('base64')
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ data: [{ b64_json: pngB64 }] }),
+      text: async () => '',
+    })) as unknown as typeof fetch
+
+    process.env.OPENAI_API_KEY = 'sk-test'
+    mockStorageUpload.mockResolvedValueOnce({ error: null })
+    mockGetPublicUrl.mockReturnValueOnce({ data: { publicUrl: 'https://cdn/abc.png' } })
+
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'generate_blog', input: HEALTHY_DRAFT }],
+      usage: { input_tokens: 100, output_tokens: 100 },
+    })
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'compliance_check', input: { issues: [], disclaimerNeeded: false } }],
+      usage: { input_tokens: 50, output_tokens: 50 },
+    })
+    mockFrom.mockReturnValueOnce(blogPostsEmpty())
+
+    // Place 에 photoRefs 있도록 — fetchPlacePhotos 가 URL 생성
+    const placeWithPhoto = { ...mkPlace('a'), photoRefs: ['photo-ref-1'] } as Place & { photoRefs: string[] }
+
+    try {
+      const r = await runBlogPipeline({
+        city: 'cheonan', cityName: '천안시',
+        category: 'dermatology', categoryName: '피부과', sector: 'medical',
+        postType: 'detail', angle: 'review-deepdive',
+        targetQuery: '천안 피부과',
+        slug: 'with-image',
+        verifiedPlaces: [placeWithPhoto],
+        externalReferences: [],
+        // skipImage 기본값 false
+        apiKey: 'k',
+      })
+
+      const stages = r.pipelineLog.stages.map(s => s.stage)
+      expect(stages).toContain('image-thumbnail')
+      expect(stages).toContain('image-place-photos')
+      expect(r.thumbnail?.url).toBe('https://cdn/abc.png')
+      expect(r.placePhotos.length).toBeGreaterThan(0)
+    } finally {
+      globalThis.fetch = originalFetch
+      delete process.env.OPENAI_API_KEY
+    }
+  })
+
+  it('medical 금칙 표현 감지 시 compliance issues 기록 + 면책 자동 삽입', async () => {
+    const forbiddenDraft = {
+      ...HEALTHY_DRAFT,
+      content: HEALTHY_DRAFT.content + '\n\n완치를 보장합니다.',
+    }
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', name: 'generate_blog', input: forbiddenDraft }],
+      usage: { input_tokens: 100, output_tokens: 100 },
+    })
+    // quality-reviewer
+    mockCreate.mockResolvedValueOnce({
+      content: [{
+        type: 'tool_use', name: 'review_blog',
+        input: { issues: ['완치 표현'], rewritePatches: [] },
+      }],
+      usage: { input_tokens: 50, output_tokens: 50 },
+    })
+    // medical-law-checker
+    mockCreate.mockResolvedValueOnce({
+      content: [{
+        type: 'tool_use', name: 'compliance_check',
+        input: { issues: [], disclaimerNeeded: true },
+      }],
+      usage: { input_tokens: 100, output_tokens: 50 },
+    })
+    // fallback — writer-rewrite 트리거되면 정상 draft 반환
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'tool_use', name: 'generate_blog', input: HEALTHY_DRAFT }],
+      usage: { input_tokens: 100, output_tokens: 100 },
+    })
+    mockFrom.mockReturnValueOnce(blogPostsEmpty())
+
+    const r = await runBlogPipeline({
+      city: 'cheonan', cityName: '천안시',
+      category: 'dermatology', categoryName: '피부과', sector: 'medical',
+      postType: 'detail', angle: 'review-deepdive',
+      targetQuery: '천안 피부과',
+      slug: 's',
+      verifiedPlaces: [mkPlace('a')],
+      externalReferences: [],
+      skipImage: true,
+      apiKey: 'k',
+    })
+
+    expect(r.complianceIssues.length).toBeGreaterThan(0)
+    expect(r.complianceIssues.some(i => i.phrase === '완치')).toBe(true)
+  })
 })
