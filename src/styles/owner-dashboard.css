@@ -99,8 +99,10 @@
   width: 100%;
 }
 
-/* Mobile topbar (only shown <=860px) */
+/* Mobile topbar + backdrop — 데스크톱에서는 grid item 차지 금지. */
 .owner-topbar { display: none }
+.owner-sidebar-backdrop { display: none }
+
 @media (max-width: 860px) {
   .side-nav {
     position: fixed;
@@ -137,6 +139,7 @@
   }
   .owner-topbar .title { font-weight: 600; font-size: 14px }
   .owner-sidebar-backdrop {
+    display: block;
     position: fixed; inset: 0;
     background: rgba(0,0,0,0.4);
     z-index: 39;
