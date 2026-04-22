@@ -14,8 +14,6 @@ import { formatRatingLine } from "@/lib/format/rating"
 import { formatHoursKo } from "@/lib/format/hours"
 import { normalizeAddress } from "@/lib/format/address"
 import { getPlaceBySlug, getPlaces, getCities, getCategories, getSchemaTypeForCategory, getSectorForCategory } from "@/lib/data.supabase"
-import { enqueuePlaceRefreshBySlug } from "@/lib/admin/pipeline-jobs"
-import { isSummaryStale } from "@/lib/ai/summarize-reviews"
 import { getBlogPostsByPlace } from "@/lib/blog/data.supabase"
 import { generateLocalBusiness, generateFAQPage, generateWebPage } from "@/lib/jsonld"
 import { generateBreadcrumbList } from "@/lib/seo"
@@ -87,19 +85,9 @@ export default async function ProfilePage({ params }: Props) {
     ? await getPlaceDetails(place.googlePlaceId)
     : null
 
-  // Phase 11: Haiku 리뷰 요약과 rating/reviewCount 재수집은 모두 background 워커가 처리.
-  // stale 감지 시 refresh 잡만 enqueue (await X) → 다음 렌더부터 신선한 데이터 반영.
+  // T-187: 방문 기반 lazy enqueue 제거 — 주 1회 일괄 refresh 크론(pipeline-enqueue-weekly)으로 대체.
+  // AI 원가 예측성 확보 + SaaS "월간 리포트" 약속 충족.
   const reviewSummaries = place.reviewSummaries ?? []
-  const existingGoogleSummary = reviewSummaries.find(s => s.source.toLowerCase() === 'google')
-  const googleSummaryStale = isSummaryStale(existingGoogleSummary, 7)
-  if (place.googlePlaceId && (place.googleReviewCount == null || googleSummaryStale)) {
-    const kinds: Array<'place.enrich_google' | 'place.summarize_google_reviews'> = []
-    if (place.googleReviewCount == null) kinds.push('place.enrich_google')
-    if (googleSummaryStale) kinds.push('place.summarize_google_reviews')
-    void enqueuePlaceRefreshBySlug(place.slug, kinds).catch(err => {
-      console.error('[place-detail] enqueue refresh failed:', err)
-    })
-  }
   const placeWithGoogleData = googleData
     ? {
         ...place,
