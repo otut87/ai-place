@@ -28,7 +28,8 @@ export async function GET(req: Request) {
       billing_keys:billing_key_id ( billing_key, status ),
       customers:customer_id ( name, email )
     `)
-    .in('status', ['active', 'past_due'])
+    // T-204: 파일럿 종료(next_charge_at) 도래한 pending 구독도 첫 결제 대상 포함.
+    .in('status', ['pending', 'active', 'past_due'])
     .lte('next_charge_at', nowIso)
     .limit(100)
 

@@ -639,6 +639,20 @@
 .place-status.pending { background: color-mix(in oklab, var(--warn) 14%, transparent); color: var(--warn) }
 .place-status.rejected { background: color-mix(in oklab, #c24b2f 14%, transparent); color: #9a2c00 }
 
+/* --- Progress bar (billing pilot) --- */
+.progress-bar {
+  height: 6px;
+  background: var(--bg-2);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.progress-bar > div {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
 /* --- Banner (파일럿) --- */
 .owner-banner {
   display: flex;
