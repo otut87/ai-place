@@ -14,9 +14,10 @@ export type BillingKeyStatus = 'active' | 'revoked' | 'expired'
 
 export type PaymentStatus = 'succeeded' | 'failed' | 'canceled'
 
-// T-205 — 단일 요금제 9,900원 (2026-04-22 확정).
+// T-206 — 단일 요금제 14,900원 (2026-04-22 확정, 9,900원 → 14,900원 상향).
 // 월 블로그 5편/업체 · 월간 리포트 · AEO 점검 · AI 인용 대시보드 포함.
-export const STANDARD_PLAN_AMOUNT = 9900 as const
+// 가격 책정 근거: 수수료 포함 변동 마진율 92% · BEP 5.5명 · 소상공인 심리 안전 구간.
+export const STANDARD_PLAN_AMOUNT = 14900 as const
 export const STANDARD_PLAN_NAME = 'standard' as const
 export const MONTHLY_BLOG_QUOTA_PER_PLACE = 5 as const
 

@@ -31,7 +31,7 @@ export default function TermsPage() {
             </Section>
 
             <Section title="제3조 (요금 및 결제)">
-              파일럿 30일은 무료로 제공되며, 이후 월 9,900원(VAT 포함)이 카드 등록 시점부터 자동 청구됩니다.
+              파일럿 30일은 무료로 제공되며, 이후 월 14,900원(VAT 포함)이 카드 등록 시점부터 자동 청구됩니다.
               이용자는 /owner/billing/cancel 에서 언제든 해지할 수 있으며, 해지 시 잔여 기간까지는 서비스가 유지됩니다.
             </Section>
 

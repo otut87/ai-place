@@ -8,7 +8,7 @@
 // - 실제 실행은 5분 consumer(/api/cron/pipeline-consume)가 FIFO 로 소화
 //
 // 방문 기반 lazy enqueue(src/app/[city]/[category]/[slug]/page.tsx)를 대체하는 목적.
-// SaaS 월 9,900원 상품에서 "AI 추천 결과 리포트 월간 제공" 약속 충족.
+// SaaS 월 14,900원 상품에서 "AI 추천 결과 리포트 월간 제공" 약속 충족.
 
 import { NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin-client'

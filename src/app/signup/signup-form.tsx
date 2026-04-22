@@ -318,7 +318,7 @@ export function SignupForm() {
 
       {/* 파일럿·자동결제 고지 — AUDIT I-4 */}
       <div className="pilot-note">
-        <b>가입 후 30일 파일럿 무료</b>로 시작됩니다. 이후 월 9,900원 자동 결제는{' '}
+        <b>가입 후 30일 파일럿 무료</b>로 시작됩니다. 이후 월 14,900원 자동 결제는{' '}
         <b>카드 등록을 완료한 경우에만</b> 진행되며, 언제든{' '}
         <Link href="/owner/billing/cancel" style={{ textDecoration: 'underline' }}>
           해지

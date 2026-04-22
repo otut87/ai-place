@@ -73,7 +73,7 @@ export default async function NewPlacePage() {
             </div>
           </div>
           <div className="foot">
-            ※ 등록 후 30일 파일럿 무료 · 이후 월 9,900원 자동 결제는 카드 등록한 경우에만 진행됩니다.
+            ※ 등록 후 30일 파일럿 무료 · 이후 월 14,900원 자동 결제는 카드 등록한 경우에만 진행됩니다.
           </div>
         </div>
       </aside>

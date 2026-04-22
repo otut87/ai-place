@@ -6,7 +6,7 @@ import { Footer } from '@/components/footer'
 import { composePageTitle } from '@/lib/seo/compose-title'
 
 const TITLE = composePageTitle('요금 안내 — AI Place')
-const DESC = 'AI Place 파일럿 30일 무료, 이후 월 9,900원 단일 플랜. 월 블로그 5편 + 월간 리포트 + AEO 점검 포함. 프리미엄 GEO 컨설팅 별도.'
+const DESC = 'AI Place 파일럿 30일 무료, 이후 월 14,900원 단일 플랜. 월 블로그 5편 + 월간 리포트 + AEO 점검 포함. 프리미엄 GEO 컨설팅 별도.'
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -33,7 +33,7 @@ export default function PricingPage() {
                 AI Place · 단일 플랜
               </div>
               <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-[#191919]">월 9,900원</span>
+                <span className="text-3xl font-bold text-[#191919]">월 14,900원</span>
                 <span className="text-xs text-[#6a6a6a]">(첫 30일 무료)</span>
               </div>
               <p className="mt-2 text-sm text-[#484848]">
@@ -90,8 +90,8 @@ export default function PricingPage() {
           <section className="mt-16">
             <h2 className="text-xl font-semibold text-[#191919]">자주 묻는 질문</h2>
             <div className="mt-6 space-y-4">
-              <Faq q="월 9,900원에 포함되는 블로그는 몇 편인가요?" a="업체 1곳당 월 5편이 자동 발행됩니다. 업체상세 2편 + 비교 1편 + 가이드 1편 + 키워드 1편 로테이션으로, 같은 업체 내에서 내용이 중복되지 않도록 similarity-guard 가 차단합니다. 파일럿 30일 기간에도 동일하게 제공됩니다." />
-              <Faq q="파일럿 종료 후 자동 결제되나요?" a="네, 가입 시 등록한 카드로 30일 후 월 9,900원이 자동 결제됩니다. 만료 7일 전 리마인드 이메일을 보내드립니다. /owner/billing 에서 언제든 해지 가능합니다." />
+              <Faq q="월 14,900원에 포함되는 블로그는 몇 편인가요?" a="업체 1곳당 월 5편이 자동 발행됩니다. 업체상세 2편 + 비교 1편 + 가이드 1편 + 키워드 1편 로테이션으로, 같은 업체 내에서 내용이 중복되지 않도록 similarity-guard 가 차단합니다. 파일럿 30일 기간에도 동일하게 제공됩니다." />
+              <Faq q="파일럿 종료 후 자동 결제되나요?" a="네, 가입 시 등록한 카드로 30일 후 월 14,900원이 자동 결제됩니다. 만료 7일 전 리마인드 이메일을 보내드립니다. /owner/billing 에서 언제든 해지 가능합니다." />
               <Faq q="월간 리포트는 어떻게 받나요?" a="매월 1일 오전 9시(KST) 에 지난 달 실측 리포트를 가입 이메일로 발송합니다. AI 봇 방문 횟수·엔진별 인용 추이·AEO 점수 변화·할 일 체크리스트가 PDF로 포함됩니다. 구독자 전원 공통 제공입니다." />
               <Faq q="해지하면 내 업체 페이지는 어떻게 되나요?" a="구독 해지 시에도 업체 페이지는 읽기 전용으로 유지됩니다. 이미 공개된 페이지를 내리지 않습니다. 다만 대시보드·AI 테스트·블로그 자동 발행 등 부가 기능은 중단됩니다." />
               <Faq q="프리미엄 컨설팅은 월 구독과 별도인가요?" a="네, 완전히 독립적입니다. 컨설팅은 1회 결제 100~300만원이며, 기존 사이트나 네이버 플레이스를 갖고 있는 사장님이 자체 채널 AEO 개선을 의뢰하는 서비스입니다. 월 구독은 AI Place 자체 플랫폼 노출입니다." />

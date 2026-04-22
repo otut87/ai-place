@@ -23,7 +23,7 @@ async function sendReminder(opts: { to: string; name: string | null; daysLeft: n
     <h2>안녕하세요 ${opts.name ?? '고객'}님,</h2>
     <p>AI Place 파일럿 체험이 <strong>${opts.daysLeft === 0 ? '오늘' : opts.daysLeft + '일 후'}</strong> 종료됩니다.</p>
     <p>만료일: ${new Date(opts.trialEnd).toLocaleDateString('ko-KR')}</p>
-    <p>지속 이용을 원하시면 <a href="https://aiplace.kr/owner/billing">카드 등록</a> 후 월 9,900원 자동 결제로 전환됩니다.</p>
+    <p>지속 이용을 원하시면 <a href="https://aiplace.kr/owner/billing">카드 등록</a> 후 월 14,900원 자동 결제로 전환됩니다.</p>
     <p>해지를 원하시면 <a href="https://aiplace.kr/owner/billing/cancel">해지 페이지</a>에서 완료해 주세요.</p>
     <hr/>
     <p style="font-size:12px;color:#888">AI Place · support@aiplace.kr</p>
