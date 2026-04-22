@@ -223,6 +223,103 @@ export async function getOwnerBotSummary(
   return aggregateOwnerBotSummary(annotated, placeIds, days, since)
 }
 
+// ── 일자별 추이 집계 (Sprint D-2 차트) ────────────────────────────
+export interface OwnerDailyTrendRow {
+  /** KST YYYY-MM-DD */
+  date: string
+  aiSearch: Record<AiSearchEngine, number>
+  aiTraining: Record<AiTrainingEngine, number>
+  /** aiSearch + aiTraining 의 합계 (차트 Y max 산정용). */
+  total: number
+}
+
+function toKstDateKey(iso: string): string {
+  const d = new Date(iso)
+  // Asia/Seoul 로 정확히 KST 날짜 추출.
+  const fmt = d.toLocaleDateString('ko-KR', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+  })
+  return fmt.replace(/\./g, '').trim().split(/\s+/).join('-')
+}
+
+function emptyEngineMap<T extends string>(keys: readonly T[]): Record<T, number> {
+  const out = {} as Record<T, number>
+  for (const k of keys) out[k] = 0
+  return out
+}
+
+/** 주어진 N일 윈도우의 날짜 키 버킷을 먼저 채우고, 방문을 bucket 에 누적. */
+export function aggregateOwnerDailyTrend(
+  rows: ReadonlyArray<AnnotatedVisit>,
+  days: number,
+  now: Date = new Date(),
+): OwnerDailyTrendRow[] {
+  const buckets = new Map<string, OwnerDailyTrendRow>()
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const d = new Date(now.getTime() - i * 86_400_000)
+    const key = toKstDateKey(d.toISOString())
+    buckets.set(key, {
+      date: key,
+      aiSearch: emptyEngineMap(AI_SEARCH_ENGINE_KEYS),
+      aiTraining: emptyEngineMap(AI_TRAINING_ENGINE_KEYS),
+      total: 0,
+    })
+  }
+
+  for (const r of rows) {
+    const group = ID_TO_GROUP.get(r.botId)
+    if (group !== 'ai-search' && group !== 'ai-training') continue
+    const key = toKstDateKey(r.visitedAt)
+    const bucket = buckets.get(key)
+    if (!bucket) continue
+    const engine = mapBotToEngine(r.botId, group)
+    if (group === 'ai-search') {
+      bucket.aiSearch[engine as AiSearchEngine] = (bucket.aiSearch[engine as AiSearchEngine] ?? 0) + 1
+    } else {
+      bucket.aiTraining[engine as AiTrainingEngine] = (bucket.aiTraining[engine as AiTrainingEngine] ?? 0) + 1
+    }
+    bucket.total += 1
+  }
+
+  return Array.from(buckets.values())
+}
+
+export async function getOwnerDailyTrend(
+  placeIds: string[],
+  days = 30,
+  now: Date = new Date(),
+): Promise<OwnerDailyTrendRow[]> {
+  if (placeIds.length === 0) return aggregateOwnerDailyTrend([], days, now)
+
+  const pathMap = await fetchPathMap(placeIds)
+  if (pathMap.size === 0) return aggregateOwnerDailyTrend([], days, now)
+
+  const admin = getAdminClient()
+  if (!admin) return aggregateOwnerDailyTrend([], days, now)
+
+  const since = new Date(now.getTime() - days * 86_400_000).toISOString()
+  const paths = Array.from(pathMap.keys())
+
+  const { data, error } = await admin
+    .from('bot_visits')
+    .select('bot_id, path, visited_at')
+    .in('path', paths)
+    .gte('visited_at', since)
+  if (error) {
+    console.error('[bot-stats] getOwnerDailyTrend 실패:', error.message)
+    return aggregateOwnerDailyTrend([], days, now)
+  }
+
+  const annotated: AnnotatedVisit[] = []
+  for (const row of (data ?? []) as Array<{ bot_id: string; path: string; visited_at: string }>) {
+    const info = pathMap.get(row.path)
+    if (!info) continue
+    annotated.push({ botId: row.bot_id, pageType: info.pageType, visitedAt: row.visited_at })
+  }
+
+  return aggregateOwnerDailyTrend(annotated, days, now)
+}
+
 /** Sprint D-2 용 — 최근 N건 AI 봇 방문 이력. ai-search/ai-training 그룹만. */
 export async function listOwnerBotVisits(
   placeIds: string[],

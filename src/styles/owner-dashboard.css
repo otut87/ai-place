@@ -344,6 +344,176 @@
 }
 .dash-panel .head .more:hover { text-decoration: underline }
 
+/* --- Chart legend --- Sprint D-2 ------------------------ */
+.legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+}
+.legend span { display: inline-flex; gap: 6px; align-items: center }
+.legend .d { width: 10px; height: 10px; border-radius: 2px; flex: 0 0 10px }
+
+/* --- D<15 측정 중 오버레이 --- */
+.measuring-overlay {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--card) 88%, transparent);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border-radius: var(--r-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 2;
+}
+.measuring-overlay .body { text-align: center; max-width: 360px }
+.measuring-overlay .big {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.measuring-overlay .sub {
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+/* --- Gauge (AEO) --- */
+.gauge {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 8px 0 4px;
+}
+.gauge-circle {
+  width: 120px;
+  height: 120px;
+  flex: 0 0 120px;
+  position: relative;
+}
+.gauge-circle svg { transform: rotate(-90deg) }
+.gauge-circle .val {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.gauge-circle .val .n {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.gauge-circle .val .s {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.gauge-desc {
+  font-size: 13.5px;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+.gauge-desc b { color: var(--ink); font-weight: 600 }
+
+.gauge-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+.gauge-rules .rule-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.gauge-rules .rule-row .lbl { color: var(--ink-2); flex: 1 }
+.gauge-rules .rule-row.pass .lbl::before { content: '✓ '; color: var(--good) }
+.gauge-rules .rule-row.fail .lbl::before { content: '· '; color: var(--muted) }
+.gauge-rules .rule-row.fail .lbl { color: var(--muted) }
+.gauge-rules .rule-row .w {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* --- Bot visit table --- */
+.bot-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.bot-table th, .bot-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.bot-table th {
+  background: var(--bg-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 500;
+}
+.bot-table tr:hover td { background: color-mix(in oklab, var(--accent) 4%, transparent) }
+.bot-table .eng {
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.bot-table .path {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  word-break: break-all;
+  max-width: 320px;
+}
+.bot-table .type-chip {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.bot-table .type-chip.direct { background: color-mix(in oklab, var(--good) 14%, transparent); color: var(--good) }
+.bot-table .type-chip.mention { background: color-mix(in oklab, var(--warn) 14%, transparent); color: var(--warn) }
+.bot-table .ts {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.bot-table .empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--muted);
+  font-style: italic;
+}
+.bot-table-note {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 /* --- Task (할 일) --- dashboard.html 패턴 ---------------- */
 .task {
   display: flex;

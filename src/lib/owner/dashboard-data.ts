@@ -7,7 +7,10 @@ import { listOwnerPlaces } from '@/lib/actions/owner-places'
 import { scorePlaceAeo, type AeoGrade } from '@/lib/owner/place-aeo-score'
 import { getMeasurementWindow, type MeasurementWindow } from '@/lib/owner/measurement-window'
 import { countMentionsByPlace } from '@/lib/owner/place-mentions'
-import { getOwnerBotSummary, type OwnerBotSummary } from '@/lib/owner/bot-stats'
+import {
+  getOwnerBotSummary, getOwnerDailyTrend, listOwnerBotVisits,
+  type OwnerBotSummary, type OwnerDailyTrendRow, type OwnerBotVisit,
+} from '@/lib/owner/bot-stats'
 import { detectOwnerTodos, type OwnerTodo } from '@/lib/owner/todos'
 import type { FAQ, PlaceImage, ReviewSummary, Service } from '@/lib/types'
 
@@ -40,6 +43,10 @@ export interface OwnerDashboardData {
   places: OwnerPlaceSummary[]
   window: MeasurementWindow
   botSummary: OwnerBotSummary
+  /** Sprint D-2 — 30일 일자별 추이 (차트용). 최신 날짜가 배열 마지막. */
+  dailyTrend: OwnerDailyTrendRow[]
+  /** Sprint D-2 — 최근 AI 봇 방문 10건 (ai-search/ai-training). */
+  recentBotVisits: OwnerBotVisit[]
   todos: OwnerTodo[]
   billing: OwnerBillingState
   averageAeoScore: number | null
@@ -170,10 +177,12 @@ export async function loadOwnerDashboard(now: Date = new Date()): Promise<OwnerD
   const placeIds = ownerRows.map((r) => r.id)
 
   // 2. 병렬 로드
-  const [fullPlaces, mentionMap, botSummary, billing, sectorMap] = await Promise.all([
+  const [fullPlaces, mentionMap, botSummary, dailyTrend, recentBotVisits, billing, sectorMap] = await Promise.all([
     loadFullPlacesForOwner(placeIds),
     countMentionsByPlace(placeIds),
     getOwnerBotSummary(placeIds, 30, now),
+    getOwnerDailyTrend(placeIds, 30, now),
+    listOwnerBotVisits(placeIds, 10, 30, now),
     loadBillingState(user.id, now),
     loadSectorMap(),
   ])
@@ -262,6 +271,8 @@ export async function loadOwnerDashboard(now: Date = new Date()): Promise<OwnerD
     places,
     window,
     botSummary,
+    dailyTrend,
+    recentBotVisits,
     todos,
     billing,
     averageAeoScore,

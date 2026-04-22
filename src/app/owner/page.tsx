@@ -8,6 +8,9 @@ import { loadOwnerDashboard, type OwnerDashboardData } from '@/lib/owner/dashboa
 import { MEASUREMENT_WINDOW_DAYS } from '@/lib/owner/measurement-window'
 import type { OwnerBotBucket } from '@/lib/owner/bot-stats'
 import { composePageTitle } from '@/lib/seo/compose-title'
+import { CitationCharts } from './_components/citation-chart'
+import { AeoGauge } from './_components/aeo-gauge'
+import { RecentBotVisits } from './_components/recent-bot-visits'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,8 +53,23 @@ export default async function OwnerHomePage({ searchParams }: Params) {
             <KpiPlaces places={data.places} />
           </section>
 
+          <CitationCharts
+            rows={data.dailyTrend}
+            measuring={data.window.isMeasuring}
+            measuringLabel={data.window.label}
+          />
+
           <section className="row">
             <PlaceListPanel places={data.places} />
+            <AeoGauge places={data.places} averageScore={data.averageAeoScore} />
+          </section>
+
+          <section className="row">
+            <RecentBotVisits
+              visits={data.recentBotVisits}
+              measuring={data.window.isMeasuring}
+              measuringLabel={data.window.label}
+            />
             <TodoPanel todos={data.todos} />
           </section>
         </>
