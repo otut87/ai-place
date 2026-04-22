@@ -18,7 +18,7 @@
   grid-template-columns: 240px 1fr;
   min-height: calc(100vh - var(--nav-h));
 }
-@media (max-width: 860px) {
+@media (max-width: 880px) {
   .dash-layout { grid-template-columns: 1fr }
 }
 
@@ -99,58 +99,89 @@
   width: 100%;
 }
 
-/* Mobile topbar + backdrop — 데스크톱에서는 grid item 차지 금지. */
-.owner-topbar { display: none }
+/* 데스크톱: backdrop 숨김 (grid item 되는 것 방지). */
 .owner-sidebar-backdrop { display: none }
 
-@media (max-width: 860px) {
+@media (max-width: 880px) {
   .side-nav {
     position: fixed;
-    top: 0; left: 0;
+    top: var(--nav-h); left: 0;
     width: 260px;
-    height: 100vh;
+    height: calc(100vh - var(--nav-h));
     z-index: 40;
     transform: translateX(-100%);
-    transition: transform 0.25s ease;
+    transition: transform 0.22s ease;
     box-shadow: var(--shadow-lg);
+    overflow-y: auto;
   }
   .side-nav.open { transform: translateX(0) }
-  .owner-topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    background: var(--bg);
-    border-bottom: 1px solid var(--line);
-    position: sticky;
-    top: var(--nav-h);
-    z-index: 30;
-  }
-  .owner-topbar .toggle {
-    background: transparent;
-    border: 1px solid var(--line-2);
-    border-radius: 10px;
-    width: 40px; height: 40px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: var(--ink);
-  }
-  .owner-topbar .title { font-weight: 600; font-size: 14px }
   .owner-sidebar-backdrop {
     display: block;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.4);
+    position: fixed;
+    top: var(--nav-h); left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.38);
     z-index: 39;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.25s ease;
+    transition: opacity 0.22s ease;
   }
   .owner-sidebar-backdrop.open { opacity: 1; pointer-events: auto }
+  .dash-main {
+    padding: clamp(16px, 4vw, 24px);
+  }
 }
 
-/* --- Greeting --- */
+/* --- Page header (공통) ------------------------------------- */
+.page-header {
+  margin-bottom: 28px;
+}
+.page-header-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-decoration: none;
+  margin-bottom: 8px;
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+}
+.page-header-back:hover { color: var(--ink-2) }
+.page-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.page-header-body { min-width: 0; flex: 1 1 auto }
+.page-header-body h1 {
+  font-size: clamp(26px, 3vw, 38px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  margin: 0 0 6px;
+}
+.page-header-body h1 em,
+.page-header-body h1 .it {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+}
+.page-header-body p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+.page-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* --- Greeting (대시보드 홈 전용 — 인사말이 있어 별도) --- */
 .greeting {
   display: flex;
   justify-content: space-between;
@@ -734,6 +765,12 @@
   max-width: 48ch;
   line-height: 1.5;
 }
+.owner-empty-state-actions {
+  display: inline-flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 
 /* =========================================================
    /owner/places/new — register.html 스타일
@@ -1020,6 +1057,101 @@
   flex-wrap: wrap;
 }
 
+/* =========================================================
+   /owner/places/[id] — 업체 편집 폼
+   ========================================================= */
+.edit-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 860px;
+}
+.form-section-title {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.form-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.form-section-head .form-section-title { margin-bottom: 0 }
+.form-counter {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 400;
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+}
+.form-counter.ok { color: var(--good) }
+
+.repeat-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px }
+.repeat-row { display: grid; gap: 8px }
+.repeat-row.grid-3 { grid-template-columns: 1fr 1fr 1fr }
+@media (max-width: 640px) { .repeat-row.grid-3 { grid-template-columns: 1fr } }
+.repeat-col-with-remove { display: flex; gap: 6px; align-items: stretch }
+.repeat-col-with-remove input { flex: 1 }
+.repeat-remove {
+  width: 36px;
+  flex: 0 0 36px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 120ms ease;
+}
+.repeat-remove:hover {
+  background: color-mix(in oklab, #c24b2f 10%, transparent);
+  color: #9a2c00;
+  border-color: color-mix(in oklab, #c24b2f 30%, transparent);
+}
+
+.repeat-faq { display: flex; flex-direction: column; gap: 6px }
+.repeat-faq-q { display: flex; gap: 6px }
+.repeat-faq-q input { flex: 1 }
+
+.form-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--accent);
+  background: transparent;
+  border: 1px dashed color-mix(in oklab, var(--accent) 40%, transparent);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 120ms ease;
+}
+.form-add-btn:hover {
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+  border-style: solid;
+}
+
+.form-submit-bar {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 20px 0 0;
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(to top, var(--bg-2) 70%, transparent);
+  margin-top: 8px;
+  z-index: 5;
+}
+.form-submit-bar .btn.lg { min-width: 160px }
+
 /* Form error / info inline boxes */
 .form-inline-error {
   padding: 10px 14px;
@@ -1038,3 +1170,223 @@
   font-size: 13px;
   border: 1px dashed var(--line-3);
 }
+
+/* =========================================================
+   /owner/citations · /owner/content · /owner/reports — 공통 필터 바
+   ========================================================= */
+.citations-filter {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  margin-top: 12px;
+}
+.citations-filter[data-pending='true'] { opacity: 0.6 }
+.citations-filter label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.citations-filter label > span {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.citations-filter select {
+  height: 32px;
+  padding: 0 28px 0 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 13px;
+  color: var(--ink);
+  font-family: inherit;
+  cursor: pointer;
+  min-width: 140px;
+}
+.citations-filter select:hover { border-color: var(--line-3) }
+.citations-filter select:focus { outline: 2px solid color-mix(in oklab, var(--accent) 30%, transparent); outline-offset: 1px }
+
+/* 콘텐츠 목록 공통 카드 */
+.content-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.content-row:last-child { border-bottom: none }
+.content-row .thumb {
+  width: 80px; height: 60px;
+  border-radius: 6px;
+  background: var(--bg-2);
+  flex: 0 0 80px;
+  object-fit: cover;
+}
+.content-row .body { flex: 1; min-width: 0 }
+.content-row .body h4 {
+  margin: 0 0 4px;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.content-row .body h4 a { color: var(--ink); text-decoration: none }
+.content-row .body h4 a:hover { text-decoration: underline }
+.content-row .meta {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.content-row .meta .chip-inline {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  color: var(--ink-2);
+}
+.content-row .actions { flex: 0 0 auto; display: flex; gap: 10px }
+.content-row .actions a { font-size: 12px; color: var(--accent); text-decoration: none }
+.content-row .actions a:hover { text-decoration: underline }
+
+/* 콘텐츠 타입 탭 */
+.content-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.content-tabs a {
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.content-tabs a.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600 }
+.content-tabs a:hover { color: var(--ink-2) }
+
+/* 리포트 카드 */
+.report-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  margin-bottom: 10px;
+  transition: border-color 120ms ease;
+}
+.report-card:hover { border-color: var(--line-3) }
+.report-card .icon {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  color: var(--accent);
+  display: grid; place-items: center;
+  flex: 0 0 40px;
+  font-size: 18px;
+}
+.report-card .body { flex: 1; min-width: 0 }
+.report-card .body h4 {
+  margin: 0 0 2px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.report-card .body .meta { font-size: 12px; color: var(--muted) }
+.report-card .cta { flex: 0 0 auto }
+
+/* 추천 키워드 칩 (업체 등록/수정 폼용) */
+.keyword-suggest {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--bg-2);
+  border: 1px dashed var(--line-3);
+  border-radius: 10px;
+}
+.keyword-suggest-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.keyword-suggest h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.keyword-suggest h4 span {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 11.5px;
+  font-family: var(--mono);
+  margin-left: 4px;
+}
+.keyword-suggest p {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.keyword-suggest p b {
+  color: var(--ink-2);
+  font-weight: 600;
+  font-family: var(--mono);
+  padding: 0 3px;
+  background: var(--bg);
+  border-radius: 3px;
+}
+.keyword-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.keyword-chip-group {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--line-2);
+  border-radius: 99px;
+  overflow: hidden;
+  background: var(--bg);
+  transition: border-color 120ms ease;
+}
+.keyword-chip-group:hover { border-color: var(--accent) }
+.keyword-chip,
+.keyword-chip-action {
+  padding: 4px 10px;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 120ms ease;
+}
+.keyword-chip:hover:not(:disabled),
+.keyword-chip-action:hover { color: var(--accent) }
+.keyword-chip-action {
+  border-left: 1px solid var(--line-2);
+  font-size: 10.5px;
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+}
+.keyword-chip.added {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  color: var(--accent);
+  cursor: default;
+}
+.keyword-chip:disabled { cursor: default }

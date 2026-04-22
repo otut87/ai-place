@@ -1,12 +1,12 @@
 'use client'
 
-// T-201 — /owner 좌측 사이드바 (docs/AIPLACE/dashboard.html 의 side-nav 구현).
-// 섹션: 둘러보기 (개요/AI 인용/업체 관리/추천 키워드/콘텐츠 관리) · 설정 (결제 플랜).
+// /owner 좌측 사이드바. 모바일 drawer 는 헤더 햄버거가 제어 (OwnerSidebarContext).
+// 데스크톱에서는 항상 열린 grid item, 모바일에서는 고정 포지션 drawer.
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { usePathname } from 'next/navigation'
+import { useOwnerSidebar } from './owner-sidebar-context'
 
 interface Props {
   userEmail: string | null
@@ -15,21 +15,19 @@ interface Props {
 interface NavItem {
   href: string
   label: string
-  icon: 'overview' | 'citation' | 'places' | 'keywords' | 'content' | 'billing'
+  icon: 'overview' | 'citation' | 'places' | 'content' | 'reports' | 'billing'
   match: (p: string) => boolean
-  comingSoon?: boolean
-  badge?: string
 }
 
 const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
   {
     title: '둘러보기',
     items: [
-      { href: '/owner',           label: '개요',        icon: 'overview',  match: (p) => p === '/owner' },
-      { href: '/owner#citation',  label: 'AI 인용',     icon: 'citation',  match: () => false, comingSoon: true },
-      { href: '/owner/places/new',label: '업체 추가',   icon: 'places',    match: (p) => p.startsWith('/owner/places') },
-      { href: '/owner#keywords',  label: '추천 키워드', icon: 'keywords',  match: () => false, comingSoon: true },
-      { href: '/owner#content',   label: '콘텐츠 관리', icon: 'content',   match: () => false, comingSoon: true },
+      { href: '/owner',            label: '개요',        icon: 'overview',  match: (p) => p === '/owner' },
+      { href: '/owner/citations',  label: 'AI 인용',     icon: 'citation',  match: (p) => p.startsWith('/owner/citations') },
+      { href: '/owner/content',    label: '콘텐츠',      icon: 'content',   match: (p) => p.startsWith('/owner/content') },
+      { href: '/owner/reports',    label: '월간 리포트', icon: 'reports',   match: (p) => p.startsWith('/owner/reports') },
+      { href: '/owner/places/new', label: '업체 추가',   icon: 'places',    match: (p) => p.startsWith('/owner/places') },
     ],
   },
   {
@@ -60,16 +58,16 @@ const ICONS: Record<NavItem['icon'], React.ReactElement> = {
       <circle cx="12" cy="10" r="3" />
     </svg>
   ),
-  keywords: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-      <circle cx="11" cy="11" r="8" />
-      <path d="M21 21l-4.35-4.35" />
-    </svg>
-  ),
   content: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <polyline points="14 2 14 8 20 8" />
+    </svg>
+  ),
+  reports: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+      <path d="M3 3v18h18" />
+      <path d="M7 14l4-4 4 4 5-5" />
     </svg>
   ),
   billing: (
@@ -82,82 +80,56 @@ const ICONS: Record<NavItem['icon'], React.ReactElement> = {
 
 export function OwnerSidebar({ userEmail }: Props) {
   const pathname = usePathname() ?? ''
-  const router = useRouter()
-  const [open, setOpen] = useState(false)
+  const { isOpen, close } = useOwnerSidebar()
 
-  // 페이지 이동 시 drawer 닫기 (모바일).
-  useEffect(() => { setOpen(false) }, [pathname])
-
-  async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    setOpen(false)
-    router.push('/')
-    router.refresh()
-  }
+  // 경로 변경 시 drawer 자동 닫기 (모바일 UX).
+  useEffect(() => { close() }, [pathname, close])
 
   return (
     <>
-      <header className="owner-topbar">
-        <button
-          type="button"
-          className="toggle"
-          aria-label="사이드바 열기"
-          aria-expanded={open}
-          onClick={() => setOpen(true)}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        <div className="title">오너 포털</div>
-        <div style={{ width: 40 }} />
-      </header>
-
       <div
-        className={`owner-sidebar-backdrop${open ? ' open' : ''}`}
+        className={`owner-sidebar-backdrop${isOpen ? ' open' : ''}`}
         aria-hidden="true"
-        onClick={() => setOpen(false)}
+        onClick={close}
       />
 
-      <aside className={`side-nav${open ? ' open' : ''}`} aria-label="오너 메뉴">
+      <aside className={`side-nav${isOpen ? ' open' : ''}`} aria-label="오너 메뉴">
         {SECTIONS.map((section, sIdx) => (
           <div key={section.title}>
             {sIdx > 0 && <div className="divider" />}
             <h5>{section.title}</h5>
             {section.items.map((item) => {
               const active = item.match(pathname)
-              const cls = active ? 'active' : undefined
               return (
                 <Link
                   key={item.label}
                   href={item.href}
-                  className={cls}
-                  aria-disabled={item.comingSoon}
-                  title={item.comingSoon ? '곧 지원 예정' : undefined}
+                  className={active ? 'active' : undefined}
                 >
                   {ICONS[item.icon]}
                   <span>{item.label}</span>
-                  {item.comingSoon && <span className="badge">soon</span>}
-                  {item.badge && <span className="badge">{item.badge}</span>}
                 </Link>
               )
             })}
           </div>
         ))}
 
-        <div className="user-foot">
-          <span className="email">{userEmail ?? '로그인 정보 없음'}</span>
-          <button type="button" onClick={handleLogout}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            <span>로그아웃</span>
-          </button>
-        </div>
+        {userEmail && <AvatarFoot email={userEmail} />}
       </aside>
     </>
+  )
+}
+
+function AvatarFoot({ email }: { email: string }) {
+  const [name, domain] = email.split('@')
+  const initial = (name?.[0] ?? '?').toUpperCase()
+  return (
+    <div className="who">
+      <div className="av">{initial}</div>
+      <div className="meta">
+        <b>{name}</b>
+        <span>@{domain}</span>
+      </div>
+    </div>
   )
 }

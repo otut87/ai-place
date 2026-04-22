@@ -118,14 +118,14 @@ export function AeoGauge({ places, averageScore }: Props) {
 function allRulesSkeleton() {
   // scorePlaceAeo 와 1:1 매칭. label 이 dashboard-data.aeoDeficiencies 와 비교되는 키.
   return [
-    { id: 'jsonld-basics',        label: 'JSON-LD 기본 (이름·주소·전화)', weight: 20 },
-    { id: 'faq-count',            label: 'FAQ 3~10개',                    weight: 20 },
-    { id: 'freshness',            label: '최근 갱신 표기 (180일 이내)',    weight: 10 },
-    { id: 'review-summary',       label: '리뷰 요약/수집',                weight: 10 },
-    { id: 'photos-3',             label: '대표 사진 3장 이상',             weight: 10 },
-    { id: 'opening-hours',        label: '영업시간 등록',                 weight: 10 },
-    { id: 'services-min',         label: '서비스 1개 이상',                weight: 10 },
-    { id: 'mentioned-in-content', label: '비교·가이드·블로그 언급',        weight: 10 },
+    { id: 'jsonld-basics',        label: 'JSON-LD 기본 (이름·주소·연락처)', weight: 20 },
+    { id: 'faq-count',            label: 'FAQ 3~10개',                      weight: 20 },
+    { id: 'freshness',            label: '최근 갱신 표시 (180일 이내)',      weight: 10 },
+    { id: 'review-summary',       label: '리뷰 표시/수집',                  weight: 10 },
+    { id: 'photos-3',             label: '대표 사진 3장 이상',               weight: 10 },
+    { id: 'opening-hours',        label: '영업시간 정확',                   weight: 10 },
+    { id: 'services-min',         label: '서비스 1가지 이상',                weight: 10 },
+    { id: 'mentioned-in-content', label: '브랜드·카테고리·지역 언급',        weight: 10 },
   ]
 }
 

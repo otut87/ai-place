@@ -1,0 +1,276 @@
+/* ============================================================
+   REMIX DASHBOARD — /owner 홈 전용
+   docs/AIPLACE-Remix-handoff 의 dashboard.html 재현.
+   .dash-page scope 로 home.css 의 .hero 와 충돌 회피.
+   ============================================================ */
+
+.dash-page { padding: clamp(22px, 2.6vw, 36px) clamp(22px, 3vw, 40px) 40px; max-width: 1320px; margin: 0 auto; }
+
+/* aip.css 의 전역 section { padding: clamp(56px, 8vw, 104px) 0 } 제거.
+   /owner/* 는 대시보드 레이아웃이라 landing 페이지용 큰 세로 패딩 불필요. */
+.owner-root section { padding: 0; }
+
+/* 사이드바 remix 재스킨 (기존 .side-nav override) + sticky 고정 */
+.owner-root .side-nav {
+  border-right: 1px solid var(--line);
+  padding: 26px 0 32px;
+  background: var(--bg);
+  position: sticky;
+  top: var(--nav-h);
+  align-self: start;
+  height: calc(100vh - var(--nav-h));
+  overflow-y: auto;
+}
+.owner-root .side-nav h5 { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted-2); margin: 0 22px 6px; padding-top: 0; font-weight: 500; }
+.owner-root .side-nav a { display: flex; align-items: center; gap: 11px; padding: 10px 22px; margin-right: 10px; font-size: 14px; color: var(--ink-2); border-radius: 0 999px 999px 0; border-left: none; position: relative; text-decoration: none; }
+.owner-root .side-nav a:hover { background: var(--bg-2); color: var(--ink); }
+.owner-root .side-nav a.active { background: color-mix(in oklab, var(--accent) 10%, transparent); color: var(--accent); font-weight: 600; }
+.owner-root .side-nav a.active::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; background: var(--accent); }
+.owner-root .side-nav a svg { width: 16px; height: 16px; flex: 0 0 16px; }
+.owner-root .side-nav .divider { margin: 22px 22px; border-bottom: 1px dashed var(--line-2); }
+.owner-root .side-nav .who { margin: 18px 16px 0; padding-top: 16px; border-top: 1px dashed var(--line-2); display: flex; gap: 10px; align-items: center; }
+.owner-root .side-nav .who .av { width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-family: var(--mono); flex: 0 0 30px; }
+.owner-root .side-nav .who .meta b { font-size: 12.5px; display: block; letter-spacing: -.01em; color: var(--ink); }
+.owner-root .side-nav .who .meta span { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+/* 사이드바 너비 조정 */
+.owner-root .dash-layout { grid-template-columns: 232px 1fr; }
+@media (max-width: 1000px) { .owner-root .dash-layout { grid-template-columns: 1fr; } }
+/* /owner 대시보드·AI인용 홈: dash-main 의 1200 제한 해제 (dash-page/cit-page 가 자체 1320 적용). */
+.owner-root .dash-main:has(> .dash-page),
+.owner-root .dash-main:has(> .cit-page) { padding: 0; max-width: none; }
+
+/* 파일럿 배너 (dashboard.html 의 .banner) */
+.dash-page .dash-banner { display: flex; align-items: center; gap: 14px; padding: 14px 20px; margin-bottom: 22px; background: color-mix(in oklab, var(--good) 7%, var(--bg)); border: 1px solid color-mix(in oklab, var(--good) 28%, transparent); border-radius: var(--r-md); font-size: 14px; color: var(--ink-2); }
+.dash-page .dash-banner .ic { width: 24px; height: 24px; border-radius: 50%; flex: 0 0 24px; background: color-mix(in oklab, var(--good) 18%, var(--bg)); color: var(--good); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
+.dash-page .dash-banner.warn { background: color-mix(in oklab, var(--warn) 7%, var(--bg)); border-color: color-mix(in oklab, var(--warn) 28%, transparent); }
+.dash-page .dash-banner.warn .ic { background: color-mix(in oklab, var(--warn) 18%, var(--bg)); color: var(--warn); }
+.dash-page .dash-banner.danger { background: color-mix(in oklab, var(--accent) 7%, var(--bg)); border-color: color-mix(in oklab, var(--accent) 28%, transparent); }
+.dash-page .dash-banner.danger .ic { background: color-mix(in oklab, var(--accent) 18%, var(--bg)); color: var(--accent); }
+.dash-page .dash-banner b { color: var(--good); font-weight: 600; }
+.dash-page .dash-banner.warn b { color: var(--warn); }
+.dash-page .dash-banner.danger b { color: var(--accent); }
+.dash-page .dash-banner .grow { flex: 1; }
+.dash-page .dash-banner a { font-family: var(--mono); font-size: 12.5px; color: var(--good); font-weight: 600; white-space: nowrap; text-decoration: none; }
+.dash-page .dash-banner.warn a { color: var(--warn); }
+.dash-page .dash-banner.danger a { color: var(--accent); }
+.dash-page .dash-banner a:hover { text-decoration: underline; }
+
+/* Hero 검정 카드 */
+.dash-page .hero { background: var(--ink); color: var(--bg); border-radius: var(--r-xl); padding: clamp(32px, 3.6vw, 52px) clamp(30px, 3.6vw, 52px); display: grid; grid-template-columns: 1fr 1px 380px; gap: clamp(28px, 3.4vw, 48px); margin-bottom: 26px; position: relative; overflow: hidden; }
+@media (max-width: 1020px) { .dash-page .hero { grid-template-columns: 1fr; gap: 26px; } .dash-page .hero .divide { display: none; } }
+.dash-page .hero::before { content: ""; position: absolute; right: -140px; top: -140px; width: 440px; height: 440px; background: radial-gradient(circle, color-mix(in oklab, var(--accent) 50%, transparent), transparent 62%); pointer-events: none; }
+.dash-page .hero .divide { background: color-mix(in oklab, #fff 12%, transparent); }
+.dash-page .hero .kicker { font-family: var(--mono); font-size: 11.5px; letter-spacing: .15em; text-transform: uppercase; color: color-mix(in oklab, var(--accent-2) 90%, white); display: inline-flex; align-items: center; gap: 10px; margin: 0 0 18px; }
+.dash-page .hero .kicker::before { content: ""; width: 22px; height: 1px; background: var(--accent-2); }
+.dash-page .hero h1 { font-size: clamp(32px, 3.6vw, 52px); font-weight: 700; letter-spacing: -.028em; line-height: 1.06; margin: 0 0 18px; color: var(--bg); }
+.dash-page .hero h1 .serif { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent-2); }
+.dash-page .hero .lede { margin: 0 0 24px; color: color-mix(in oklab, #fff 72%, transparent); font-size: 15.5px; line-height: 1.6; max-width: 52ch; }
+.dash-page .hero .lede b { color: #fff; font-weight: 600; }
+.dash-page .hero .lede .zero { color: color-mix(in oklab, #fff 40%, transparent); }
+.dash-page .hero .cta-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.dash-page .hero .cta-row .btn.accent { background: var(--accent); color: #fff; border: none; }
+.dash-page .hero .cta-row .btn.ghost { background: transparent; color: #fff; border: 1px solid color-mix(in oklab, #fff 25%, transparent); }
+.dash-page .hero .cta-row .btn.ghost:hover { background: #fff; color: var(--ink); border-color: #fff; }
+
+.dash-page .hero .stats { display: flex; flex-direction: column; gap: 22px; position: relative; z-index: 1; }
+.dash-page .hero .stat { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; padding-bottom: 22px; border-bottom: 1px dashed color-mix(in oklab, #fff 14%, transparent); }
+.dash-page .hero .stat:last-child { border-bottom: none; padding-bottom: 0; }
+.dash-page .hero .stat .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: color-mix(in oklab, #fff 55%, transparent); display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.dash-page .hero .stat .lbl i { width: 7px; height: 7px; border-radius: 50%; }
+.dash-page .hero .stat .v { font-size: 40px; font-weight: 700; letter-spacing: -.025em; line-height: 1; color: #fff; }
+.dash-page .hero .stat .v .u { font-size: 14px; color: color-mix(in oklab, #fff 55%, transparent); font-weight: 500; margin-left: 4px; }
+.dash-page .hero .stat .sub { font-family: var(--mono); font-size: 11.5px; color: color-mix(in oklab, #fff 55%, transparent); margin-top: 5px; line-height: 1.5; }
+.dash-page .hero .stat .sub b { color: var(--accent-2); font-weight: 600; }
+.dash-page .hero .stat .spark { width: 84px; height: 40px; }
+
+/* 섹션 라벨 — 원본 dashboard.html 와 동일 */
+.dash-page .dash-sec { margin: 40px 0 14px; display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.dash-page .dash-sec .k { font-size: 11.5px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.dash-page .dash-sec h2 { font-size: 24px; margin: 6px 0 0; letter-spacing: -.024em; font-weight: 700; line-height: 1.15; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.dash-page .dash-sec h2 small { font-family: var(--mono); font-size: 13px; color: var(--muted); font-weight: 500; }
+.dash-page .dash-sec h2 .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
+.dash-page .dash-sec .actions { display: flex; gap: 8px; align-items: center; }
+.dash-page .dash-sec .actions a { font-size: 13px; font-family: var(--mono); color: var(--ink-2); text-decoration: none; }
+.dash-page .dash-sec .actions a:hover { color: var(--accent); }
+
+/* Panel basics */
+.dash-page .dash-panel2 { background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-lg); overflow: hidden; }
+.dash-page .phead { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 20px 24px 14px; }
+.dash-page .phead h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.015em; display: flex; align-items: center; gap: 9px; }
+.dash-page .phead h3 .dt { width: 9px; height: 9px; border-radius: 50%; }
+.dash-page .phead .right { display: flex; gap: 10px; align-items: center; }
+.dash-page .range { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); padding: 3px; border-radius: 8px; font-family: var(--mono); font-size: 11px; }
+.dash-page .range button { border: none; background: transparent; padding: 4px 10px; cursor: pointer; border-radius: 5px; color: var(--ink-2); font-family: inherit; }
+.dash-page .range button.active { background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm); }
+.dash-page .range a { display: inline-flex; align-items: center; text-decoration: none; padding: 4px 10px; border-radius: 5px; color: var(--ink-2); font-family: inherit; }
+.dash-page .range a.active { background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm); }
+.dash-page .dash-total { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.dash-page .dash-total b { color: var(--ink); font-weight: 700; font-size: 13.5px; }
+
+/* 차트 행 */
+.dash-page .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 1020px) { .dash-page .chart-row { grid-template-columns: 1fr; } }
+.dash-page .chart-card { padding-bottom: 20px; }
+.dash-page .chart-card .summary { padding: 0 24px 12px; display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
+.dash-page .chart-card .summary .big { font-size: clamp(46px, 4.4vw, 62px); font-weight: 700; letter-spacing: -.028em; line-height: .95; font-family: var(--font); }
+.dash-page .chart-card .summary .big .u { font-size: 16px; color: var(--muted); font-weight: 500; margin-left: 4px; }
+.dash-page .chart-card .summary .desc { font-size: 13px; color: var(--muted); line-height: 1.5; padding-bottom: 6px; max-width: 26ch; }
+.dash-page .chart-card .summary .desc b { color: var(--ink); font-weight: 600; }
+.dash-page .chart-card .summary .engines { padding-bottom: 6px; margin-left: auto; text-align: right; font-family: var(--mono); font-size: 11px; }
+.dash-page .chart-card .summary .engines .lead { color: #10a37f; font-weight: 600; font-size: 13px; }
+.dash-page .chart-card .summary .engines .lead.warn { color: #b45309; }
+.dash-page .chart-svg { width: 100%; height: 220px; padding: 0 12px; display: block; }
+.dash-page .chart-legend { display: flex; gap: 16px; flex-wrap: wrap; font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); padding: 14px 24px 0; margin-top: 2px; border-top: 1px dashed var(--line); }
+.dash-page .chart-legend span { display: inline-flex; gap: 6px; align-items: center; }
+.dash-page .chart-legend i { width: 8px; height: 8px; border-radius: 2px; }
+.dash-page .chart-legend span.zero { color: var(--muted-2); }
+.dash-page .chart-legend b { font-weight: 600; color: var(--ink); margin-left: 2px; }
+
+/* KPI2 row (AEO + biz summary) */
+.dash-page .kpi2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+@media (max-width: 800px) { .dash-page .kpi2 { grid-template-columns: 1fr; } }
+
+/* AEO summary */
+.dash-page .aeo-sum { background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-lg); padding: 24px; display: grid; grid-template-columns: 140px 1fr; gap: 24px; align-items: center; position: relative; overflow: hidden; }
+@media (max-width: 520px) { .dash-page .aeo-sum { grid-template-columns: 1fr; } }
+.dash-page .aeo-sum::before { content: ""; position: absolute; right: -80px; bottom: -80px; width: 220px; height: 220px; background: radial-gradient(circle, color-mix(in oklab, var(--accent) 18%, transparent), transparent 70%); pointer-events: none; }
+.dash-page .aeo-sum .gauge { width: 140px; height: 140px; position: relative; }
+.dash-page .aeo-sum .gauge svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+.dash-page .aeo-sum .gauge .vv { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.dash-page .aeo-sum .gauge .vv .n { font-size: 44px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.dash-page .aeo-sum .gauge .vv .s { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 4px; }
+.dash-page .aeo-sum .info .row1 { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.dash-page .aeo-sum .info h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.dash-page .aeo-sum .info small { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.dash-page .aeo-sum .grade { font-family: var(--mono); font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: color-mix(in oklab, var(--good) 12%, transparent); color: var(--good); border: 1px solid color-mix(in oklab, var(--good) 30%, transparent); margin-left: auto; }
+.dash-page .aeo-sum .grade.B { background: color-mix(in oklab, #4285f4 12%, transparent); color: #1e40af; border-color: color-mix(in oklab, #4285f4 30%, transparent); }
+.dash-page .aeo-sum .grade.C { background: color-mix(in oklab, var(--warn) 12%, transparent); color: var(--warn); border-color: color-mix(in oklab, var(--warn) 30%, transparent); }
+.dash-page .aeo-sum .grade.D { background: color-mix(in oklab, var(--accent) 12%, transparent); color: var(--accent); border-color: color-mix(in oklab, var(--accent) 30%, transparent); }
+.dash-page .aeo-sum .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 12px; }
+.dash-page .aeo-sum .stats .c { border-left: 2px solid var(--line); padding-left: 10px; }
+.dash-page .aeo-sum .stats .c:first-child { border-left: 2px solid var(--accent); }
+.dash-page .aeo-sum .stats .c .l { font-family: var(--mono); font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.dash-page .aeo-sum .stats .c .n { font-size: 20px; font-weight: 700; letter-spacing: -.02em; margin-top: 2px; }
+.dash-page .aeo-sum .stats .c .n small { font-size: 11.5px; color: var(--muted); font-family: var(--mono); font-weight: 500; margin-left: 3px; }
+.dash-page .aeo-sum .meter { height: 6px; background: var(--bg-2); border-radius: 999px; overflow: hidden; position: relative; margin-bottom: 8px; }
+.dash-page .aeo-sum .meter .fill { position: absolute; inset: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; }
+.dash-page .aeo-sum .meter .tgt { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
+.dash-page .aeo-sum .hint { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.dash-page .aeo-sum .hint b { color: var(--ink); font-weight: 600; }
+
+/* Biz summary — AEO sum 과 같은 높이로 stretch 시 내용이 카드 전체에 고르게 분산 */
+.dash-page .biz-sum { background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-lg); padding: 24px; display: flex; flex-direction: column; gap: 16px; justify-content: space-between; }
+.dash-page .biz-sum .t { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.dash-page .biz-sum .t h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.dash-page .biz-sum .t small { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.dash-page .biz-sum .num { font-size: clamp(50px, 5vw, 72px); font-weight: 700; letter-spacing: -.028em; line-height: .95; display: flex; align-items: baseline; gap: 14px; }
+.dash-page .biz-sum .num .u { font-size: 16px; color: var(--muted); font-weight: 500; }
+.dash-page .biz-sum .num .chips { display: flex; gap: 6px; margin-left: auto; }
+.dash-page .biz-sum .num .chips .c { font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 999px; background: var(--bg-2); color: var(--ink-2); border: 1px solid var(--line); }
+.dash-page .biz-sum .num .chips .c.on { background: color-mix(in oklab, var(--good) 12%, transparent); color: var(--good); border-color: color-mix(in oklab, var(--good) 28%, transparent); }
+.dash-page .biz-sum .split { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.dash-page .biz-sum .split .c { padding: 12px 14px; background: var(--bg-2); border-radius: var(--r-md); }
+.dash-page .biz-sum .split .c .l { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.dash-page .biz-sum .split .c .n { font-size: 22px; font-weight: 700; letter-spacing: -.02em; margin-top: 4px; line-height: 1; }
+.dash-page .biz-sum .split .c .n small { font-family: var(--mono); font-size: 11.5px; color: var(--muted); font-weight: 500; margin-left: 2px; }
+.dash-page .biz-sum .add { display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; background: var(--ink); color: #fff; border-radius: 999px; font-weight: 600; font-size: 14px; align-self: flex-start; text-decoration: none; transition: background .12s; }
+.dash-page .biz-sum .add:hover { background: var(--accent); }
+
+/* Biz list + AEO checklist */
+.dash-page .biz-row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; }
+@media (max-width: 1100px) { .dash-page .biz-row { grid-template-columns: 1fr; } }
+.dash-page .biz-grid { display: flex; flex-direction: column; padding: 0; }
+.dash-page .biz-grid .phead { border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 0; }
+.dash-page .biz { display: grid; grid-template-columns: 56px 1fr auto; gap: 18px; padding: 20px 24px; border-bottom: 1px solid var(--line); align-items: center; transition: background .15s; }
+.dash-page .biz:last-child { border-bottom: none; }
+.dash-page .biz:hover { background: color-mix(in oklab, var(--accent) 3%, transparent); }
+/* .ring 은 Tailwind 유틸리티와 충돌 — .score-ring 으로 네임스페이스 분리 */
+.dash-page .score-ring { width: 56px; height: 56px; position: relative; box-shadow: none; }
+.dash-page .score-ring svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+.dash-page .score-ring .vv { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 14px; font-weight: 700; }
+.dash-page .biz .body { min-width: 0; }
+.dash-page .biz .top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 5px; }
+.dash-page .biz .name { font-size: 17px; font-weight: 700; letter-spacing: -.018em; line-height: 1.2; }
+.dash-page .biz .sub { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.dash-page .biz .st { font-family: var(--mono); font-size: 10px; padding: 2px 7px; border-radius: 999px; font-weight: 700; letter-spacing: .04em; }
+.dash-page .biz .st.public { background: color-mix(in oklab, var(--good) 12%, transparent); color: var(--good); border: 1px solid color-mix(in oklab, var(--good) 30%, transparent); }
+.dash-page .biz .st.pending { background: var(--bg-2); color: var(--muted); border: 1px solid var(--line-2); }
+.dash-page .biz .gr { font-family: var(--mono); font-size: 10.5px; padding: 2px 7px; border-radius: 4px; background: var(--ink); color: var(--bg); font-weight: 700; letter-spacing: .04em; }
+.dash-page .biz .gr.B { background: #4a4a4a; }
+.dash-page .biz .gr.C { background: var(--warn); }
+.dash-page .biz .gr.D { background: var(--accent); }
+.dash-page .biz .path { font-family: var(--mono); font-size: 11.5px; color: var(--muted); display: flex; gap: 10px; align-items: center; margin-top: 2px; flex-wrap: wrap; }
+.dash-page .biz .path .sep { opacity: .4; }
+.dash-page .biz .path b { color: var(--ink); font-weight: 600; }
+.dash-page .biz .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.dash-page .biz .chips .c { font-family: var(--mono); font-size: 10.5px; padding: 3px 9px; border-radius: 999px; background: var(--bg-2); color: var(--ink-2); border: 1px solid var(--line); white-space: nowrap; }
+.dash-page .biz .chips .c.warn { background: color-mix(in oklab, var(--accent) 12%, transparent); color: #9a2c00; border-color: color-mix(in oklab, var(--accent) 30%, transparent); }
+.dash-page .biz .chips .c.ok { background: color-mix(in oklab, var(--good) 10%, transparent); color: var(--good); border-color: color-mix(in oklab, var(--good) 25%, transparent); }
+.dash-page .biz .actions { display: flex; gap: 6px; align-items: center; }
+.dash-page .biz .actions a { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 12px; color: var(--ink-2); padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line-2); white-space: nowrap; text-decoration: none; transition: background .12s, color .12s, border-color .12s; }
+.dash-page .biz .actions a:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.dash-page .biz .actions a svg { width: 12px; height: 12px; }
+
+/* AEO 체크리스트 */
+.dash-page .aeo-ck { padding: 0; }
+.dash-page .aeo-ck .phead { padding: 20px 24px 14px; border-bottom: 1px solid var(--line); }
+.dash-page .aeo-ck .list { padding: 8px 24px 12px; }
+.dash-page .aeo-ck .it { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; padding: 11px 0; align-items: center; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
+.dash-page .aeo-ck .it:last-child { border-bottom: none; }
+.dash-page .aeo-ck .it .ic { width: 20px; height: 20px; flex: 0 0 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+.dash-page .aeo-ck .it.done .ic { background: var(--good); color: #fff; }
+.dash-page .aeo-ck .it.miss .ic { background: var(--bg-2); color: var(--muted); border: 1px dashed var(--line-3); }
+.dash-page .aeo-ck .it .lbl { color: var(--ink-2); }
+.dash-page .aeo-ck .it.miss .lbl { color: var(--muted-2); }
+.dash-page .aeo-ck .it .pt { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); font-weight: 600; white-space: nowrap; }
+.dash-page .aeo-ck .it.miss .pt { color: var(--muted-2); }
+.dash-page .aeo-ck .cta { padding: 14px 24px 24px; display: flex; gap: 10px; }
+.dash-page .aeo-ck .cta a.btn { padding: 10px 16px; font-size: 13px; }
+
+/* Bot visits */
+.dash-page .bot-card { padding: 0; display: flex; flex-direction: column; }
+.dash-page .bot-card .phead { padding: 20px 24px 14px; border-bottom: 1px solid var(--line); }
+.dash-page .bot-card .empty { padding: 48px 28px; text-align: center; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+.dash-page .bot-card .empty .ill { width: 96px; height: 96px; position: relative; }
+.dash-page .bot-card .empty .ill::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, color-mix(in oklab, var(--accent) 16%, transparent), transparent 70%); }
+.dash-page .bot-card .empty .ill svg { position: relative; z-index: 1; width: 96px; height: 96px; }
+.dash-page .bot-card .empty b { font-size: 15px; color: var(--ink); font-weight: 700; letter-spacing: -.015em; }
+.dash-page .bot-card .empty p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.55; max-width: 38ch; }
+.dash-page .bot-card .bots-preview { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 4px 0; }
+.dash-page .bot-card .bots-preview span { font-family: var(--mono); font-size: 11px; padding: 4px 10px; border: 1px dashed var(--line-3); border-radius: 999px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.dash-page .bot-card .bots-preview span i { width: 7px; height: 7px; border-radius: 2px; display: inline-block; }
+.dash-page .bot-card .bot-foot { padding: 14px 24px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.dash-page .bot-card .bot-foot a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.dash-page .bot-card .bot-list { padding: 8px 24px; display: flex; flex-direction: column; }
+.dash-page .bot-card .bot-list .bot-row { display: grid; grid-template-columns: auto 1fr auto auto; gap: 12px; padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 13px; align-items: center; }
+.dash-page .bot-card .bot-list .bot-row:last-child { border-bottom: none; }
+.dash-page .bot-card .bot-list .eng { font-family: var(--mono); font-size: 12px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.dash-page .bot-card .bot-list .eng i { width: 8px; height: 8px; border-radius: 2px; }
+.dash-page .bot-card .bot-list .path { font-family: var(--mono); font-size: 11.5px; color: var(--muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; min-width: 0; }
+.dash-page .bot-card .bot-list .path a { color: inherit; text-decoration: underline; }
+.dash-page .bot-card .bot-list .ts { font-family: var(--mono); font-size: 11px; color: var(--muted-2); }
+.dash-page .bot-card .bot-list .type { font-family: var(--mono); font-size: 10px; padding: 2px 7px; border-radius: 999px; background: var(--bg-2); color: var(--ink-2); }
+
+/* Todos */
+.dash-page .todo-card { padding: 0; }
+.dash-page .todo-card .phead { padding: 20px 24px 14px; border-bottom: 1px solid var(--line); }
+.dash-page .todo-card .sort { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; background: var(--accent-soft); color: #9a2c00; border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent); font-family: var(--mono); font-size: 11px; font-weight: 700; }
+.dash-page .todo-card .list { padding: 4px 24px 16px; }
+.dash-page .todo-item { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; padding: 16px 0; border-bottom: 1px dashed var(--line); align-items: start; }
+.dash-page .todo-item:last-child { border-bottom: none; }
+.dash-page .todo-item .num { font-family: var(--mono); font-size: 11px; color: var(--muted); width: 22px; height: 22px; border-radius: 50%; background: var(--bg-2); display: flex; align-items: center; justify-content: center; flex: 0 0 22px; margin-top: 2px; }
+.dash-page .todo-item .body b { display: block; font-size: 14.5px; font-weight: 700; letter-spacing: -.014em; line-height: 1.3; }
+.dash-page .todo-item .body b .biz-n { color: var(--accent); font-weight: 700; }
+.dash-page .todo-item .body span { font-size: 12.5px; color: var(--muted); display: block; margin-top: 5px; font-family: var(--mono); }
+.dash-page .todo-item .body span b { color: var(--ink); font-weight: 600; font-family: var(--mono); }
+.dash-page .todo-item .body .start { display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 11.5px; color: var(--accent); font-weight: 700; margin-top: 10px; text-decoration: none; }
+.dash-page .todo-item .body .start:hover { text-decoration: underline; }
+.dash-page .todo-item .pri { font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 999px; letter-spacing: .06em; font-weight: 700; }
+.dash-page .todo-item .pri.HIGH { background: color-mix(in oklab, var(--accent) 16%, transparent); color: var(--accent); border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent); }
+.dash-page .todo-item .pri.MID { background: var(--bg-2); color: var(--ink-2); border: 1px solid var(--line-2); }
+.dash-page .todo-item .pri.LOW { background: color-mix(in oklab, #4285f4 12%, transparent); color: #1e40af; border: 1px solid color-mix(in oklab, #4285f4 30%, transparent); }
+.dash-page .todo-card .todo-empty { padding: 32px 24px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+/* Foot meta */
+.dash-page .foot-meta { margin-top: 36px; padding-top: 22px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }

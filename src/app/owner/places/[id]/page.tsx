@@ -1,8 +1,10 @@
-// 사장님 단일 업체 편집 페이지 — 등록 폼과 동일 수준의 전체 필드 편집.
+// 사장님 단일 업체 편집 페이지 — owner-dashboard.css 토큰으로 통일.
+import Link from 'next/link'
 import { requireOwnerUser } from '@/lib/owner/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { canOwnerEdit } from '@/lib/owner/permissions'
-import { AdminLink } from '@/components/admin/admin-link'
+import { getAvailableKeywords } from '@/lib/blog/keyword-bank'
+import { PageHeader } from '../../_components/page-header'
 import { OwnerEditForm, type OwnerEditInitial } from './owner-edit-form'
 
 interface Params {
@@ -18,7 +20,15 @@ export default async function OwnerPlaceEditPage({ params, searchParams }: Param
   const { registered, msg } = await searchParams
 
   const supabase = getAdminClient()
-  if (!supabase) return <div className="p-6 text-sm text-red-600">DB 연결 실패</div>
+  if (!supabase) {
+    return (
+      <section className="wrap">
+        <div className="owner-banner danger" role="alert">
+          <span>⚠️ 데이터베이스 연결 실패</span>
+        </div>
+      </section>
+    )
+  }
 
   const { data } = await supabase
     .from('places')
@@ -48,10 +58,39 @@ export default async function OwnerPlaceEditPage({ params, searchParams }: Param
     owner_id: string | null; owner_email: string | null
   } | null
 
-  if (!row) return <div className="p-6 text-sm text-red-600">업체를 찾을 수 없습니다.</div>
-  if (!canOwnerEdit(row, { userId: user.id, email: user.email })) {
-    return <div className="p-6 text-sm text-red-600">본인 소유 업체가 아닙니다.</div>
+  if (!row) {
+    return (
+      <section className="wrap">
+        <PageHeader
+          title="업체를 찾을 수 없어요"
+          subtitle="삭제되었거나 잘못된 링크입니다."
+          back={{ href: '/owner', label: '내 업체 목록' }}
+        />
+      </section>
+    )
   }
+  if (!canOwnerEdit(row, { userId: user.id, email: user.email })) {
+    return (
+      <section className="wrap">
+        <PageHeader
+          title="권한이 없어요"
+          subtitle="본인 소유 업체만 편집할 수 있습니다."
+          back={{ href: '/owner', label: '내 업체 목록' }}
+        />
+      </section>
+    )
+  }
+
+  // 추천 키워드 — sector 확정 후 키워드 뱅크에서 최대 20개 조회.
+  const { data: secRow } = await supabase
+    .from('category_sector')
+    .select('sector_slug')
+    .eq('category_slug', row.category)
+    .maybeSingle()
+  const sectorSlug = (secRow as { sector_slug: string } | null)?.sector_slug ?? null
+  const suggestedKeywords = sectorSlug
+    ? await getAvailableKeywords({ sector: sectorSlug, active: true, limit: 20 })
+    : []
 
   const initial: OwnerEditInitial = {
     name: row.name,
@@ -75,26 +114,52 @@ export default async function OwnerPlaceEditPage({ params, searchParams }: Param
     googlePlaceId: row.google_place_id ?? '',
   }
 
+  const statusLabel = row.status === 'active' ? '공개' : row.status === 'pending' ? '검토 중' : row.status
+
   return (
-    <div className="mx-auto max-w-2xl p-6">
+    <section className="wrap">
       {registered && msg && (
-        <div className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
-          ✅ {msg}
+        <div className="owner-banner ok" role="status" style={{ marginBottom: 20 }}>
+          <span>✅ {msg}</span>
         </div>
       )}
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{row.name} 편집</h1>
-        <div className="flex items-center gap-3 text-xs">
-          <AdminLink href={`/owner/places/${row.id}/dashboard`} className="text-[#008060] underline">
-            📊 대시보드
-          </AdminLink>
-          <AdminLink href="/owner" className="text-[#4c1d95] underline">← 내 업체</AdminLink>
-        </div>
-      </div>
-      <p className="mb-4 text-xs text-[#6a6a6a]">
-        공개 페이지: /{row.city}/{row.category}/{row.slug} · 상태: {row.status}
-      </p>
-      <OwnerEditForm placeId={row.id} initial={initial} />
-    </div>
+
+      <PageHeader
+        title={<>{row.name} <span className="it">편집</span></>}
+        subtitle={
+          <>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>
+              /{row.city}/{row.category}/{row.slug}
+            </span>
+            {' · '}
+            <span className={`grade-pill ${row.status === 'active' ? 'A' : 'C'}`}>{statusLabel}</span>
+          </>
+        }
+        back={{ href: '/owner', label: '내 업체 목록' }}
+        actions={
+          <>
+            <Link className="btn ghost sm" href={`/owner/places/${row.id}/dashboard`}>
+              📊 인용 테스트
+            </Link>
+            {row.status === 'active' && (
+              <a
+                className="btn ghost sm"
+                href={`/${row.city}/${row.category}/${row.slug}`}
+                target="_blank"
+                rel="noopener"
+              >
+                공개 페이지 ↗
+              </a>
+            )}
+          </>
+        }
+      />
+
+      <OwnerEditForm
+        placeId={row.id}
+        initial={initial}
+        suggestedKeywords={suggestedKeywords.map((k) => k.keyword)}
+      />
+    </section>
   )
 }

@@ -1,391 +1,202 @@
-// T-201 — 오너 대시보드 홈 (docs/AIPLACE/dashboard.html 디자인).
-// loadOwnerDashboard 의 실측 데이터를 그대로 활용.
-// 허수 금지: 실측 불가 지표는 노출하지 않는다.
+// /owner 대시보드 — Remix 디자인 (docs/AIPLACE-Remix-handoff/aiplace-remix/project/dashboard.html).
+// 모든 실측만 노출 (허수 금지). 업체 0곳 이면 empty hero.
 
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { loadOwnerDashboard, type OwnerDashboardData } from '@/lib/owner/dashboard-data'
-import { MEASUREMENT_WINDOW_DAYS } from '@/lib/owner/measurement-window'
-import type { OwnerBotBucket } from '@/lib/owner/bot-stats'
+import { loadOwnerDashboard } from '@/lib/owner/dashboard-data'
 import { composePageTitle } from '@/lib/seo/compose-title'
-import { CitationCharts } from './_components/citation-chart'
-import { AeoGauge } from './_components/aeo-gauge'
-import { RecentBotVisits } from './_components/recent-bot-visits'
+import { EmptyState } from './_components/empty-state'
+import { DashHero } from './_components/dash-hero'
+import { DashCharts } from './_components/dash-charts'
+import { DashAeoSummary } from './_components/dash-aeo-summary'
+import { DashBizSummary } from './_components/dash-biz-summary'
+import { DashPlaceList } from './_components/dash-place-list'
+import { DashAeoChecklist } from './_components/dash-aeo-checklist'
+import { DashBotCard } from './_components/dash-bot-card'
+import { DashTodoCard } from './_components/dash-todo-card'
 
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: composePageTitle('오너 대시보드'),
-  description: '내 업체의 AI 인용 · AEO 점수 · 할 일을 한눈에 확인하세요.',
+  description: '내 업체의 AI 인용·AEO 점수·할 일을 한눈에 확인하세요.',
   robots: { index: false, follow: false },
 }
 
 interface Params {
-  searchParams: Promise<{ registered?: string; msg?: string }>
+  searchParams: Promise<{ registered?: string; msg?: string; days?: string }>
+}
+
+function parseDays(raw: string | undefined): 7 | 30 | 90 {
+  if (raw === '7') return 7
+  if (raw === '90') return 90
+  return 30
+}
+
+function formatKstDate(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 export default async function OwnerHomePage({ searchParams }: Params) {
-  const { registered, msg } = await searchParams
-  const data = await loadOwnerDashboard()
+  const { registered, msg, days: daysRaw } = await searchParams
+  const rangeDays = parseDays(daysRaw)
+  const data = await loadOwnerDashboard(new Date(), { trendDays: rangeDays })
+
+  const email = data.user.email ?? ''
+  const userName = email.split('@')[0] || '사장님'
+  const placesLinked = data.places.filter((p) => p.mentionCount > 0).length
 
   return (
-    <>
+    <div className="dash-page">
       {registered && msg && (
-        <div className="owner-banner ok" role="status">
-          <span>✅ {msg}</span>
+        <div className="dash-banner" role="status">
+          <div className="ic">✓</div>
+          <div>✅ {msg}</div>
         </div>
       )}
 
-      <PilotBanner billing={data.billing} />
-      <Greeting data={data} />
+      <BillingBanner
+        hasCard={data.billing.hasCard}
+        pilotRemainingDays={data.billing.pilotRemainingDays}
+      />
 
       {data.places.length === 0 ? (
-        <EmptyStateNoPlace />
+        <EmptyState
+          eyebrow="· · · 아직 아무것도 없어요 · · ·"
+          title={<>첫 업체를 <em>등록</em>해 볼까요?</>}
+          description="업체명을 검색하면 네이버·Google 에서 기본 정보가 자동으로 채워져요. 30초면 끝 · AI 최적화 프로필은 등록 직후 자동 생성됩니다."
+          action={{ href: '/owner/places/new', label: '+ 업체 등록 시작 →' }}
+        />
       ) : (
         <>
-          <section className="kpi-grid">
-            <KpiAiCitation
-              botSummary={data.botSummary}
-              measuring={data.window.isMeasuring}
-              windowLabel={data.window.label}
-            />
-            <KpiAeoScore places={data.places} averageScore={data.averageAeoScore} />
-            <KpiPlaces places={data.places} />
-          </section>
-
-          <CitationCharts
-            rows={data.dailyTrend}
-            measuring={data.window.isMeasuring}
-            measuringLabel={data.window.label}
+          <DashHero
+            userName={userName}
+            periodLabel={`${formatKstDate(new Date())} · 지난 ${rangeDays}일 요약`}
+            botSummary={data.botSummary}
+            averageAeoScore={data.averageAeoScore}
+            placesCount={data.places.length}
+            placesLinked={placesLinked}
+            dailyTrend={data.dailyTrend}
+            primaryCtaHref="/owner/places/new"
+            secondaryCtaHref="/owner/reports"
           />
 
-          <section className="row">
-            <PlaceListPanel places={data.places} />
-            <AeoGauge places={data.places} averageScore={data.averageAeoScore} />
-          </section>
-
-          <section className="row">
-            <RecentBotVisits
-              visits={data.recentBotVisits}
-              measuring={data.window.isMeasuring}
-              measuringLabel={data.window.label}
-            />
-            <TodoPanel todos={data.todos} />
-          </section>
-        </>
-      )}
-    </>
-  )
-}
-
-// ── Pilot / Billing Banner ────────────────────────────────────────
-function PilotBanner({ billing }: { billing: OwnerDashboardData['billing'] }) {
-  const { hasCard, pilotRemainingDays } = billing
-
-  if (hasCard && pilotRemainingDays > 0 && pilotRemainingDays <= 30) {
-    const used = 30 - pilotRemainingDays
-    const pct = Math.max(0, Math.min(100, (used / 30) * 100))
-    return (
-      <div className="owner-banner ok" role="status">
-        <span>파일럿 D+{used}/30 · 잔 {pilotRemainingDays}일</span>
-        <div className="progress"><div className="bar" style={{ width: `${pct}%` }} /></div>
-        <Link href="/owner/billing">결제 관리</Link>
-      </div>
-    )
-  }
-
-  if (hasCard) return null
-
-  if (pilotRemainingDays < 0) {
-    return (
-      <div className="owner-banner danger" role="alert">
-        <span>⚠️ 파일럿이 종료됐어요. 카드 등록으로 구독을 재개할 수 있습니다.</span>
-        <Link href="/owner/billing">카드 등록 →</Link>
-      </div>
-    )
-  }
-  if (pilotRemainingDays <= 7) {
-    return (
-      <div className="owner-banner warn" role="alert">
-        <span>파일럿 종료 {pilotRemainingDays}일 남음 · 지금 카드 등록하면 AI 노출이 끊기지 않아요.</span>
-        <Link href="/owner/billing">카드 등록 →</Link>
-      </div>
-    )
-  }
-  return (
-    <div className="owner-banner ok" role="status">
-      <span>파일럿 잔 {pilotRemainingDays}일 · 카드 등록은 종료 7일 전까지 완료하면 돼요.</span>
-      <Link href="/owner/billing">결제 관리</Link>
-    </div>
-  )
-}
-
-// ── Greeting (dashboard.html 의 .greeting) ────────────────────────
-function Greeting({ data }: { data: OwnerDashboardData }) {
-  const email = data.user.email ?? ''
-  const name = email ? email.split('@')[0] : '사장님'
-  const totalCitations = data.botSummary.aiSearch.total
-  const totalTraining = data.botSummary.aiTraining.total
-
-  let subText: string
-  if (data.places.length === 0) {
-    subText = '업체를 1곳 이상 등록하면 AI 노출 측정이 시작됩니다.'
-  } else if (data.window.isMeasuring) {
-    subText = `AI 봇이 새 URL 을 발견하기까지 평균 3~10일 · ${data.window.label}`
-  } else {
-    subText = `지난 30일 · AI 답변 ${totalCitations}회 인용 · 학습 크롤링 ${totalTraining}회.`
-  }
-
-  return (
-    <header className="greeting">
-      <div>
-        <h1>
-          안녕하세요, <span className="it">{name}</span>님
-        </h1>
-        <p>{subText}</p>
-      </div>
-      {data.places.length > 0 && (
-        <Link className="btn ghost sm" href="/owner/places/new">
-          + 새 업체 추가
-        </Link>
-      )}
-    </header>
-  )
-}
-
-// ── KPI 1: AI 인용 (실시간 + 학습 2단) ──────────────────────────
-function KpiAiCitation({
-  botSummary, measuring, windowLabel,
-}: {
-  botSummary: OwnerDashboardData['botSummary']
-  measuring: boolean
-  windowLabel: string
-}) {
-  if (measuring) {
-    return (
-      <article className="kpi">
-        <span className="k">🟢 AI 답변 · 실시간 인용</span>
-        <div className="measuring-v">측정 중 · {windowLabel}</div>
-        <span className="sub">AI 봇 방문까지 평균 3~7일</span>
-        <div className="rule-sm" />
-        <span className="k">🟡 AI 학습 크롤링</span>
-        <div className="measuring-v">측정 중 · {windowLabel}</div>
-        <div className="info-note">
-          업체 등록 후 {MEASUREMENT_WINDOW_DAYS}일이 지나면 실수치가 공개됩니다.
-        </div>
-      </article>
-    )
-  }
-
-  return (
-    <article className="kpi">
-      <span className="k">🟢 AI 답변 · 실시간 인용 (30일)</span>
-      <div className="v">
-        {botSummary.aiSearch.total.toLocaleString()}
-        <span className="u">회</span>
-      </div>
-      <AttributionBreak bucket={botSummary.aiSearch} />
-      <div className="sub">
-        GPT {botSummary.aiSearch.byEngine.chatgpt ?? 0} · Claude {botSummary.aiSearch.byEngine.claude ?? 0}
-        {' '}· Perp. {botSummary.aiSearch.byEngine.perplexity ?? 0} · 기타 {botSummary.aiSearch.byEngine.other ?? 0}
-      </div>
-
-      <div className="rule-sm" />
-
-      <span className="k">🟡 AI 학습 크롤링 (Gemini 포함)</span>
-      <div className="v">
-        {botSummary.aiTraining.total.toLocaleString()}
-        <span className="u">회</span>
-      </div>
-      <div className="sub">
-        GPTBot {botSummary.aiTraining.byEngine.chatgpt ?? 0}
-        {' '}· ClaudeBot {botSummary.aiTraining.byEngine.claude ?? 0}
-        {' '}· Gemini {botSummary.aiTraining.byEngine.gemini ?? 0}
-        {' '}· 기타 {botSummary.aiTraining.byEngine.other ?? 0}
-      </div>
-
-      <div className="info-note">
-        ⓘ Gemini 실시간 인용은 전용 UA 가 없어 직접 측정 불가입니다.
-      </div>
-    </article>
-  )
-}
-
-function AttributionBreak({ bucket }: { bucket: OwnerBotBucket }) {
-  return (
-    <div className="attr">
-      <div className="row"><span>🟢 직접 방문</span><span className="v">{bucket.direct.toLocaleString()}회</span></div>
-      <div className="row"><span>🟡 본문 언급</span><span className="v">{bucket.mention.toLocaleString()}회</span></div>
-    </div>
-  )
-}
-
-// ── KPI 2: AEO 점수 ─────────────────────────────────────────────
-function KpiAeoScore({
-  places, averageScore,
-}: {
-  places: OwnerDashboardData['places']
-  averageScore: number | null
-}) {
-  if (averageScore === null || places.length === 0) {
-    return (
-      <article className="kpi">
-        <span className="k">AEO 점수</span>
-        <div className="v">—</div>
-        <span className="sub">업체 등록 후 즉시 평가됩니다.</span>
-      </article>
-    )
-  }
-
-  const grade = averageScore >= 85 ? 'A' : averageScore >= 75 ? 'B' : averageScore >= 60 ? 'C' : 'D'
-  const weakest = places.slice().sort((a, b) => a.aeoScore - b.aeoScore)[0]
-  const nextTip = weakest?.aeoDeficiencies[0]
-
-  return (
-    <article className="kpi">
-      <span className="k">AEO 점수 (평균)</span>
-      <div className="v">
-        {averageScore}
-        <span className="u">/100</span>
-      </div>
-      <div className="label-small">
-        <span className={`grade-pill ${grade}`}>{grade}등급</span>
-        {' '}· {places.length}곳 평균
-      </div>
-      {weakest && (
-        <div className="sub">
-          최저 <b style={{ color: 'var(--ink)' }}>{weakest.name}</b> {weakest.aeoScore}점
-        </div>
-      )}
-      {nextTip && <div className="info-note">다음: {nextTip}</div>}
-    </article>
-  )
-}
-
-// ── KPI 3: 내 업체 ───────────────────────────────────────────────
-function KpiPlaces({ places }: { places: OwnerDashboardData['places'] }) {
-  const active = places.filter((p) => p.status === 'active').length
-  const pending = places.filter((p) => p.status === 'pending').length
-  const totalMentions = places.reduce((s, p) => s + p.mentionCount, 0)
-  return (
-    <article className="kpi">
-      <span className="k">내 업체</span>
-      <div className="v">
-        {places.length}
-        <span className="u">곳</span>
-      </div>
-      <div className="sub">
-        공개 {active}곳 · 검토 {pending}곳
-      </div>
-      <div className="label-small">
-        총 콘텐츠 언급 <b style={{ color: 'var(--ink)' }}>{totalMentions}</b>회
-      </div>
-      <Link href="/owner/places/new" style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', fontFamily: 'var(--mono)' }}>
-        + 새 업체 추가 →
-      </Link>
-    </article>
-  )
-}
-
-// ── 내 업체 패널 ─────────────────────────────────────────────────
-function PlaceListPanel({ places }: { places: OwnerDashboardData['places'] }) {
-  return (
-    <div className="dash-panel">
-      <div className="head">
-        <h3>내 업체</h3>
-        <Link className="more" href="/owner/places/new">+ 업체 추가</Link>
-      </div>
-      <div className="place-list">
-        {places.map((p) => (
-          <article key={p.id} className="place-row">
+          <section className="dash-sec">
             <div>
-              <div className="name">
-                <b>{p.name}</b>
-                <span className={`place-status ${p.status}`}>
-                  {p.status === 'active' ? '공개' : p.status === 'pending' ? '검토 중' : p.status}
-                </span>
-                <span className={`grade-pill ${p.aeoGrade}`}>{p.aeoGrade} · {p.aeoScore}</span>
-              </div>
-              <div className="meta">
-                /{p.city}/{p.category}/{p.slug}
-                {' · '}언급 {p.mentionCount}회
-              </div>
-              {p.aeoDeficiencies.length > 0 && (
-                <div className="badges">
-                  {p.aeoDeficiencies.slice(0, 3).map((d) => (
-                    <span key={d} className="deficiency-chip">{d}</span>
-                  ))}
-                  {p.aeoDeficiencies.length > 3 && (
-                    <span className="deficiency-chip">+{p.aeoDeficiencies.length - 3}</span>
-                  )}
-                </div>
-              )}
+              <div className="k">추이 · {rangeDays}일</div>
+              <h2>인용과 크롤링 <span className="it">추이</span></h2>
             </div>
             <div className="actions">
-              <Link href={`/owner/places/${p.id}`}>편집</Link>
-              {p.status === 'active' && (
-                <Link
-                  className="ghost"
-                  href={`/${p.city}/${p.category}/${p.slug}`}
-                  target="_blank"
-                  rel="noopener"
-                >
-                  공개 ↗
-                </Link>
-              )}
+              <Link href="/owner/citations">전체 보기 →</Link>
             </div>
-          </article>
-        ))}
-      </div>
-    </div>
-  )
-}
+          </section>
 
-// ── 할 일 패널 ───────────────────────────────────────────────────
-function TodoPanel({ todos }: { todos: OwnerDashboardData['todos'] }) {
-  return (
-    <div className="dash-panel">
-      <div className="head">
-        <h3>할 일 · {todos.length}건</h3>
-        {todos.length > 0 && <span className="chip accent">우선순위 자동 정렬</span>}
-      </div>
-      {todos.length === 0 ? (
-        <div className="task-empty">
-          🎉 할 일이 모두 끝났어요.<br />AI 노출 데이터가 쌓이는 동안 다른 업체를 추가해 보세요.
-        </div>
-      ) : (
-        <div>
-          {todos.slice(0, 6).map((t, idx) => (
-            <div key={`${t.id}-${idx}`} className="task">
-              <div className="body">
-                <b>{t.title}</b>
-                <span>{t.description}</span>
-                {t.actionHref && <Link href={t.actionHref}>이동 →</Link>}
-              </div>
-              <span className={`pri ${t.priority}`}>{t.priority}</span>
+          <DashCharts
+            rows={data.dailyTrend}
+            searchTotal={data.botSummary.aiSearch.total}
+            trainingTotal={data.botSummary.aiTraining.total}
+            rangeDays={rangeDays}
+          />
+
+          <div className="kpi2">
+            <DashAeoSummary places={data.places} averageScore={data.averageAeoScore} />
+            <DashBizSummary places={data.places} />
+          </div>
+
+          <section className="dash-sec">
+            <div>
+              <div className="k">포트폴리오</div>
+              <h2>등록된 <span className="it">업체</span> <small>{data.places.length}곳</small></h2>
             </div>
-          ))}
-        </div>
+            <div className="actions">
+              <Link href="/owner/places/new">+ 업체 추가</Link>
+            </div>
+          </section>
+
+          <div className="biz-row">
+            <DashPlaceList places={data.places} />
+            <DashAeoChecklist places={data.places} />
+          </div>
+
+          <section className="dash-sec">
+            <div>
+              <div className="k">피드</div>
+              <h2>AI 봇 방문 &amp; <span className="it">할 일</span></h2>
+            </div>
+          </section>
+
+          <div className="biz-row">
+            <DashBotCard visits={data.recentBotVisits} totalDays={rangeDays} />
+            <DashTodoCard todos={data.todos} />
+          </div>
+
+          <div className="foot-meta">
+            <span>{email} · 계정 ID #{data.user.id.slice(0, 8)}</span>
+            <span>실시간 집계 · 최근 동기화 방금</span>
+          </div>
+        </>
       )}
     </div>
   )
 }
 
-// ── 빈 상태: 업체 0 ───────────────────────────────────────────────
-function EmptyStateNoPlace() {
-  return (
-    <div className="owner-empty-state">
-      <span className="i">· · · 아직 아무것도 없어요 · · ·</span>
-      <h3>
-        첫 업체를 <span className="it">등록</span>해 볼까요?
-      </h3>
-      <p>
-        업체명을 검색하면 네이버·Google 에서 기본 정보가 자동으로 채워져요.
-        30초면 끝 · AI 최적화 프로필은 등록 직후 자동 생성됩니다.
-      </p>
-      <Link className="btn accent lg" href="/owner/places/new">
-        + 업체 등록 시작 →
-      </Link>
-    </div>
-  )
+// ── 파일럿 배너 ──────────────────────────────────────────────
+function BillingBanner({
+  hasCard, pilotRemainingDays,
+}: {
+  hasCard: boolean
+  pilotRemainingDays: number
+}) {
+  // 카드 등록 완료 & 파일럿 정상 진행 중.
+  if (hasCard && pilotRemainingDays > 0) {
+    return (
+      <div className="dash-banner" role="status">
+        <div className="ic">✓</div>
+        <div>카드 등록 완료 · 체험판 잔여 <b>{pilotRemainingDays}일</b> · 종료 후 자동 결제 전환됩니다.</div>
+        <div className="grow" />
+        <Link href="/owner/billing">결제 관리 →</Link>
+      </div>
+    )
+  }
+
+  // 카드 없음 · 파일럿 진행 중 — 신뢰형 배너.
+  if (!hasCard && pilotRemainingDays > 7) {
+    return (
+      <div className="dash-banner" role="status">
+        <div className="ic">!</div>
+        <div>체험판 잔여 <b>{pilotRemainingDays}일</b> · 카드 등록은 종료 <b>7일 전</b>까지 완료하세요.</div>
+        <div className="grow" />
+        <Link href="/owner/billing">요금제 관리 →</Link>
+      </div>
+    )
+  }
+
+  // 7일 이내 만료 경고.
+  if (!hasCard && pilotRemainingDays > 0 && pilotRemainingDays <= 7) {
+    return (
+      <div className="dash-banner warn" role="alert">
+        <div className="ic">!</div>
+        <div>파일럿 종료 <b>{pilotRemainingDays}일</b> 남음 · 지금 카드 등록하면 AI 노출이 끊기지 않아요.</div>
+        <div className="grow" />
+        <Link href="/owner/billing">카드 등록 →</Link>
+      </div>
+    )
+  }
+
+  // 만료됨.
+  if (!hasCard && pilotRemainingDays < 0) {
+    return (
+      <div className="dash-banner danger" role="alert">
+        <div className="ic">⚠</div>
+        <div>파일럿이 종료됐어요. 카드 등록으로 구독을 재개할 수 있습니다.</div>
+        <div className="grow" />
+        <Link href="/owner/billing">카드 등록 →</Link>
+      </div>
+    )
+  }
+
+  return null
 }

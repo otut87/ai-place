@@ -36,9 +36,11 @@ export interface OwnerEditInitial {
 interface Props {
   placeId: string
   initial: OwnerEditInitial
+  /** AI Place keyword_bank 에서 sector 기준으로 뽑은 후보 키워드 (최대 20개). */
+  suggestedKeywords?: string[]
 }
 
-export function OwnerEditForm({ placeId, initial }: Props) {
+export function OwnerEditForm({ placeId, initial, suggestedKeywords = [] }: Props) {
   const [pending, startTransition] = useTransition()
   const [photoLoading, setPhotoLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -70,7 +72,7 @@ export function OwnerEditForm({ placeId, initial }: Props) {
   const [instagramUrl, setInstagramUrl] = useState(initial.instagramUrl)
 
   // 이미지 상태 — Google 에서 다시 불러올 수 있음. 현재 저장된 것 + 새로 가져온 refs 병합.
-  const [images, setImages] = useState<PlaceImageItem[]>(initial.images)
+  const [, setImages] = useState<PlaceImageItem[]>(initial.images)
   const [photoRefs, setPhotoRefs] = useState<string[]>(
     initial.images
       .map(i => extractRefFromProxyUrl(i.url))
@@ -150,122 +152,149 @@ export function OwnerEditForm({ placeId, initial }: Props) {
     })
   }
 
+  const descValid = description.length >= 40 && description.length <= 60
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="edit-form-stack">
       {/* 기본 정보 */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-[#222222]">기본 정보</h2>
-        <div>
-          <label className="mb-1 block text-xs font-medium">업체명</label>
-          <input value={initial.name} disabled className="w-full h-10 rounded-md border border-[#eeeeee] bg-[#f8f8f8] px-3 text-sm text-[#9a9a9a]" />
-          <p className="mt-1 text-[10px] text-[#9a9a9a]">업체명 변경은 관리자 문의가 필요합니다.</p>
+      <section className="form-card">
+        <h2 className="form-section-title">기본 정보</h2>
+        <div className="field">
+          <label className="lbl">업체명</label>
+          <input value={initial.name} disabled />
+          <p className="hint">업체명 변경은 관리자 문의가 필요합니다.</p>
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">영문 이름</label>
-          <input value={nameEn} onChange={e => setNameEn(e.target.value)} className="w-full h-10 rounded-md border border-[#dddddd] px-3 text-sm" />
+        <div className="field">
+          <label className="lbl">영문 이름</label>
+          <input value={nameEn} onChange={e => setNameEn(e.target.value)} />
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">주소</label>
-          <input value={initial.address} disabled className="w-full h-10 rounded-md border border-[#eeeeee] bg-[#f8f8f8] px-3 text-sm text-[#9a9a9a]" />
+        <div className="field">
+          <label className="lbl">주소</label>
+          <input value={initial.address} disabled />
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">
-            소개 문구 <span className={`ml-2 text-[10px] ${description.length >= 40 && description.length <= 60 ? 'text-green-600' : 'text-[#9a9a9a]'}`}>
-              {description.length}/60자 (권장 40~60)
+        <div className="field">
+          <label className="lbl">
+            소개 문구
+            <span className={`form-counter${descValid ? ' ok' : ''}`}>
+              {description.length} / 60자 (권장 40~60)
             </span>
           </label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} maxLength={100} className="w-full rounded-md border border-[#dddddd] px-3 py-2 text-sm" />
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} maxLength={100} />
         </div>
       </section>
 
-      {/* 연락처 */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-[#222222]">연락처 · 영업시간</h2>
-        <div>
-          <label className="mb-1 block text-xs font-medium">전화번호</label>
-          <input value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-10 rounded-md border border-[#dddddd] px-3 text-sm" placeholder="041-123-4567" />
+      {/* 연락처·영업시간 */}
+      <section className="form-card">
+        <h2 className="form-section-title">연락처 · 영업시간</h2>
+        <div className="field">
+          <label className="lbl">전화번호</label>
+          <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="041-123-4567" />
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">영업시간 (한 줄에 하나)</label>
-          <textarea value={hoursText} onChange={e => setHoursText(e.target.value)} rows={4} className="w-full rounded-md border border-[#dddddd] px-3 py-2 font-mono text-xs" placeholder={"Mo 09:00-18:00\nTu 09:00-18:00"} />
+        <div className="field">
+          <label className="lbl">영업시간 <span className="form-counter">한 줄에 하나</span></label>
+          <textarea
+            value={hoursText}
+            onChange={e => setHoursText(e.target.value)}
+            rows={4}
+            placeholder={'Mo 09:00-18:00\nTu 09:00-18:00'}
+            style={{ fontFamily: 'var(--mono)', fontSize: 13 }}
+          />
         </div>
       </section>
 
       {/* 서비스 */}
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold text-[#222222]">제공 서비스</h2>
-        {services.map((s, i) => (
-          <div key={i} className="grid grid-cols-3 gap-2">
-            <input placeholder="서비스명" value={s.name} onChange={e => { const next = [...services]; next[i] = { ...next[i], name: e.target.value }; setServices(next) }} className="h-10 rounded-md border border-[#dddddd] px-3 text-sm" />
-            <input placeholder="설명" value={s.description} onChange={e => { const next = [...services]; next[i] = { ...next[i], description: e.target.value }; setServices(next) }} className="h-10 rounded-md border border-[#dddddd] px-3 text-sm" />
-            <div className="flex gap-1">
-              <input placeholder="가격대" value={s.priceRange} onChange={e => { const next = [...services]; next[i] = { ...next[i], priceRange: e.target.value }; setServices(next) }} className="flex-1 h-10 rounded-md border border-[#dddddd] px-3 text-sm" />
-              <button type="button" onClick={() => setServices(services.filter((_, j) => j !== i))} className="h-10 px-2 text-xs text-red-500 hover:bg-red-50 rounded">✕</button>
+      <section className="form-card">
+        <h2 className="form-section-title">제공 서비스</h2>
+        <div className="repeat-list">
+          {services.map((s, i) => (
+            <div key={i} className="repeat-row grid-3">
+              <input placeholder="서비스명" value={s.name} onChange={e => { const next = [...services]; next[i] = { ...next[i], name: e.target.value }; setServices(next) }} />
+              <input placeholder="설명" value={s.description} onChange={e => { const next = [...services]; next[i] = { ...next[i], description: e.target.value }; setServices(next) }} />
+              <div className="repeat-col-with-remove">
+                <input placeholder="가격대" value={s.priceRange} onChange={e => { const next = [...services]; next[i] = { ...next[i], priceRange: e.target.value }; setServices(next) }} />
+                <button type="button" className="repeat-remove" onClick={() => setServices(services.filter((_, j) => j !== i))} aria-label="서비스 삭제">✕</button>
+              </div>
             </div>
-          </div>
-        ))}
-        <button type="button" onClick={() => setServices([...services, { name: '', description: '', priceRange: '' }])} className="text-xs text-[#008060]">+ 서비스 추가</button>
+          ))}
+        </div>
+        <button type="button" className="form-add-btn" onClick={() => setServices([...services, { name: '', description: '', priceRange: '' }])}>+ 서비스 추가</button>
       </section>
 
       {/* FAQ */}
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold text-[#222222]">자주 묻는 질문</h2>
-        {faqs.map((f, i) => (
-          <div key={i} className="space-y-1">
-            <div className="flex gap-1">
-              <input placeholder="질문 (? 로 끝나게)" value={f.question} onChange={e => { const next = [...faqs]; next[i] = { ...next[i], question: e.target.value }; setFaqs(next) }} className="flex-1 h-10 rounded-md border border-[#dddddd] px-3 text-sm" />
-              <button type="button" onClick={() => setFaqs(faqs.filter((_, j) => j !== i))} className="h-10 px-2 text-xs text-red-500 hover:bg-red-50 rounded">✕</button>
+      <section className="form-card">
+        <h2 className="form-section-title">자주 묻는 질문</h2>
+        <div className="repeat-list">
+          {faqs.map((f, i) => (
+            <div key={i} className="repeat-faq">
+              <div className="repeat-faq-q">
+                <input placeholder="질문 (? 로 끝나게)" value={f.question} onChange={e => { const next = [...faqs]; next[i] = { ...next[i], question: e.target.value }; setFaqs(next) }} />
+                <button type="button" className="repeat-remove" onClick={() => setFaqs(faqs.filter((_, j) => j !== i))} aria-label="FAQ 삭제">✕</button>
+              </div>
+              <input placeholder="답변" value={f.answer} onChange={e => { const next = [...faqs]; next[i] = { ...next[i], answer: e.target.value }; setFaqs(next) }} />
             </div>
-            <input placeholder="답변" value={f.answer} onChange={e => { const next = [...faqs]; next[i] = { ...next[i], answer: e.target.value }; setFaqs(next) }} className="w-full h-10 rounded-md border border-[#dddddd] px-3 text-sm" />
-          </div>
-        ))}
-        <button type="button" onClick={() => setFaqs([...faqs, { question: '', answer: '' }])} className="text-xs text-[#008060]">+ FAQ 추가</button>
+          ))}
+        </div>
+        <button type="button" className="form-add-btn" onClick={() => setFaqs([...faqs, { question: '', answer: '' }])}>+ FAQ 추가</button>
       </section>
 
       {/* 태그·추천·강점 */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-[#222222]">태그 · 추천 대상 · 강점</h2>
-        <div>
-          <label className="mb-1 block text-xs font-medium">태그 (쉼표로 구분, 최대 10개)</label>
-          <input value={tagsText} onChange={e => setTagsText(e.target.value)} className="w-full h-10 rounded-md border border-[#dddddd] px-3 text-sm" placeholder="여드름, 레이저" />
+      <section className="form-card">
+        <h2 className="form-section-title">태그 · 추천 대상 · 강점</h2>
+        <div className="field">
+          <label className="lbl">태그 <span className="form-counter">쉼표로 구분, 최대 10개</span></label>
+          <input value={tagsText} onChange={e => setTagsText(e.target.value)} placeholder="여드름, 레이저" />
+
+          {suggestedKeywords.length > 0 && (
+            <KeywordSuggestBox
+              keywords={suggestedKeywords}
+              currentTags={tagsText.split(',').map(t => t.trim()).filter(Boolean)}
+              onAddTag={(kw) => {
+                const currents = new Set(tagsText.split(',').map(t => t.trim()).filter(Boolean))
+                if (currents.has(kw)) return
+                currents.add(kw)
+                setTagsText(Array.from(currents).join(', '))
+              }}
+              onAddFaq={(kw) => {
+                const q = `${kw} 관련해서 자주 묻는 질문은 무엇인가요?`
+                setFaqs([...faqs, { question: q, answer: '' }])
+              }}
+            />
+          )}
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">추천 대상 (쉼표로 구분)</label>
-          <input value={recommendedForText} onChange={e => setRecommendedForText(e.target.value)} className="w-full h-10 rounded-md border border-[#dddddd] px-3 text-sm" placeholder="직장인, 학생" />
+        <div className="field">
+          <label className="lbl">추천 대상 <span className="form-counter">쉼표로 구분</span></label>
+          <input value={recommendedForText} onChange={e => setRecommendedForText(e.target.value)} placeholder="직장인, 학생" />
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">강점 (쉼표로 구분)</label>
-          <input value={strengthsText} onChange={e => setStrengthsText(e.target.value)} className="w-full h-10 rounded-md border border-[#dddddd] px-3 text-sm" placeholder="20년 경력, 야간 진료" />
+        <div className="field">
+          <label className="lbl">강점 <span className="form-counter">쉼표로 구분</span></label>
+          <input value={strengthsText} onChange={e => setStrengthsText(e.target.value)} placeholder="20년 경력, 야간 진료" />
         </div>
       </section>
 
       {/* 사진 */}
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-[#222222]">사진 <span className="text-xs text-[#9a9a9a]">(Google Places 자동)</span></h2>
+      <section className="form-card">
+        <div className="form-section-head">
+          <h2 className="form-section-title">사진 <span className="form-counter">Google Places 자동</span></h2>
           <button
             type="button"
             onClick={handleRefreshPhotos}
             disabled={photoLoading}
-            className="text-xs text-[#008060] hover:underline disabled:opacity-50"
+            className="btn ghost sm"
           >
-            {photoLoading ? '불러오는 중...' : '🔄 Google 사진 다시 불러오기'}
+            {photoLoading ? '불러오는 중…' : '🔄 다시 불러오기'}
           </button>
         </div>
         {photoRefs.length === 0 ? (
-          <p className="text-xs text-[#9a9a9a] p-3 rounded-lg bg-[#fafafa] border border-dashed border-[#dddddd]">
-            Google Places 에 등록된 사진이 없거나 매칭 실패했습니다. Google Business Profile 에 사진을 올린 뒤 &ldquo;다시 불러오기&rdquo;를 눌러 주세요.
+          <p className="form-inline-info">
+            Google Places 에 등록된 사진이 없거나 매칭에 실패했습니다. Google Business Profile 에 사진을 올린 뒤 &ldquo;다시 불러오기&rdquo;를 눌러 주세요.
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            <div className="photo-grid">
               {photoRefs.map((ref) => {
                 const checked = selectedPhotos.has(ref)
                 return (
-                  <label
-                    key={ref}
-                    className={`relative block aspect-square overflow-hidden rounded-lg border-2 cursor-pointer transition-all ${checked ? 'border-[#008060]' : 'border-[#dddddd] opacity-60'}`}
-                  >
+                  <label key={ref} className={checked ? 'sel' : undefined}>
                     <input
                       type="checkbox"
                       checked={checked}
@@ -277,63 +306,63 @@ export function OwnerEditForm({ placeId, initial }: Props) {
                           return next
                         })
                       }}
-                      className="absolute top-1.5 left-1.5 z-10"
                     />
                     { /* eslint-disable-next-line @next/next/no-img-element */ }
                     <img
                       src={`/api/places/photo?ref=${encodeURIComponent(ref)}&w=400`}
                       alt=""
-                      className="w-full h-full object-cover"
                       loading="lazy"
                     />
                   </label>
                 )
               })}
             </div>
-            <p className="text-xs text-[#9a9a9a]">{selectedPhotos.size} / {photoRefs.length} 장 선택됨</p>
+            <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
+              {selectedPhotos.size} / {photoRefs.length} 장 선택됨
+            </p>
           </>
         )}
       </section>
 
       {/* 외부 프로필 */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-[#222222]">외부 프로필 링크 (sameAs)</h2>
-        <div>
-          <label className="mb-1 block text-xs font-medium">네이버 플레이스</label>
-          <input type="url" value={naverPlaceUrl} onChange={e => setNaverPlaceUrl(e.target.value)} className="w-full h-10 rounded-md border border-[#dddddd] px-3 text-sm" />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">카카오맵</label>
-          <input type="url" value={kakaoMapUrl} onChange={e => setKakaoMapUrl(e.target.value)} className="w-full h-10 rounded-md border border-[#dddddd] px-3 text-sm" />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">Google Business Profile</label>
-          <input type="url" value={googleBusinessUrl} onChange={e => setGoogleBusinessUrl(e.target.value)} className="w-full h-10 rounded-md border border-[#dddddd] px-3 text-sm" />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">홈페이지</label>
-          <input type="url" value={homepageUrl} onChange={e => setHomepageUrl(e.target.value)} className="w-full h-10 rounded-md border border-[#dddddd] px-3 text-sm" />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">블로그</label>
-          <input type="url" value={blogUrl} onChange={e => setBlogUrl(e.target.value)} className="w-full h-10 rounded-md border border-[#dddddd] px-3 text-sm" />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">인스타그램</label>
-          <input type="url" value={instagramUrl} onChange={e => setInstagramUrl(e.target.value)} className="w-full h-10 rounded-md border border-[#dddddd] px-3 text-sm" />
+      <section className="form-card">
+        <h2 className="form-section-title">외부 프로필 링크 <span className="form-counter">Schema.org sameAs</span></h2>
+        <div className="grid-2">
+          <div className="field">
+            <label className="lbl">네이버 플레이스</label>
+            <input type="url" value={naverPlaceUrl} onChange={e => setNaverPlaceUrl(e.target.value)} />
+          </div>
+          <div className="field">
+            <label className="lbl">카카오맵</label>
+            <input type="url" value={kakaoMapUrl} onChange={e => setKakaoMapUrl(e.target.value)} />
+          </div>
+          <div className="field">
+            <label className="lbl">Google Business Profile</label>
+            <input type="url" value={googleBusinessUrl} onChange={e => setGoogleBusinessUrl(e.target.value)} />
+          </div>
+          <div className="field">
+            <label className="lbl">홈페이지</label>
+            <input type="url" value={homepageUrl} onChange={e => setHomepageUrl(e.target.value)} />
+          </div>
+          <div className="field">
+            <label className="lbl">블로그</label>
+            <input type="url" value={blogUrl} onChange={e => setBlogUrl(e.target.value)} />
+          </div>
+          <div className="field">
+            <label className="lbl">인스타그램</label>
+            <input type="url" value={instagramUrl} onChange={e => setInstagramUrl(e.target.value)} />
+          </div>
         </div>
       </section>
 
-      {message && <p className="text-xs text-green-700">{message}</p>}
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {message && <div className="owner-banner ok" role="status">{message}</div>}
+      {error && <div className="owner-banner danger" role="alert">{error}</div>}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="h-11 w-full rounded-lg bg-[#008060] px-4 text-sm font-medium text-white hover:bg-[#006e52] disabled:opacity-50"
-      >
-        {pending ? '저장 중...' : '변경 사항 저장'}
-      </button>
+      <div className="form-submit-bar">
+        <button type="submit" disabled={pending} className="btn accent lg">
+          {pending ? '저장 중…' : '변경 사항 저장'}
+        </button>
+      </div>
     </form>
   )
 }
@@ -342,4 +371,54 @@ function extractRefFromProxyUrl(url: string): string | null {
   const m = url.match(/[?&]ref=([^&]+)/)
   if (!m) return null
   try { return decodeURIComponent(m[1]) } catch { return null }
+}
+
+// ── 추천 키워드 박스 ────────────────────────────────────────────────
+// AI Place keyword_bank 에서 sector 기준으로 뽑은 후보.
+// 오너가 칩 클릭 → 태그 추가 / FAQ 질문 자동 생성.
+interface KeywordSuggestBoxProps {
+  keywords: string[]
+  currentTags: string[]
+  onAddTag: (keyword: string) => void
+  onAddFaq: (keyword: string) => void
+}
+
+function KeywordSuggestBox({ keywords, currentTags, onAddTag, onAddFaq }: KeywordSuggestBoxProps) {
+  const currentSet = new Set(currentTags)
+  return (
+    <div className="keyword-suggest">
+      <div className="keyword-suggest-head">
+        <h4>추천 키워드 <span>· {keywords.length}개 · 내 업종 AEO 풀</span></h4>
+      </div>
+      <p>
+        내 업종에서 AI 검색이 자주 묻는 키워드예요. <b>+</b> 는 태그에 추가, <b>FAQ</b> 는 질문 초안을 아래 FAQ 섹션에 넣습니다.
+      </p>
+      <div className="keyword-chip-list">
+        {keywords.map((kw) => {
+          const isUsed = currentSet.has(kw)
+          return (
+            <span key={kw} className="keyword-chip-group">
+              <button
+                type="button"
+                className={`keyword-chip${isUsed ? ' added' : ''}`}
+                onClick={() => onAddTag(kw)}
+                disabled={isUsed}
+                title={isUsed ? '이미 태그에 있음' : '태그로 추가'}
+              >
+                {isUsed ? '✓' : '+'} {kw}
+              </button>
+              <button
+                type="button"
+                className="keyword-chip-action"
+                onClick={() => onAddFaq(kw)}
+                title="이 키워드로 FAQ 질문 초안 생성"
+              >
+                FAQ
+              </button>
+            </span>
+          )
+        })}
+      </div>
+    </div>
+  )
 }

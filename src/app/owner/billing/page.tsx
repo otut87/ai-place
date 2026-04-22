@@ -11,6 +11,7 @@ import { loadOwnerBillingState, type OwnerBillingState } from '@/lib/owner/billi
 import { getTossClientKey, isUsingTossTestKey } from '@/lib/billing/toss'
 import { STANDARD_PLAN_AMOUNT } from '@/lib/billing/types'
 import { composePageTitle } from '@/lib/seo/compose-title'
+import { PageHeader } from '../_components/page-header'
 import { BillingAuthButton } from './_components/billing-auth-button'
 
 export const dynamic = 'force-dynamic'
@@ -65,13 +66,14 @@ export default async function OwnerBillingPage({ searchParams }: Params) {
         </div>
       )}
 
-      <header className="greeting" style={{ marginBottom: 20 }}>
-        <div>
-          <h1>결제 <span className="it">·</span> 플랜</h1>
-          <p>파일럿 · 카드 · 자동 결제 이력을 한눈에 관리합니다.</p>
-        </div>
-        {isTest && <span className="chip" style={{ background: 'var(--bg-2)', color: 'var(--muted)' }}>테스트 키 사용 중</span>}
-      </header>
+      <PageHeader
+        title={<>결제 <em>·</em> 플랜</>}
+        subtitle="파일럿 · 카드 · 자동 결제 이력을 한눈에 관리합니다."
+        back={{ href: '/owner', label: '대시보드' }}
+        actions={isTest ? (
+          <span className="chip" style={{ background: 'var(--bg-2)', color: 'var(--muted)' }}>테스트 키 사용 중</span>
+        ) : undefined}
+      />
 
       <section className="kpi-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
         <PilotCard state={state} />
