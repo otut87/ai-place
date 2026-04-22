@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { JOB_STATUS_LABEL, jobStatusTone } from '@/lib/admin/pipeline-jobs'
+import { JOB_STATUS_LABEL, jobStatusTone, JOB_TYPE_LABEL, formatJobType } from '@/lib/admin/pipeline-jobs'
 
 describe('JOB_STATUS_LABEL', () => {
   it('5가지 상태 모두 한국어', () => {
@@ -8,6 +8,17 @@ describe('JOB_STATUS_LABEL', () => {
     expect(JOB_STATUS_LABEL.succeeded).toBe('성공')
     expect(JOB_STATUS_LABEL.failed).toBe('실패')
     expect(JOB_STATUS_LABEL.canceled).toBe('취소')
+  })
+})
+
+describe('JOB_TYPE_LABEL / formatJobType', () => {
+  it('알려진 job_type 은 한국어 라벨', () => {
+    expect(JOB_TYPE_LABEL['place.enrich_google']).toBe('Google 정보 재수집')
+    expect(formatJobType('place.summarize_google_reviews')).toBe('Google 리뷰 요약')
+    expect(formatJobType('blog_draft_generate')).toBe('블로그 초안 생성')
+  })
+  it('미등록 job_type 은 raw 문자열 폴백', () => {
+    expect(formatJobType('unknown.new_type')).toBe('unknown.new_type')
   })
 })
 
@@ -63,15 +74,28 @@ beforeEach(() => {
   })
   mockInsert.mockResolvedValue({ error: null })
 
-  mockFrom.mockImplementation(() => ({
-    select: vi.fn((sel) => {
-      if (typeof sel === 'string' && sel.includes('input_payload')) {
-        return { eq: vi.fn(() => ({ single: mockSingle })) }
+  mockFrom.mockImplementation((table?: string) => {
+    // places 테이블 — listPipelineJobs 의 name 병합 쿼리용
+    if (table === 'places') {
+      return {
+        select: vi.fn(() => ({
+          in: vi.fn().mockResolvedValue({
+            data: [{ id: 'p1', name: '테스트 업체' }],
+            error: null,
+          }),
+        })),
       }
-      return mockSelect()
-    }),
-    insert: mockInsert,
-  }))
+    }
+    return {
+      select: vi.fn((sel) => {
+        if (typeof sel === 'string' && sel.includes('input_payload')) {
+          return { eq: vi.fn(() => ({ single: mockSingle })) }
+        }
+        return mockSelect()
+      }),
+      insert: mockInsert,
+    }
+  })
 })
 
 describe('listPipelineJobs', () => {
@@ -82,11 +106,12 @@ describe('listPipelineJobs', () => {
     expect(await listPipelineJobs()).toEqual([])
   })
 
-  it('결과 반환 (필터 없이)', async () => {
+  it('결과 반환 (필터 없이) + places.name 병합', async () => {
     const { listPipelineJobs } = await import('@/lib/admin/pipeline-jobs')
     const r = await listPipelineJobs()
     expect(r).toHaveLength(1)
     expect(r[0].status).toBe('failed')
+    expect(r[0].target_name).toBe('테스트 업체')
   })
 
   it('status=all 은 필터 생략', async () => {

@@ -10,6 +10,7 @@ export interface PipelineJobRow {
   job_type: string
   target_type: string | null
   target_id: string | null
+  target_name: string | null   // target_type='place' 인 경우 places.name 병합. 그 외 null.
   status: PipelineJobStatus
   error: string | null
   retried_count: number
@@ -43,7 +44,34 @@ export async function listPipelineJobs(filter: PipelineJobFilter = {}): Promise<
 
   const { data, error } = await query
   if (error || !data) return []
-  return data as PipelineJobRow[]
+
+  const rows = data as Array<Omit<PipelineJobRow, 'target_name'>>
+
+  // places.name 병합 (target_type='place' 만)
+  const placeIds = Array.from(
+    new Set(
+      rows
+        .filter(r => r.target_type === 'place' && r.target_id)
+        .map(r => r.target_id as string),
+    ),
+  )
+
+  const nameMap = new Map<string, string>()
+  if (placeIds.length > 0) {
+    const { data: placeRows } = await admin
+      .from('places')
+      .select('id, name')
+      .in('id', placeIds)
+    for (const p of (placeRows ?? []) as Array<{ id: string; name: string }>) {
+      nameMap.set(p.id, p.name)
+    }
+  }
+
+  return rows.map(r => ({
+    ...r,
+    target_name:
+      r.target_type === 'place' && r.target_id ? nameMap.get(r.target_id) ?? null : null,
+  }))
 }
 
 export const JOB_STATUS_LABEL: Record<PipelineJobStatus, string> = {
@@ -52,6 +80,17 @@ export const JOB_STATUS_LABEL: Record<PipelineJobStatus, string> = {
   succeeded: '성공',
   failed: '실패',
   canceled: '취소',
+}
+
+/** job_type → 한국어 라벨. 미등록 job_type 은 raw 문자열 폴백. */
+export const JOB_TYPE_LABEL: Record<string, string> = {
+  'place.enrich_google': 'Google 정보 재수집',
+  'place.summarize_google_reviews': 'Google 리뷰 요약',
+  'blog_draft_generate': '블로그 초안 생성',
+}
+
+export function formatJobType(jobType: string): string {
+  return JOB_TYPE_LABEL[jobType] ?? jobType
 }
 
 export function jobStatusTone(status: PipelineJobStatus): 'ok' | 'warn' | 'danger' | 'muted' {

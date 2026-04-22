@@ -1,7 +1,7 @@
 // T-076 — /admin/pipelines — 파이프라인 작업 모니터링.
 
 import { requireAuth } from '@/lib/auth'
-import { listPipelineJobs, JOB_STATUS_LABEL, jobStatusTone } from '@/lib/admin/pipeline-jobs'
+import { listPipelineJobs, JOB_STATUS_LABEL, jobStatusTone, formatJobType } from '@/lib/admin/pipeline-jobs'
 import { getLlmUsage, API_QUOTAS } from '@/lib/admin/pipeline-metrics'
 import { RetryJobButton } from './retry-button'
 
@@ -118,10 +118,24 @@ export default async function AdminPipelinesPage({
             <tbody className="divide-y divide-[#f0f0f0]">
               {rows.map((r) => (
                 <tr key={r.id} className="hover:bg-[#fafafa]">
-                  <td className="px-4 py-3 font-medium text-[#191919]">{r.job_type}</td>
+                  <td className="px-4 py-3 font-medium text-[#191919]">
+                    {formatJobType(r.job_type)}
+                    <div className="font-mono text-[10px] text-[#9a9a9a]">{r.job_type}</div>
+                  </td>
                   <td className="px-4 py-3 text-[#6b6b6b]">
-                    {r.target_type ?? '—'}
-                    {r.target_id ? <span className="ml-1 font-mono text-xs">#{r.target_id.slice(0, 8)}</span> : null}
+                    {r.target_name ? (
+                      <>
+                        <div className="text-[#191919]">{r.target_name}</div>
+                        {r.target_id && (
+                          <div className="font-mono text-[10px] text-[#9a9a9a]">#{r.target_id.slice(0, 8)}</div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {r.target_type ?? '—'}
+                        {r.target_id ? <span className="ml-1 font-mono text-xs">#{r.target_id.slice(0, 8)}</span> : null}
+                      </>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <StatusPill status={r.status} />
@@ -131,9 +145,9 @@ export default async function AdminPipelinesPage({
                     {r.error ? <span className="text-red-600">{r.error}</span> : '—'}
                   </td>
                   <td className="px-4 py-3 text-xs text-[#6b6b6b]">
-                    {r.started_at ? new Date(r.started_at).toLocaleString('ko-KR') : '—'}
+                    {formatKst(r.started_at)}
                     {' → '}
-                    {r.finished_at ? new Date(r.finished_at).toLocaleString('ko-KR') : '—'}
+                    {formatKst(r.finished_at)}
                   </td>
                   <td className="px-4 py-3">
                     <RetryJobButton jobId={r.id} disabled={r.status !== 'failed'} />
@@ -174,4 +188,19 @@ function asSingle(v: string | string[] | undefined): string | undefined {
 
 function isStatus(v: string): v is 'pending' | 'running' | 'succeeded' | 'failed' | 'canceled' | 'all' {
   return ['pending', 'running', 'succeeded', 'failed', 'canceled', 'all'].includes(v)
+}
+
+// DB timestamp → KST 포맷 (Vercel 서버 런타임이 UTC 라 명시 필요).
+function formatKst(iso: string | null): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
 }
