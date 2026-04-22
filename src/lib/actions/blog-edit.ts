@@ -5,6 +5,11 @@
 import { requireAuthForAction } from '@/lib/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { revalidatePath } from 'next/cache'
+import {
+  fanOutBlogPost,
+  buildBlogPath,
+  removeMentionsForPath,
+} from '@/lib/owner/place-mentions'
 
 export interface SaveBlogInput {
   slug: string
@@ -50,6 +55,30 @@ export async function saveBlogPost(input: SaveBlogInput): Promise<{ success: boo
   const { error } = await admin.from('blog_posts').update(payload).eq('slug', input.slug)
   if (error) return { success: false, error: error.message }
 
+  // T-200: active 전환 시 place_mentions fan-out / archived 시 제거.
+  // best-effort — 실패해도 저장 자체는 성공 처리.
+  if (input.status === 'active' || input.status === 'archived') {
+    try {
+      const { data: row } = await admin
+        .from('blog_posts')
+        .select('city, sector, places_mentioned')
+        .eq('slug', input.slug)
+        .single()
+      const typed = row as { city: string; sector: string; places_mentioned: string[] | null } | null
+      if (typed) {
+        const pagePath = buildBlogPath(typed.city, typed.sector, input.slug)
+        if (input.status === 'active') {
+          const placeIds = typed.places_mentioned ?? []
+          if (placeIds.length > 0) await fanOutBlogPost({ placeIds, pagePath })
+        } else {
+          await removeMentionsForPath(pagePath)
+        }
+      }
+    } catch (err) {
+      console.error('[saveBlogPost] place_mentions 동기화 실패:', err)
+    }
+  }
+
   revalidatePath('/admin/blog')
   revalidatePath(`/admin/blog/${input.slug}/edit`)
   revalidatePath(`/blog/${input.slug}`)
@@ -63,8 +92,26 @@ export async function deleteBlogPost(slug: string): Promise<{ success: boolean; 
   const admin = getAdminClient()
   if (!admin) return { success: false, error: 'admin_unavailable' }
   if (!slug.trim()) return { success: false, error: 'slug 필수' }
+
+  // T-200: 삭제 전 path 확보 → place_mentions 정리.
+  const { data: row } = await admin
+    .from('blog_posts')
+    .select('city, sector')
+    .eq('slug', slug)
+    .maybeSingle()
+  const typed = row as { city: string; sector: string } | null
+
   const { error } = await admin.from('blog_posts').delete().eq('slug', slug)
   if (error) return { success: false, error: error.message }
+
+  if (typed) {
+    try {
+      await removeMentionsForPath(buildBlogPath(typed.city, typed.sector, slug))
+    } catch (err) {
+      console.error('[deleteBlogPost] mention 정리 실패:', err)
+    }
+  }
+
   revalidatePath('/admin/blog')
   revalidatePath('/blog')
   return { success: true }
@@ -76,8 +123,25 @@ export async function deleteBlogPostById(id: string): Promise<{ success: boolean
   const admin = getAdminClient()
   if (!admin) return { success: false, error: 'admin_unavailable' }
   if (!id.trim()) return { success: false, error: 'id 필수' }
+
+  const { data: row } = await admin
+    .from('blog_posts')
+    .select('city, sector, slug')
+    .eq('id', id)
+    .maybeSingle()
+  const typed = row as { city: string; sector: string; slug: string } | null
+
   const { error } = await admin.from('blog_posts').delete().eq('id', id)
   if (error) return { success: false, error: error.message }
+
+  if (typed) {
+    try {
+      await removeMentionsForPath(buildBlogPath(typed.city, typed.sector, typed.slug))
+    } catch (err) {
+      console.error('[deleteBlogPostById] mention 정리 실패:', err)
+    }
+  }
+
   revalidatePath('/admin/blog')
   revalidatePath('/blog')
   return { success: true }

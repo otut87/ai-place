@@ -34,6 +34,10 @@
     "audit:places": "tsx scripts/audit-places.ts",
     "audit:places:fix-tags": "tsx scripts/audit-places.ts --fix-tags",
     "audit:related-content": "tsx scripts/audit-related-content.ts",
+    "sync:place-mentions": "tsx scripts/sync-place-mentions.ts",
+    "sync:place-mentions:dry": "tsx scripts/sync-place-mentions.ts --dry-run --verbose",
+    "backfill:place-mentions": "tsx scripts/backfill-place-mentions.ts",
+    "backfill:place-mentions:dry": "tsx scripts/backfill-place-mentions.ts --dry-run",
     "prepare": "husky"
   },
   "dependencies": {

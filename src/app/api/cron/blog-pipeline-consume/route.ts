@@ -173,6 +173,11 @@ export async function GET(req: Request) {
 
     // blog_posts INSERT
     const faqs = result.draft.faqs ?? []
+    // T-200: places_mentioned — bot 방문 귀속의 근거. id 있는 행만.
+    const placesMentioned = verifiedPlaces
+      .map((p) => (p as Place & { id?: string }).id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0)
+
     const { data: inserted, error: insErr } = await (admin
       .from('blog_posts') as ReturnType<typeof admin.from>)
       .insert({
@@ -190,6 +195,7 @@ export async function GET(req: Request) {
         tags: result.draft.tags,
         faqs,
         related_place_slugs: verifiedPlaces.map(p => p.slug),
+        places_mentioned: placesMentioned,
         quality_score: result.quality?.score ?? null,
         quality_rules_report: result.quality?.rulesReport ?? null,
         hard_failures: result.quality?.hardFailures ?? [],

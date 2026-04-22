@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { revalidatePath } from 'next/cache'
 import { canAutopublish, type CategoryPolicy } from '@/lib/admin/autopublish'
+import { fanOutBlogPost, buildBlogPath } from '@/lib/owner/place-mentions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,6 +20,7 @@ interface ScheduledRow {
   category: string | null
   created_at: string
   published_at: string
+  places_mentioned: string[] | null
 }
 
 async function loadPolicies(admin: ReturnType<typeof getAdminClient>): Promise<Map<string, CategoryPolicy>> {
@@ -54,7 +56,7 @@ export async function GET(req: Request) {
   const nowIso = new Date().toISOString()
   const { data: rows, error } = await admin
     .from('blog_posts')
-    .select('id, slug, city, sector, category, created_at, published_at')
+    .select('id, slug, city, sector, category, created_at, published_at, places_mentioned')
     .eq('status', 'draft')
     .not('published_at', 'is', null)
     .lte('published_at', nowIso)
@@ -88,6 +90,20 @@ export async function GET(req: Request) {
       continue
     }
     published.push(row.slug)
+
+    // T-200: active 전환 시 place_mentions fan-out. Best-effort — 실패해도 발행은 유지.
+    const placeIds = row.places_mentioned ?? []
+    if (placeIds.length > 0) {
+      try {
+        await fanOutBlogPost({
+          placeIds,
+          pagePath: buildBlogPath(row.city, row.sector, row.slug),
+        })
+      } catch (err) {
+        console.error(`[autopublish] fanOutBlogPost 실패 slug=${row.slug}:`, err)
+      }
+    }
+
     revalidatePath(`/blog/${row.city}/${row.sector}/${row.slug}`)
   }
 

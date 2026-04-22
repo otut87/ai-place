@@ -57,3 +57,4 @@ docs/
 
 # 개인 권한/설정 (팀 공유 대상 아님)
 .claude/settings.local.json
+.claude/scheduled_tasks.lock

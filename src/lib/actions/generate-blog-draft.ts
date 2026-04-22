@@ -11,6 +11,7 @@ import { getAllPlaces, getCities, getSectors, getCategories } from '@/lib/data.s
 import { selectCandidatePlaces } from '@/lib/ai/select-candidate-places'
 import { generateBlogDraft } from '@/lib/ai/generate-blog-draft'
 import { revalidatePath } from 'next/cache'
+import type { Place } from '@/lib/types'
 
 // T-135: 초안 생성 모달에서 카테고리가 바뀔 때마다 업체 목록 조회.
 export interface PlaceCandidateListing {
@@ -119,6 +120,11 @@ export async function generateBlogDraftAction(
   const slug = `${input.city}-${input.sector}-${input.postType}-${suffix}`
 
   // 5. blog_posts INSERT
+  // T-200: places_mentioned — 업체 귀속 측정의 근거. id 가 있는 행만 기록 (seed fallback 에는 id 없을 수 있음).
+  const placesMentioned = selection.places
+    .map((p) => (p as Place & { id?: string }).id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+
   const payload = {
     slug,
     title: draft.title,
@@ -131,6 +137,7 @@ export async function generateBlogDraftAction(
     tags: draft.tags,
     faqs: draft.faqs,
     related_place_slugs: selection.places.map(p => p.slug),
+    places_mentioned: placesMentioned,
     quality_score: draft.qualityScore,
     status: 'draft',
     published_at: input.scheduledDate ? new Date(input.scheduledDate).toISOString() : null,

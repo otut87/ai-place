@@ -76,8 +76,14 @@ describe('deleteBlogPostById', () => {
   beforeEach(() => {
     mockDeleteEq.mockReset()
     mockDeleteEq.mockResolvedValue({ error: null })
+    // T-200: delete 전 select(city, sector, slug) 호출 경로 추가 → mock 에 select 지원.
     mockFrom.mockImplementation(() => ({
       delete: vi.fn(() => ({ eq: mockDeleteEq })),
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          maybeSingle: vi.fn(async () => ({ data: null })),
+        })),
+      })),
     }))
   })
 
