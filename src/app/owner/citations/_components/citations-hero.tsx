@@ -19,7 +19,7 @@ interface Props {
   periodMode: 'days' | 'month' | 'custom'
   periodLabel: string
   periodDays: number
-  days: 7 | 30 | 90 | null
+  days: 7 | 30 | 90 | null       // days 모드일 때만 값 존재
   monthKey: string | null        // 'YYYY-MM' when mode === 'month'
   from: Date
   to: Date
@@ -30,6 +30,8 @@ interface Props {
   lastVisitIso: string | null
   lastVisitSub: string | null
 }
+
+const DAYS_PRESETS: Array<7 | 30 | 90> = [7, 30, 90]
 
 const SPARK_W = 84
 const SPARK_H = 40
@@ -75,7 +77,7 @@ function kickerText(mode: string, monthKey: string | null, totalCount: number, f
 }
 
 export function CitationsHero({
-  periodMode, monthKey, from, to, periodDays,
+  periodMode, monthKey, days, from, to, periodDays,
   selectedPlaceId, places,
   botSummary, dailyTrend, lastVisitIso, lastVisitSub,
 }: Props) {
@@ -105,25 +107,7 @@ export function CitationsHero({
     return nowYM
   }, [periodMode, monthKey, nowYM])
 
-  // 3개월 pill — active 기준 -2, -1, 0 offset
-  const pillMonths = useMemo(() => {
-    const out: Array<{ y: number; m: number; key: string; isActive: boolean; isCurrent: boolean }> = []
-    for (let off = -2; off <= 0; off++) {
-      let mm = activeYM.m + off, yy = activeYM.y
-      if (mm < 1) { mm += 12; yy -= 1 }
-      if (mm > 12) { mm -= 12; yy += 1 }
-      const key = `${yy}-${String(mm).padStart(2, '0')}`
-      out.push({
-        y: yy, m: mm, key,
-        isActive: yy === activeYM.y && mm === activeYM.m,
-        isCurrent: yy === nowYM.y && mm === nowYM.m,
-      })
-    }
-    return out
-  }, [activeYM, nowYM])
-
   function navigateToMonth(y: number, m: number) {
-    // future month block
     if (y > nowYM.y || (y === nowYM.y && m > nowYM.m)) return
     const { from: fD, to: tD } = monthBounds(y, m - 1)
     const fromStr = toDateInputValue(fD)
@@ -134,11 +118,12 @@ export function CitationsHero({
     setPanelOpen(false)
   }
 
-  function navigateDir(dir: 1 | -1) {
-    let mm = activeYM.m + dir, yy = activeYM.y
-    if (mm < 1) { mm += 12; yy -= 1 }
-    if (mm > 12) { mm -= 12; yy += 1 }
-    navigateToMonth(yy, mm)
+  function navigateToDays(n: 7 | 30 | 90) {
+    const sp = new URLSearchParams(params?.toString() ?? '')
+    sp.set('days', String(n))
+    sp.delete('from'); sp.delete('to')
+    startTransition(() => router.replace(`/owner/citations${sp.toString() ? `?${sp}` : ''}`))
+    setPanelOpen(false)
   }
 
   function togglePanel() {
@@ -218,29 +203,29 @@ export function CitationsHero({
           {zeros.length > 0 && <> <span className="zero">{zeros.join('·')}는 아직 기록 없음.</span></>}
         </p>
 
+        {/* T-213: days 롤링 pill(7/30/90) + 캘린더 아이콘(월 선택) + 업체 필터 */}
         <div className="filt" ref={filtRef} id="monthFilt">
-          <span className="mf-year-lbl">{activeYM.y}</span>
-
-          <button className="mf-nav" aria-label="이전 월" onClick={() => navigateDir(-1)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6" /></svg>
-          </button>
-
-          {pillMonths.map((p) => (
+          {DAYS_PRESETS.map((n) => (
             <button
-              key={p.key}
-              className={p.isActive ? 'mf-pill active' : 'mf-pill'}
-              onClick={() => navigateToMonth(p.y, p.m)}
+              key={n}
+              type="button"
+              className={periodMode === 'days' && days === n ? 'mf-pill active' : 'mf-pill'}
+              aria-pressed={periodMode === 'days' && days === n}
+              onClick={() => navigateToDays(n)}
             >
-              {p.m}월
-              {p.isCurrent && !p.isActive && <span className="mf-cur">·오늘</span>}
+              {n}일
             </button>
           ))}
 
+          <span className="sep" />
+
           <button
             ref={dropBtnRef}
-            className="mf-drop"
+            type="button"
+            className={periodMode === 'month' ? 'mf-drop active' : 'mf-drop'}
             aria-label="월 선택 열기"
             aria-haspopup="true"
+            aria-expanded={panelOpen}
             onClick={togglePanel}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -249,15 +234,11 @@ export function CitationsHero({
               <line x1="8" y1="2" x2="8" y2="6" />
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
-          </button>
-
-          <button
-            className="mf-nav"
-            aria-label="다음 월"
-            onClick={() => navigateDir(1)}
-            disabled={activeYM.y === nowYM.y && activeYM.m >= nowYM.m}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6" /></svg>
+            {periodMode === 'month' && monthKey && (
+              <span className="mf-drop-label">
+                {activeYM.y !== nowYM.y ? `${activeYM.y}. ` : ''}{activeYM.m}월
+              </span>
+            )}
           </button>
 
           <span className="sep sep-biz" />
