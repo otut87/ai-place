@@ -77,11 +77,13 @@ export async function issueBillingKeyAction(input: {
   const billingKeyId = (bkRow as { id: string }).id
 
   // 5. subscription upsert — 1 customer = 1 active subscription
+  // T-220.5: `suspended` 도 포함 — 카드 재등록 시 재활성화 경로 보장.
+  //   (기존 로직은 past_due → active 만 처리. suspended 는 영원히 suspended 남음)
   const { data: existingSub } = await admin
     .from('subscriptions')
     .select('id, status')
     .eq('customer_id', c.id)
-    .in('status', ['pending', 'active', 'past_due', 'pending_cancellation'])
+    .in('status', ['pending', 'active', 'past_due', 'suspended', 'pending_cancellation'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -95,13 +97,20 @@ export async function issueBillingKeyAction(input: {
     ? new Date(trialEndMs).toISOString()
     : new Date(nowMs + 30 * 86_400_000).toISOString()
 
+  // T-220.5: 카드 재등록 시 status 재계산 — past_due/suspended 둘 다 active 로 복구.
+  //   pending_cancellation 은 유지 (사용자 의도 존중).
+  function reactivate(prev: string): string {
+    if (prev === 'past_due' || prev === 'suspended') return 'active'
+    return prev
+  }
+
   let subscriptionId: string
   if (existing) {
     const { error: updErr } = await admin
       .from('subscriptions')
       .update({
         billing_key_id: billingKeyId,
-        status: existing.status === 'past_due' ? 'active' : existing.status,
+        status: reactivate(existing.status),
         next_charge_at: nextChargeAt,
         updated_at: new Date().toISOString(),
       })

@@ -38,7 +38,8 @@ export async function cancelSubscriptionAction(input: CancelInput): Promise<Canc
     return { success: false, error: '본인 소유 구독이 아닙니다' }
   }
 
-  if (subRow.status === 'cancelled') {
+  // T-220.5: canceled/cancelled 철자 통일 (migration 043 에서 CHECK constraint 강제).
+  if (subRow.status === 'canceled') {
     return { success: false, error: '이미 해지된 구독입니다' }
   }
 
@@ -52,8 +53,8 @@ export async function cancelSubscriptionAction(input: CancelInput): Promise<Canc
     updated_at: now.toISOString(),
   }
   if (input.mode === 'immediate') {
-    updates.status = 'cancelled'
-    updates.cancelled_at = now.toISOString()
+    updates.status = 'canceled'
+    updates.canceled_at = now.toISOString()
     updates.next_charge_at = null
   } else {
     updates.status = 'pending_cancellation'

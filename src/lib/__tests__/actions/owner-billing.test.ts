@@ -8,6 +8,7 @@ const state: {
   existingSubStatus: string
   bkInsertError: { message: string } | null
   subInsertError: { message: string } | null
+  capturedSubUpdates: Record<string, unknown>[]
 } = {
   customer: null,
   billingKeyId: 'bk-1',
@@ -15,6 +16,7 @@ const state: {
   existingSubStatus: 'pending',
   bkInsertError: null,
   subInsertError: null,
+  capturedSubUpdates: [],
 }
 
 function makeAdmin() {
@@ -61,7 +63,10 @@ function makeAdmin() {
               }),
             }),
           }),
-          update: () => ({ eq: async () => ({ error: null }) }),
+          update: (payload: Record<string, unknown>) => {
+            state.capturedSubUpdates.push(payload)
+            return { eq: async () => ({ error: null }) }
+          },
           insert: () => ({
             select: () => ({
               single: async () => state.subInsertError
@@ -96,6 +101,7 @@ beforeEach(() => {
   state.existingSubStatus = 'pending'
   state.bkInsertError = null
   state.subInsertError = null
+  state.capturedSubUpdates = []
   mockIssue.mockReset().mockResolvedValue({
     success: true,
     billingKey: 'bkey-xyz', method: '카드', cardCompany: 'SHINHAN',
@@ -166,6 +172,32 @@ describe('issueBillingKeyAction', () => {
     const { issueBillingKeyAction } = await import('@/lib/actions/owner-billing')
     const r = await issueBillingKeyAction({ authKey: 'a', customerKey: 'c-1' })
     expect(r.success).toBe(true)
+    const lastUpdate = state.capturedSubUpdates[state.capturedSubUpdates.length - 1]
+    expect(lastUpdate.status).toBe('active')
+  })
+
+  it('T-220.5: suspended 구독 있음 → status=active 로 재활성화', async () => {
+    // 구 코드는 past_due 만 active 로 복구했으나, 실제로는 carried-over suspended 도
+    // 카드 재등록 시 재활성화되어야 함. billing-state.ts 에서 suspended 가 active
+    // 리스트에서 제외되므로, 영원히 suspended 에 갇히면 사용자 복구 경로 없음.
+    state.existingSubId = 'susp-sub'
+    state.existingSubStatus = 'suspended'
+    const { issueBillingKeyAction } = await import('@/lib/actions/owner-billing')
+    const r = await issueBillingKeyAction({ authKey: 'a', customerKey: 'c-1' })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.subscriptionId).toBe('susp-sub')
+    const lastUpdate = state.capturedSubUpdates[state.capturedSubUpdates.length - 1]
+    expect(lastUpdate.status).toBe('active')
+  })
+
+  it('T-220.5: pending_cancellation 구독 있음 → status 유지 (사용자 해지 의도 존중)', async () => {
+    state.existingSubId = 'pc-sub'
+    state.existingSubStatus = 'pending_cancellation'
+    const { issueBillingKeyAction } = await import('@/lib/actions/owner-billing')
+    const r = await issueBillingKeyAction({ authKey: 'a', customerKey: 'c-1' })
+    expect(r.success).toBe(true)
+    const lastUpdate = state.capturedSubUpdates[state.capturedSubUpdates.length - 1]
+    expect(lastUpdate.status).toBe('pending_cancellation')
   })
 
   it('trial_ends_at 이 미래 → next_charge_at=trial_ends_at (타임스탬프 로직 검증)', async () => {
