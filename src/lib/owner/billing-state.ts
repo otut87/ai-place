@@ -51,6 +51,12 @@ export interface PaymentRow {
   receiptUrl: string | null
 }
 
+export interface PendingCoupon {
+  code: string
+  discountType: 'percent' | 'fixed'
+  discountValue: number
+}
+
 export interface OwnerBillingState {
   customer: CustomerRow | null
   /** @deprecated T-223.5 다중카드 — primary 카드 (billingKeys 에서 is_primary=true). */
@@ -62,6 +68,8 @@ export interface OwnerBillingState {
   pilotRemainingDays: number
   /** T-210: 활성 업체 수 — 요금 브레이크다운 "N곳 × ₩14,900" 에 사용. */
   activePlaceCount: number
+  /** T-229: 미적용 쿠폰 (다음 결제 시 자동 반영). */
+  pendingCoupon: PendingCoupon | null
 }
 
 function daysUntilIso(iso: string | null, now: Date): number | null {
@@ -76,6 +84,7 @@ export async function loadOwnerBillingState(userId: string, now: Date = new Date
     customer: null,
     billingKey: null,
     billingKeys: [],
+    pendingCoupon: null,
     subscription: null,
     recentPayments: [],
     pilotRemainingDays: 30,
@@ -197,8 +206,36 @@ export async function loadOwnerBillingState(userId: string, now: Date = new Date
     .eq('customer_id', c.id)
     .eq('status', 'active')
 
+  // T-229: 미적용 쿠폰 조회 — coupons join 으로 code/discount 노출.
+  const { data: pendingRows } = await admin
+    .from('coupon_redemptions')
+    .select('coupon_id, coupons:coupon_id(code, discount_type, discount_value)')
+    .eq('customer_id', c.id)
+    .is('applied_payment_id', null)
+    .order('redeemed_at', { ascending: false })
+    .limit(1)
+  // Supabase foreign-key join 은 배열 형태로 반환될 수 있음 (PostgREST embedded resource).
+  //   ─ 단일 관계라도 coupons 가 array 로 올 수 있어 두 shape 모두 지원.
+  const pendingRow = ((pendingRows ?? []) as unknown as Array<{
+    coupon_id: string
+    coupons:
+      | { code: string; discount_type: 'percent' | 'fixed'; discount_value: number }
+      | Array<{ code: string; discount_type: 'percent' | 'fixed'; discount_value: number }>
+      | null
+  }>)[0]
+  const pendingCouponRow = pendingRow?.coupons
+    ? Array.isArray(pendingRow.coupons) ? pendingRow.coupons[0] ?? null : pendingRow.coupons
+    : null
+  const pendingCoupon: PendingCoupon | null = pendingCouponRow
+    ? {
+      code: pendingCouponRow.code,
+      discountType: pendingCouponRow.discount_type,
+      discountValue: pendingCouponRow.discount_value,
+    }
+    : null
+
   return {
     customer, billingKey, billingKeys, subscription, recentPayments, pilotRemainingDays,
-    activePlaceCount: activePlaceCount ?? 0,
+    activePlaceCount: activePlaceCount ?? 0, pendingCoupon,
   }
 }

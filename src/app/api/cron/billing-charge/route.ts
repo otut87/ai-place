@@ -6,6 +6,7 @@ import { getAdminClient } from '@/lib/supabase/admin-client'
 import { getPgAdapter } from '@/lib/billing'
 import { chargeSubscriptionOnce } from '@/lib/billing/charge-subscription'
 import { dispatchNotify } from '@/lib/actions/notify'
+import { calcDiscountedAmount, loadUnappliedRedemption, markRedemptionApplied } from '@/lib/billing/coupon'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -66,17 +67,30 @@ export async function GET(req: Request) {
       continue
     }
 
+    // T-229: 미적용 쿠폰이 있으면 이번 charge 에 discount 적용.
+    //   실패 시 redemption 은 그대로 유지돼 다음 주기로 carry-over.
+    const redemption = await loadUnappliedRedemption(admin, row.customer_id)
+    const chargeAmount = redemption
+      ? calcDiscountedAmount(row.amount, redemption.discountType, redemption.discountValue)
+      : row.amount
+
     const outcome = await chargeSubscriptionOnce(adapter, {
       subscriptionId: row.id,
       billingKey: row.billing_keys.billing_key,
       customerKey: row.customer_id,
       customerName: row.customers?.name ?? '(이름 없음)',
       customerEmail: row.customers?.email ?? undefined,
-      amount: row.amount,           // T-210: DB 에 저장된 동적 금액 명시 전달
+      amount: chargeAmount,          // T-210 + T-229: 쿠폰 적용된 최종 금액
       retriedCount: row.failed_retry_count,
     })
 
-    await admin.from('payments').insert({ ...outcome.paymentRow, billing_key_id: row.billing_key_id })
+    const { data: insertedPayment } = await admin
+      .from('payments')
+      .insert({ ...outcome.paymentRow, billing_key_id: row.billing_key_id })
+      .select('id')
+      .single()
+    const paymentId = (insertedPayment as { id: string } | null)?.id ?? null
+
     await admin
       .from('subscriptions')
       .update({
@@ -85,6 +99,11 @@ export async function GET(req: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', row.id)
+
+    // T-229: 결제 성공 시에만 쿠폰 소진 처리. 실패 시엔 redemption 유지.
+    if (outcome.paymentRow.status === 'succeeded' && redemption && paymentId) {
+      await markRedemptionApplied(admin, redemption.id, redemption.couponId, paymentId)
+    }
 
     if (outcome.paymentRow.status === 'succeeded') succeeded += 1
     else failed += 1

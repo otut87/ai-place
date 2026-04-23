@@ -30,14 +30,14 @@ function makeAdmin() {
         }
       }
       if (table === 'billing_keys') {
+        // T-223.5 다중카드 — .select().eq().eq().order().order() 체인 후 배열 awaitable.
+        const rows = state.billingKey ? [state.billingKey] : []
         return {
           select: () => ({
             eq: () => ({
               eq: () => ({
                 order: () => ({
-                  limit: () => ({
-                    maybeSingle: async () => ({ data: state.billingKey, error: null }),
-                  }),
+                  order: () => Promise.resolve({ data: rows, error: null }),
                 }),
               }),
             }),
@@ -76,6 +76,20 @@ function makeAdmin() {
           select: () => ({
             eq: () => ({
               eq: async () => ({ count: state.activePlaceCount, error: null }),
+            }),
+          }),
+        }
+      }
+      if (table === 'coupon_redemptions') {
+        // T-229: 미적용 쿠폰 조회 (없으면 빈 배열).
+        return {
+          select: () => ({
+            eq: () => ({
+              is: () => ({
+                order: () => ({
+                  limit: async () => ({ data: [], error: null }),
+                }),
+              }),
             }),
           }),
         }

@@ -12,6 +12,7 @@ import { PilotEndingBanner } from '../_components/pilot-ending-banner'
 import { BillingAuthButton } from './_components/billing-auth-button'
 import { CardRowActions } from './_components/card-actions'
 import { RetryButton } from './_components/retry-button'
+import { CouponInput } from './_components/coupon-input'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -102,6 +103,21 @@ export default async function OwnerBillingPage({ searchParams }: Params) {
 
       {/* 카드 관리 */}
       <CardSection state={state} clientKey={clientKey} />
+
+      {/* 쿠폰 (T-229) — 카드 등록된 오너에게만 */}
+      {state.customer && state.billingKeys.length > 0 && (
+        <section className="ob-sec">
+          <div className="hd">
+            <h3>프로모 코드</h3>
+            {state.pendingCoupon && <span className="sub">다음 결제에 자동 적용</span>}
+          </div>
+          <CouponInput
+            pendingCode={state.pendingCoupon?.code ?? null}
+            pendingDiscountType={state.pendingCoupon?.discountType}
+            pendingDiscountValue={state.pendingCoupon?.discountValue}
+          />
+        </section>
+      )}
 
       {/* 결제 이력 */}
       <HistorySection state={state} />

@@ -15,6 +15,7 @@ import { getPgAdapter } from '@/lib/billing'
 import { chargeSubscriptionOnce } from '@/lib/billing/charge-subscription'
 import { dispatchNotify } from '@/lib/actions/notify'
 import { revalidatePath } from 'next/cache'
+import { calcDiscountedAmount, loadUnappliedRedemption, markRedemptionApplied } from '@/lib/billing/coupon'
 
 const LOCK_SECONDS = 60           // 60초간 다른 프로세스 진입 차단
 const RATE_LIMIT_SECONDS = 300    // 5분 1회
@@ -92,20 +93,34 @@ export async function ownerRetryBillingAction(subscriptionId: string): Promise<O
   // 4) PG charge (Toss 에 orderId dedupe 까지 있음 — 이중 안전)
   try {
     const adapter = getPgAdapter()
+    // T-229: 미적용 쿠폰 있으면 discount 반영.
+    const redemption = await loadUnappliedRedemption(admin, row.customer_id)
+    const chargeAmount = redemption
+      ? calcDiscountedAmount(row.amount, redemption.discountType, redemption.discountValue)
+      : row.amount
+
     const outcome = await chargeSubscriptionOnce(adapter, {
       subscriptionId: row.id,
       billingKey: row.billing_keys.billing_key,
       customerKey: row.customer_id,
       customerName: row.customers.name ?? '(이름 없음)',
       customerEmail: row.customers.email ?? undefined,
-      amount: row.amount,
+      amount: chargeAmount,
       retriedCount: row.failed_retry_count,
     })
 
-    // 5) payments insert
-    await admin
+    // 5) payments insert + id 회수 (쿠폰 소진 처리용)
+    const { data: inserted } = await admin
       .from('payments')
       .insert({ ...outcome.paymentRow, billing_key_id: row.billing_key_id })
+      .select('id')
+      .single()
+    const paymentId = (inserted as { id: string } | null)?.id ?? null
+
+    // T-229: 성공 시에만 쿠폰 소진 (실패 시 redemption 보존)
+    if (outcome.paymentRow.status === 'succeeded' && redemption && paymentId) {
+      await markRedemptionApplied(admin, redemption.id, redemption.couponId, paymentId)
+    }
 
     // 6) subscription patch — charging_started_at 은 NULL 로 해제
     await admin
