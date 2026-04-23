@@ -259,6 +259,25 @@ export interface OwnerDailyTrendRow {
   total: number
 }
 
+/** 차트·KPI 용 엔진 버킷. Perplexity 는 Gemini 슬롯이 없으므로 other 로 합산. */
+export type ChartEngineKey = 'chatgpt' | 'claude' | 'gemini' | 'other'
+
+/**
+ * aiSearch + aiTraining 을 차트용 4개 슬롯 {chatgpt, claude, gemini, other} 으로 병합.
+ * - chatgpt: GPTBot(훈련) + ChatGPT-User / OAI-SearchBot(검색)
+ * - claude:  ClaudeBot/Anthropic-AI(훈련) + Claude-Web(검색)
+ * - gemini:  Google-Extended(훈련) — aiSearch 엔진 키에 gemini 없음
+ * - other:   Perplexity/Youbot/DuckAssist(검색) + CCBot/Bytespider 등(훈련)
+ */
+export function dailyRowToChartCounts(row: OwnerDailyTrendRow): Record<ChartEngineKey, number> {
+  return {
+    chatgpt: row.aiSearch.chatgpt + row.aiTraining.chatgpt,
+    claude:  row.aiSearch.claude  + row.aiTraining.claude,
+    gemini:  row.aiTraining.gemini,
+    other:   row.aiSearch.perplexity + row.aiSearch.other + row.aiTraining.other,
+  }
+}
+
 function toKstDateKey(iso: string): string {
   const d = new Date(iso)
   // Asia/Seoul 로 정확히 KST 날짜 추출.

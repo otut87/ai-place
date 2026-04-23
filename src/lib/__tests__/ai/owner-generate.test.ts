@@ -63,6 +63,15 @@ describe('checkAiRateLimit', () => {
     expect(s.reason).toBe('monthly')
     expect(s.monthlyUsed).toBe(5)
   })
+
+  it('T-218: 30일 rolling — 31일 이전 이력 5개는 window 밖이라 DB 가 gte 필터로 이미 제외 → allowed', async () => {
+    // DB 쿼리가 windowStart 보다 오래된 row 는 반환하지 않는다. mock 도 같은 행동 — 빈 배열 리턴.
+    mockRows([])
+    const { checkAiRateLimit } = await import('@/lib/ai/owner-generate')
+    const s = await checkAiRateLimit('p1')
+    expect(s.allowed).toBe(true)
+    expect(s.monthlyUsed).toBe(0)
+  })
 })
 
 describe('generateOwnerDraft', () => {

@@ -97,7 +97,7 @@ export function suggestCategoryFromKorean(koreanName: string): CategorySuggestio
   // 2. sector / schemaType 결정
   let sector: string
   let schemaType: string
-  let icon: string | undefined = hint?.icon
+  const icon: string | undefined = hint?.icon
 
   if (dictionaryExists) {
     schemaType = CATEGORY_SCHEMA_MAP[candidateSlug]

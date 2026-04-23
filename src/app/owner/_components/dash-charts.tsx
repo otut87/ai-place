@@ -140,14 +140,14 @@ function Chart({
           })}
         </g>
         {/* y axis labels */}
-        <g fontFamily="JetBrains Mono" fontSize={9.5} fill="#9a9a9a">
+        <g style={{ fontFamily: 'var(--mono)' }} fontSize={9.5} fill="#9a9a9a">
           {yLabels.map((v, i) => {
             const y = PAD_T + (plotH * i) / GRID_TICKS + 3
             return <text key={i} x={4} y={y}>{v}</text>
           })}
         </g>
         {/* x axis labels */}
-        <g fontFamily="JetBrains Mono" fontSize={9.5} fill="#9a9a9a" textAnchor="middle">
+        <g style={{ fontFamily: 'var(--mono)' }} fontSize={9.5} fill="#9a9a9a" textAnchor="middle">
           {xLabels.map((key, i) => {
             const x = PAD_L + (plotW * i) / Math.max(1, xLabels.length - 1)
             return <text key={i} x={x} y={VB_H - 8}>{parseKstDate(key)}</text>

@@ -280,9 +280,9 @@ const CONTENT_TOOL_SCHEMA = {
   properties: {
     description: {
       type: 'string',
-      minLength: 40,
-      maxLength: 60,
-      description: '40~60자 한국어. 형식 "{지역} 위치. {구체적 전문분야·장비·인력} 전문."',
+      minLength: 60,
+      maxLength: 180,
+      description: '80~160자 한국어. 2~3문장. 첫 문장은 "{지역} 위치. {구체적 전문분야·장비·인력} 전문." 형식, 이어서 이 업체만의 특징·강점·차별점(장비·경력·시술 시그니처·동선·후기 포인트)을 1~2문장 더 씀.',
     },
     services: {
       type: 'array',
@@ -424,7 +424,7 @@ export async function generatePlaceContent(input: {
     '</target>',
     '',
     '규칙:',
-    '- description 은 40~60자, 형식 "{지역} 위치. {구체적 전문분야} 전문."',
+    '- description 은 80~160자 (2~3문장). 1문장: "{지역} 위치. {전문분야} 전문." 2~3문장: 장비·경력·시술·가격·동선 중 이 업체의 구체적 특징·강점 2개 이상. 일반론 금지.',
     `- FAQ 질문은 반드시 업체명 "${input.name}" 을 포함하고 물음표로 끝난다.`,
     '- priceRange 는 실제 지역 시세. 모르면 "상담 필요" 로 표기.',
     '- 서비스·FAQ·태그는 위 데이터에 실제로 뒷받침되는 것만 생성.',
@@ -650,9 +650,9 @@ export async function generateRecommendation(input: {
 export async function registerPlace(input: RegisterPlaceInput): Promise<ActionResult<{ slug: string }>> {
   const user = await requireAuth()
 
-  // Validation
-  if (input.description.length < 40 || input.description.length > 60) {
-    return { success: false, error: `설명은 40~60자여야 합니다. (현재 ${input.description.length}자)` }
+  // Validation — 권장 80~160자 (2~3문장, 특징·강점 포함). 강제는 최소 30자.
+  if (input.description.length < 30) {
+    return { success: false, error: `설명이 너무 짧습니다. 권장 80~160자. (현재 ${input.description.length}자)` }
   }
   if (input.faqs.length < 3) {
     return { success: false, error: 'FAQ는 최소 3개 필요합니다.' }

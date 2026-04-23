@@ -1,13 +1,12 @@
-// T-210 — /owner/places 업체 관리 (CRUD 허브).
-// 본인 소유 업체 목록 + status 배지 + 액션 4개 (편집·대시보드·공개 페이지·보관/복원).
-// 하단: "+ 업체 추가" CTA. 파일럿(1곳) 이상이면 업체 추가 시 ₩14,900/월 증액 안내.
+// T-215 — /owner/places 업체 관리 (CRUD 허브). owner.html BUSINESSES VIEW 디자인 이식.
+// T-210 에서 세운 "목록 + status 배지 + 액션 4개" 구조는 유지하고,
+// 검정 히어로 + 카드형 biz-row (logo · main · AI 가독성 바 · 액션) 으로 리믹스.
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { requireOwnerUser } from '@/lib/owner/auth'
 import { listOwnerPlaces } from '@/lib/actions/owner-places'
 import { composePageTitle } from '@/lib/seo/compose-title'
-import { EmptyState } from '../_components/empty-state'
 import { loadAeoSnapshotsForPlaces } from '@/lib/owner/aeo-snapshot'
 import { PLAN_AMOUNT_PER_PLACE } from '@/lib/billing/types'
 import { PlaceRowActions } from './_components/place-row-actions'
@@ -30,14 +29,37 @@ function classifyStatus(s: string): StatusKind {
   return 'other'
 }
 
-function statusLabel(s: StatusKind): { text: string; tone: 'good' | 'muted' | 'warn' | 'bad' } {
-  switch (s) {
-    case 'active':   return { text: '공개 중',     tone: 'good' }
-    case 'archived': return { text: '보관됨',       tone: 'muted' }
-    case 'pending':  return { text: '검수 대기',    tone: 'warn' }
-    case 'rejected': return { text: '등록 반려',    tone: 'bad' }
-    default:         return { text: '확인 필요',    tone: 'warn' }
+function statusBadge(kind: StatusKind): { text: string; cls: string } {
+  switch (kind) {
+    case 'active':   return { text: '공개 중',  cls: '' }
+    case 'pending':  return { text: '검수 중',  cls: 'draft' }
+    case 'archived': return { text: '보관됨',    cls: 'off' }
+    case 'rejected': return { text: '반려됨',    cls: 'bad' }
+    default:         return { text: '확인 필요', cls: 'draft' }
   }
+}
+
+// 카테고리 슬러그 → 로고 테마. owner.html 의 derma/food/edu/wellness 에 매핑.
+function logoTheme(category: string): 'derma' | 'food' | 'edu' | 'wellness' | 'default' {
+  const c = category.toLowerCase()
+  if (/derm|skin|clinic|beauty|aesthetic|plastic|dental|hospital|medical/.test(c)) return 'derma'
+  if (/food|restaurant|cafe|bakery|kitchen|hansik|yangsik|jungsik/.test(c)) return 'food'
+  if (/edu|academy|school|interior|build|design|studio|construction/.test(c)) return 'edu'
+  if (/pilates|yoga|fitness|gym|wellness|spa|sports|leisure/.test(c)) return 'wellness'
+  return 'default'
+}
+
+// 한글 이름에서 첫 글자 (thumb logo 용). 공백/빈 이름 방어.
+function firstChar(name: string): string {
+  const trimmed = name.trim()
+  return trimmed.length > 0 ? Array.from(trimmed)[0] : '·'
+}
+
+function formatKoreanDate(iso: string | null): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\.\s?$/, '')
 }
 
 export default async function OwnerPlacesPage() {
@@ -46,243 +68,216 @@ export default async function OwnerPlacesPage() {
 
   const activeCount = places.filter((p) => p.status === 'active').length
   const archivedCount = places.filter((p) => p.status === 'archived').length
-  const placeIds = places.map((p) => p.id)
-  const aeoSnapshots = placeIds.length > 0
-    ? await loadAeoSnapshotsForPlaces(placeIds.filter((id) => {
-        const p = places.find((pl) => pl.id === id)
-        return p?.status === 'active'
-      }))
-    : []
-  const aeoByPlaceId = new Map(aeoSnapshots.map((s) => [s.placeId, s]))
-
+  const pendingCount = places.filter((p) => classifyStatus(p.status) === 'pending').length
   const monthlyAmount = activeCount * PLAN_AMOUNT_PER_PLACE
 
+  // AEO snapshot 은 공개 중인 업체만 대상 (archived/pending 은 점수 의미 희박).
+  const activePlaceIds = places.filter((p) => p.status === 'active').map((p) => p.id)
+  const aeoSnapshots = activePlaceIds.length > 0 ? await loadAeoSnapshotsForPlaces(activePlaceIds) : []
+  const aeoByPlaceId = new Map(aeoSnapshots.map((s) => [s.placeId, s]))
+
+  const avgScore = aeoSnapshots.length > 0
+    ? Math.round(aeoSnapshots.reduce((sum, s) => sum + s.score, 0) / aeoSnapshots.length)
+    : null
+  const minScore = aeoSnapshots.length > 0 ? Math.min(...aeoSnapshots.map((s) => s.score)) : null
+  const maxScore = aeoSnapshots.length > 0 ? Math.max(...aeoSnapshots.map((s) => s.score)) : null
+
   return (
-    <div className="places-page">
-      <div className="crumb">
-        <Link href="/owner">← 대시보드</Link>
-        <span>/</span>
-        <span>업체 관리</span>
+    <div className="pl-page">
+      <div className="pl-crumb">
+        <Link href="/owner">대시보드</Link>
+        <span className="sep">›</span>
+        <span>내 업체</span>
       </div>
 
-      <section className="places-hero">
-        <div className="left">
-          <p className="kicker">내 업체</p>
-          <h1>
-            등록된 <span className="serif">{places.length}곳</span>
-            {archivedCount > 0 && <small> · 보관 {archivedCount}곳</small>}
+      {/* ========= HERO ========= */}
+      <section className="pl-hero">
+        <div>
+          <p className="pl-hero-kicker">Owner · {places.length}곳 운영 중</p>
+          <h1 className="pl-hero-h1">
+            내 <span className="serif">업체</span>를<br />
+            한곳에서 관리하세요.
           </h1>
-          <p className="lede">
-            공개 중 <b>{activeCount}곳</b> · 월 <b>₩{monthlyAmount.toLocaleString('ko-KR')}</b>
-            {' '}(업체당 ₩{PLAN_AMOUNT_PER_PLACE.toLocaleString('ko-KR')} 기준).
-            {activeCount === 0 && ' 파일럿 기간이거나 활성 업체가 없어 결제 발생 안 함.'}
+          <p className="pl-hero-lede">
+            {places.length > 0 ? (
+              <>등록된 <b>{places.length}곳</b>의 AI 인용 · 리뷰 · 가독성을 모두 확인하고, 업체별 공개 페이지를 편집할 수 있습니다.</>
+            ) : (
+              <>아직 등록된 업체가 없습니다. 지금 첫 업체를 추가하면 공개 페이지와 AI 최적화 프로필이 자동 생성돼요.</>
+            )}
           </p>
+          <div className="pl-hero-ctas">
+            <Link href="/owner/places/new" className="pl-btn-accent">+ 새 업체 추가</Link>
+            <Link href="/owner/billing" className="pl-btn-ghost-dark">요금제 관리 →</Link>
+          </div>
         </div>
-        <div className="right">
-          <Link href="/owner/places/new" className="btn accent">
-            + 업체 추가
-          </Link>
+
+        <div className="pl-hero-divide"></div>
+
+        <div className="pl-hero-stats">
+          <div className="pl-hero-stat">
+            <div className="lbl"><i style={{ background: 'var(--accent-2)' }}></i> 등록된 업체</div>
+            <div className="v">{places.length}<span className="u">곳</span></div>
+            <div className="sub">
+              공개 <b>{activeCount}</b>
+              {pendingCount > 0 && <> · 검수 중 <b>{pendingCount}</b></>}
+              {archivedCount > 0 && <> · 보관 <b>{archivedCount}</b></>}
+            </div>
+          </div>
+          <div className="pl-hero-stat">
+            <div className="lbl"><i style={{ background: '#10a37f' }}></i> 이번 달 청구</div>
+            <div className="v">₩{monthlyAmount.toLocaleString('ko-KR')}</div>
+            <div className="sub">
+              {activeCount > 0 ? (
+                <>{activeCount}곳 × <b>₩{PLAN_AMOUNT_PER_PLACE.toLocaleString('ko-KR')}</b> / 월 · 파일럿 30일 무료</>
+              ) : (
+                <>공개 업체 없음 · 파일럿 30일 무료</>
+              )}
+            </div>
+          </div>
+          <div className="pl-hero-stat">
+            <div className="lbl"><i style={{ background: 'var(--accent)' }}></i> AI 가독성 평균</div>
+            <div className="v">
+              {avgScore !== null ? avgScore : '—'}
+              {avgScore !== null && <span className="u">/100</span>}
+            </div>
+            <div className="sub">
+              {minScore !== null && maxScore !== null ? (
+                <>최저 <b>{minScore}</b> · 최고 <b>{maxScore}</b> · 목표 <b>90+</b></>
+              ) : (
+                <>공개 업체 등록 시 집계됩니다</>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
+      {/* ========= SECTION LABEL + LIST ========= */}
       {places.length === 0 ? (
-        <EmptyState
-          eyebrow="· · · 아직 등록된 업체가 없어요 · · ·"
-          title={<>첫 업체를 <em>등록</em>해 볼까요?</>}
-          description="업체명을 검색하면 네이버·Google 에서 기본 정보가 자동으로 채워져요. 30초면 끝 · AI 최적화 프로필은 등록 직후 자동 생성됩니다."
-          action={{ href: '/owner/places/new', label: '+ 업체 등록 시작 →', variant: 'accent' }}
-        />
+        <div className="pl-empty">
+          <h2>첫 <span className="it">업체</span>를 등록해 볼까요?</h2>
+          <p>업체명을 검색하면 네이버·Google 에서 기본 정보가 자동으로 채워집니다. 30초면 끝 · AI 최적화 프로필은 등록 직후 자동 생성됩니다.</p>
+          <Link href="/owner/places/new" className="pl-btn-accent">+ 업체 등록 시작 →</Link>
+        </div>
       ) : (
-        <div className="places-list">
-          {places.map((p) => {
-            const kind = classifyStatus(p.status)
-            const sl = statusLabel(kind)
-            const aeo = aeoByPlaceId.get(p.id)
-            const publicUrl = `/${p.city}/${p.category}/${p.slug}`
+        <>
+          <div className="pl-sec">
+            <div>
+              <div className="k">Businesses · {places.length}곳</div>
+              <h2>등록된 <span className="it">업체</span></h2>
+            </div>
+          </div>
 
-            return (
-              <article key={p.id} className={`place-card place-card-${kind}`}>
-                <div className="main">
-                  <div className="head">
-                    <h3>{p.name}</h3>
-                    <span className={`status-chip status-${sl.tone}`}>{sl.text}</span>
-                  </div>
-                  <div className="meta">
-                    <span className="path">{publicUrl}</span>
-                    {p.updated_at && (
-                      <span className="updated">
-                        · 최근 수정 {new Date(p.updated_at).toLocaleDateString('ko-KR')}
-                      </span>
-                    )}
-                  </div>
-                  {aeo && (
-                    <div className="aeo-mini">
-                      <span className="grade">{aeo.grade}</span>
-                      <span>AI 가독성 <b>{aeo.score}</b><small>/100</small></span>
-                      {aeo.topIssues.length > 0 && (
-                        <span className="issues-hint">
-                          · 개선 {aeo.topIssues.length}건
-                        </span>
+          <div className="biz-list">
+            {places.map((p) => {
+              const kind = classifyStatus(p.status)
+              const badge = statusBadge(kind)
+              const aeo = aeoByPlaceId.get(p.id)
+              const publicUrl = `/${p.city}/${p.category}/${p.slug}`
+              const theme = logoTheme(p.category)
+              const updated = formatKoreanDate(p.updated_at)
+              const canViewPublic = kind === 'active'
+
+              return (
+                <article key={p.id} className={`biz-row${kind === 'archived' ? ' archived' : ''}`}>
+                  <div className={`br-logo ${theme}`}>{firstChar(p.name)}</div>
+
+                  <div className="br-main">
+                    <div className="br-name">
+                      <b>{p.name}</b>
+                      <span className="sub">({p.city} · {p.category})</span>
+                      <span className={`badge ${badge.cls}`}>{badge.text}</span>
+                    </div>
+                    <div className="br-meta">
+                      <span className="path">{p.slug}</span>
+                      {updated && (
+                        <>
+                          <span className="sep">·</span>
+                          <span>최근 수정 {updated}</span>
+                        </>
                       )}
                     </div>
-                  )}
-                </div>
-                <div className="actions">
-                  <Link className="btn ghost sm" href={`/owner/places/${p.id}`}>
-                    편집
-                  </Link>
-                  <Link className="btn ghost sm" href={`/owner/places/${p.id}/dashboard`}>
-                    대시보드
-                  </Link>
-                  <a
-                    className="btn ghost sm"
-                    href={publicUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-disabled={kind !== 'active'}
-                    style={kind !== 'active' ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
-                  >
-                    공개 페이지 ↗
-                  </a>
-                  <PlaceRowActions placeId={p.id} placeName={p.name} status={kind} />
-                </div>
-              </article>
-            )
-          })}
-        </div>
+                  </div>
+
+                  <div className="br-ai">
+                    <div className="top">
+                      <span className="lab">AI 가독성</span>
+                    </div>
+                    {aeo ? (
+                      <>
+                        <div className="score">{aeo.score}<span className="u">/100</span></div>
+                        <div className="bar"><i style={{ width: `${aeo.score}%` }}></i></div>
+                        {aeo.topIssues.length === 0 ? (
+                          <div className="fix none">개선 필요 없음</div>
+                        ) : (
+                          <div className="fix">개선 {aeo.topIssues.length}건</div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="score muted">—</div>
+                        <div className="bar"><i style={{ width: '0%' }}></i></div>
+                        <div className="fix none">
+                          {kind === 'active' ? '집계 대기' : '점수 집계 제외'}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="br-actions">
+                    <Link className="a" href={`/owner/places/${p.id}`}>편집</Link>
+                    <Link className="a" href={`/owner/places/${p.id}/dashboard`}>대시보드</Link>
+                    <span className="sep"></span>
+                    {canViewPublic ? (
+                      <a
+                        className="a"
+                        href={publicUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="공개 페이지 열기"
+                      >
+                        공개 페이지
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                          <path d="M14 3h7v7M10 14L21 3M21 14v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h5" />
+                        </svg>
+                      </a>
+                    ) : (
+                      <span
+                        className="a"
+                        aria-disabled="true"
+                        title={kind === 'archived' ? '보관된 업체는 공개 페이지가 없습니다' : '검수 통과 후 공개됩니다'}
+                        style={{ opacity: 0.5, pointerEvents: 'none', cursor: 'not-allowed' }}
+                      >
+                        공개 페이지
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                          <path d="M14 3h7v7M10 14L21 3M21 14v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h5" />
+                        </svg>
+                      </span>
+                    )}
+                    <PlaceRowActions placeId={p.id} placeName={p.name} status={kind} />
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+
+          <Link href="/owner/places/new" className="biz-add">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v8M8 12h8" />
+            </svg>
+            새 업체 추가
+          </Link>
+        </>
       )}
 
-      <div className="places-footer-note">
-        <b>ⓘ 요금 안내</b> · 월 <b>₩{PLAN_AMOUNT_PER_PLACE.toLocaleString('ko-KR')} / 업체</b> · 업체 추가 시 다음 결제일부터 자동 증액됩니다.
-        파일럿 30일 동안은 무료이며, 보관 처리한 업체는 결제 대상에서 제외됩니다.
+      {/* ========= FOOTER NOTE ========= */}
+      <div className="biz-note">
+        <div className="t">
+          <b>요금 안내 —</b> 업체당 월 ₩{PLAN_AMOUNT_PER_PLACE.toLocaleString('ko-KR')} · 파일럿 30일 무료
+          <span className="mono">· 보관 처리한 업체는 결제 대상에서 제외됩니다</span>
+        </div>
+        <Link className="cta" href="/owner/billing">결제 관리 →</Link>
       </div>
-
-      <style>{`
-        .places-page { padding: 24px 0 80px; display: flex; flex-direction: column; gap: 20px; }
-        .places-hero {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          gap: 20px;
-          padding: 28px;
-          background: var(--ink, #0f0f0f);
-          color: #fff;
-          border-radius: var(--r-lg, 14px);
-        }
-        .places-hero .kicker {
-          margin: 0;
-          font-size: 12px;
-          color: rgba(255,255,255,.6);
-          letter-spacing: .08em;
-          text-transform: uppercase;
-        }
-        .places-hero h1 {
-          margin: 4px 0 8px;
-          font-size: 28px;
-          font-weight: 600;
-        }
-        .places-hero h1 small {
-          font-size: 14px;
-          color: rgba(255,255,255,.6);
-          font-weight: 400;
-        }
-        .places-hero .serif { font-family: var(--font-serif, Georgia, serif); font-style: italic; }
-        .places-hero .lede { margin: 0; font-size: 13px; color: rgba(255,255,255,.78); }
-        .places-hero .right .btn.accent {
-          background: #fff;
-          color: #0f0f0f;
-          padding: 10px 18px;
-          border-radius: 999px;
-          font-weight: 600;
-          text-decoration: none;
-        }
-        @media (max-width: 720px) {
-          .places-hero { flex-direction: column; align-items: stretch; }
-        }
-
-        .places-list { display: flex; flex-direction: column; gap: 12px; }
-        .place-card {
-          background: var(--card, #fff);
-          border: 1px solid var(--line-2, #e7e5e1);
-          border-radius: var(--r-lg, 14px);
-          padding: 18px 22px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 20px;
-        }
-        .place-card.place-card-archived {
-          opacity: .7;
-          background: color-mix(in oklab, var(--line-2, #e7e5e1) 30%, #fff);
-        }
-        .place-card .main { flex: 1; min-width: 0; }
-        .place-card .head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-        .place-card h3 { margin: 0; font-size: 16px; font-weight: 600; }
-        .place-card .meta { font-size: 12px; color: var(--ink-soft, #6b6b6b); }
-        .place-card .meta .path { font-family: var(--mono, monospace); }
-        .place-card .aeo-mini {
-          margin-top: 6px;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 12px;
-          color: var(--ink-soft, #6b6b6b);
-        }
-        .place-card .aeo-mini .grade {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 22px; height: 22px;
-          border-radius: 50%;
-          background: var(--ink, #0f0f0f);
-          color: #fff;
-          font-size: 11px;
-          font-weight: 700;
-        }
-        .place-card .aeo-mini b { color: var(--ink, #0f0f0f); }
-        .place-card .aeo-mini .issues-hint { color: var(--warn, #b45309); }
-        .place-card .actions {
-          display: flex; gap: 6px; flex-wrap: wrap;
-          flex-shrink: 0;
-        }
-        .place-card .actions .btn {
-          padding: 6px 12px;
-          font-size: 12px;
-          border-radius: 8px;
-          text-decoration: none;
-          border: 1px solid var(--line-2, #e7e5e1);
-          color: var(--ink, #0f0f0f);
-          background: var(--card, #fff);
-        }
-        .place-card .actions .btn:hover { background: var(--line-2, #e7e5e1); }
-
-        .status-chip {
-          display: inline-flex;
-          align-items: center;
-          padding: 3px 10px;
-          border-radius: 999px;
-          font-size: 11px;
-          font-weight: 600;
-        }
-        .status-chip.status-good { background: color-mix(in oklab, var(--good, #10a37f) 12%, transparent); color: var(--good, #10a37f); }
-        .status-chip.status-muted { background: color-mix(in oklab, #999 18%, transparent); color: #666; }
-        .status-chip.status-warn { background: color-mix(in oklab, var(--warn, #b45309) 12%, transparent); color: var(--warn, #b45309); }
-        .status-chip.status-bad { background: color-mix(in oklab, var(--bad, #b91c1c) 12%, transparent); color: var(--bad, #b91c1c); }
-
-        .places-footer-note {
-          padding: 14px 18px;
-          background: color-mix(in oklab, var(--accent, #c09062) 6%, transparent);
-          border-left: 3px solid var(--accent, #c09062);
-          border-radius: 8px;
-          font-size: 13px;
-          color: var(--ink, #191919);
-        }
-        .places-footer-note b { color: var(--ink, #0f0f0f); }
-
-        @media (max-width: 720px) {
-          .place-card { flex-direction: column; align-items: stretch; }
-        }
-      `}</style>
     </div>
   )
 }

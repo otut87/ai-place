@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import localFont from "next/font/local"
+import { Instrument_Serif, JetBrains_Mono } from "next/font/google"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@/components/analytics"
 import "./globals.css"
@@ -11,6 +12,23 @@ const pretendard = localFont({
   variable: "--font-pretendard",
   weight: "45 920",
   preload: true,
+})
+
+// aip.css 의 --serif / --mono 토큰에 연결될 Google 폰트. App Router 권장 패턴:
+// <link> 태그 대신 next/font 로 로드하여 자동 self-host + preload.
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-instrument-serif",
+  display: "swap",
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
 })
 
 export const metadata: Metadata = {
@@ -53,7 +71,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ko" className={`h-full antialiased ${pretendard.variable}`}>
+    <html lang="ko" className={`h-full antialiased ${pretendard.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-full flex flex-col font-sans text-[#222222] bg-white">
         {children}
         <Analytics />

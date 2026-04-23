@@ -3,7 +3,7 @@
 // <70 이면 재생성 권장. 어드민 대시보드에도 노출 예정.
 //
 // 스코어 브레이크다운 (총 100점):
-//   - descLength     : 15점 (40~60자 준수)
+//   - descLength     : 15점 (80~160자 권장 · 2~3문장 · 특징·강점 포함)
 //   - keywordDensity : 15점 (description 이 지역·업종 키워드 포함)
 //   - stats          : 20점 (서비스 가격, FAQ 수치 인용 등 구체 수치)
 //   - faqDiversity   : 20점 (FAQ 5개 이상 + 질문 첫 단어 다양)
@@ -61,9 +61,14 @@ function clamp(n: number, min: number, max: number): number {
 
 function scoreDescLength(desc: string): number {
   const len = desc.length
-  if (len >= 40 && len <= 60) return 15
-  if (len >= 35 && len <= 65) return 10
-  if (len >= 30 && len <= 70) return 5
+  // 80~160자(2~3문장)를 권장 — 첫 문장 "{지역} 위치. {전문} 전문." + 특징/강점 2~3문장.
+  if (len < 30) return 0
+  if (len <= 40) return 4
+  if (len < 60) return 8
+  if (len < 80) return 12
+  if (len <= 160) return 15
+  if (len <= 220) return 10
+  if (len <= 300) return 4
   return 0
 }
 
@@ -161,7 +166,7 @@ export function scoreQuality(input: QualityScoreInput): QualityScoreResult {
     breakdown.categoryFit
 
   const suggestions: string[] = []
-  if (breakdown.descLength < 15) suggestions.push('description 을 40~60자 사이로 조정하세요.')
+  if (breakdown.descLength < 15) suggestions.push('description 을 80~160자로, 특징·강점 2~3가지를 포함해 2~3문장으로 작성하세요.')
   if (breakdown.keywordDensity < 10) suggestions.push('description 에 업체명·지역·업종을 모두 포함하세요.')
   if (breakdown.stats < 12) suggestions.push('서비스 가격과 FAQ 답변에 구체 수치(시간·횟수·가격)를 추가하세요.')
   if (breakdown.faqDiversity < 15) suggestions.push('FAQ 5개 이상, 서로 다른 질문 유형으로 다양화하세요.')

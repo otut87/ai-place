@@ -4,7 +4,7 @@
 // 아이콘 + 라벨, 접기(localStorage 유지), 현재 라우트 활성 표시.
 
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import {
   LayoutDashboard,
   ListChecks,
@@ -54,12 +54,16 @@ const COLLAPSE_KEY = 'admin_sidebar_collapsed'
 export function Sidebar() {
   const pathname = usePathname() ?? '/admin'
   const [collapsed, setCollapsed] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  // Hydration 가드 — SSR=false, 클라이언트=true. setState-in-effect 회피.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
 
   useEffect(() => {
-    setMounted(true)
-    const saved = localStorage.getItem(COLLAPSE_KEY)
-    if (saved === '1') setCollapsed(true)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage 기반 1회성 복원. SSR 마크업과 충돌하지 않도록 mount 후 동기화.
+    if (localStorage.getItem(COLLAPSE_KEY) === '1') setCollapsed(true)
   }, [])
 
   function toggle() {

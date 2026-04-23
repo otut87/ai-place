@@ -22,7 +22,7 @@ vi.mock('next/link', () => ({
 const renderAdminLink = async (props: Record<string, unknown>, children: string) => {
   const { AdminLink } = await import('@/components/admin/admin-link')
   const Component = AdminLink as unknown as (p: Record<string, unknown>) => unknown
-  return renderToStaticMarkup(createElement(Component as never, { ...props, children }))
+  return renderToStaticMarkup(createElement(Component as never, props, children))
 }
 
 describe('AdminLink', () => {

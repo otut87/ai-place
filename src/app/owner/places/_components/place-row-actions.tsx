@@ -1,7 +1,7 @@
 'use client'
 
-// T-210 — 업체 카드 액션: 보관/복원 버튼 + 확인 다이얼로그.
-// archiveOwnerPlace / restoreOwnerPlace server action 호출 + 결과에 따라 refresh.
+// T-210/T-215 — 업체 카드 액션: 보관/복원 버튼 + 확인 다이얼로그.
+// T-215 에서 owner.html 의 `.br-actions .a` 아이콘 버튼 스타일에 맞춰 리스타일.
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -51,19 +51,25 @@ export function PlaceRowActions({ placeId, placeName, status }: Props) {
       {canArchive && (
         <button
           type="button"
-          className="btn ghost sm danger-btn"
+          className="a a-icon danger-btn"
           onClick={() => setConfirming('archive')}
           disabled={pending}
+          title="보관하기"
+          aria-label="보관하기"
         >
-          보관
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="4" rx="1" />
+            <path d="M5 8v11a2 2 0 002 2h10a2 2 0 002-2V8M10 12h4" />
+          </svg>
         </button>
       )}
       {canRestore && (
         <button
           type="button"
-          className="btn ghost sm"
+          className="a"
           onClick={() => setConfirming('restore')}
           disabled={pending}
+          title="복원하기"
         >
           복원
         </button>
@@ -114,8 +120,8 @@ export function PlaceRowActions({ placeId, placeName, status }: Props) {
       )}
 
       <style>{`
-        .danger-btn { color: var(--bad, #b91c1c); }
-        .danger-btn:hover { background: color-mix(in oklab, var(--bad, #b91c1c) 8%, transparent) !important; }
+        .danger-btn { color: var(--muted) !important; }
+        .danger-btn:hover { background: color-mix(in oklab, #b42318 8%, transparent) !important; color: #b42318 !important; }
 
         .row-confirm-backdrop {
           position: fixed;
@@ -141,9 +147,9 @@ export function PlaceRowActions({ placeId, placeName, status }: Props) {
         .row-confirm .err {
           margin-bottom: 12px;
           padding: 10px;
-          background: color-mix(in oklab, var(--bad, #b91c1c) 10%, transparent);
+          background: color-mix(in oklab, #b91c1c 10%, transparent);
           border-radius: 6px;
-          color: var(--bad, #b91c1c);
+          color: #b91c1c;
           font-size: 12px;
         }
         .row-confirm .actions { display: flex; justify-content: flex-end; gap: 8px; }
@@ -158,9 +164,9 @@ export function PlaceRowActions({ placeId, placeName, status }: Props) {
           cursor: pointer;
         }
         .row-confirm .btn.danger {
-          background: var(--bad, #b91c1c);
+          background: #b91c1c;
           color: #fff;
-          border-color: var(--bad, #b91c1c);
+          border-color: #b91c1c;
         }
         .row-confirm .btn.accent {
           background: var(--ink, #0f0f0f);

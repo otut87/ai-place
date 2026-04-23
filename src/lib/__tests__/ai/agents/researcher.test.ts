@@ -36,12 +36,13 @@ describe('buildResearchPack', () => {
   })
 
   it('reviewSummaries positiveThemes 를 highlights 로', () => {
-    const p: Place & { reviewSummaries?: Array<{ positiveThemes: string[] }> } = {
+    // buildResearchPack 은 positiveThemes 만 참조 — 테스트에서는 최소 필드만 제공 후 Place 로 캐스팅.
+    const p = {
       ...mkPlace({ slug: 'a' }),
       reviewSummaries: [
         { positiveThemes: ['친절한 상담', '청결한 시설'] },
       ],
-    }
+    } as unknown as Place
     const r = buildResearchPack([p])
     expect(r.reviewHighlights).toContain('친절한 상담')
     expect(r.reviewHighlights).toContain('청결한 시설')

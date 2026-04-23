@@ -1,40 +1,37 @@
 'use client'
 
-// T-201 — Owner 업체 등록 폼 (docs/AIPLACE/register.html 디자인).
-// 플로우 (로직 기존 유지):
-//   1) 업체명 검색 (네이버 지역) → 후보 카드
-//   2) 후보 선택 → Google enrich (평점·리뷰·영업시간·사진)
-//   3) 상세 수정 + AI 자동 생성 → 등록
-//
-// className 은 aip.css + owner-dashboard.css 토큰 (form-card, field, grid-2, chip-picker, …).
+// T-201/T-220 — Owner 업체 등록 폼.
+// 플로우: (1) 네이버 검색 → (2) 후보 선택 → (3) 정보 편집 + AI 자동 생성 → (4) 등록.
+// T-220: 실제 schema(places 테이블) 필드 전부 입력 가능하게 확장. 편집 페이지(pe-*) 와 동일한 유틸(
+//   hours-structured, phone, hangul-romanize) 공유. 누락 필드(recommended_for, strengths, blog_url,
+//   instagram_url, google_business_url)를 chip/link 입력으로 노출.
 
-import { useState, type ChangeEvent } from 'react'
+import { useMemo, useState, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   searchPlaceByNaver,
   enrichFromGoogle,
   generatePlaceContent,
+  generateRecommendation,
   type NaverCandidate,
 } from '@/lib/actions/register-place'
 import { registerOwnerPlaceAction } from '@/lib/actions/owner-register-place'
 import type { PlaceSearchResult } from '@/lib/google-places'
 import { ClaimPlaceButton } from '@/components/business/claim-place-button'
-
-const TIME_OPTIONS = Array.from({ length: 33 }, (_, i) => {
-  const h = Math.floor(i / 2) + 7
-  const m = i % 2 === 0 ? '00' : '30'
-  return `${String(h).padStart(2, '0')}:${m}`
-})
-
-function TimeSelect({ value, onChange, ariaLabel }: { value: string; onChange: (v: string) => void; ariaLabel: string }) {
-  return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={ariaLabel}>
-      <option value="">--:--</option>
-      {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-    </select>
-  )
-}
+import {
+  parseHoursArray,
+  serializeHoursMap,
+  emptyHoursMap,
+  DAY_ORDER,
+  DAY_LABEL_KO,
+  HOURS_PRESETS,
+  timeOptions,
+  type HoursMap,
+  type DayCode,
+} from '@/lib/format/hours-structured'
+import { formatKoreanPhone } from '@/lib/format/phone'
+import { suggestEnglishName, romanizeKorean } from '@/lib/format/hangul-romanize'
 
 interface Props {
   cities: Array<{ slug: string; name: string }>
@@ -69,26 +66,29 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
   const [slug, setSlug] = useState('')
   const [description, setDescription] = useState('')
   const [phone, setPhone] = useState('')
-  const [hours, setHours] = useState([
-    { day: 'Mo', label: '월', open: '', close: '', closed: false },
-    { day: 'Tu', label: '화', open: '', close: '', closed: false },
-    { day: 'We', label: '수', open: '', close: '', closed: false },
-    { day: 'Th', label: '목', open: '', close: '', closed: false },
-    { day: 'Fr', label: '금', open: '', close: '', closed: false },
-    { day: 'Sa', label: '토', open: '', close: '', closed: false },
-    { day: 'Su', label: '일', open: '', close: '', closed: true },
-  ])
+  const [hoursMap, setHoursMap] = useState<HoursMap>(emptyHoursMap())
+  const TIME_OPTS = useMemo(() => timeOptions(), [])
+
+  // 외부 링크 (places schema 의 6개 채널 모두)
   const [naverPlaceUrl, setNaverPlaceUrl] = useState('')
   const [kakaoMapUrl, setKakaoMapUrl] = useState('')
+  const [googleBusinessUrl, setGoogleBusinessUrl] = useState('')
+  const [homepageUrl, setHomepageUrl] = useState('')
+  const [blogUrl, setBlogUrl] = useState('')
+  const [instagramUrl, setInstagramUrl] = useState('')
+
   const [enrichedReviews, setEnrichedReviews] = useState<Array<{ text: string; rating: number }>>([])
-  const [enrichedData, setEnrichedData] = useState<{ openingHours?: string[]; editorialSummary?: string } | null>(null)
+  const [enrichedData, setEnrichedData] = useState<{ openingHours?: string[]; editorialSummary?: string; websiteUri?: string; googleMapsUri?: string } | null>(null)
+
   const [services, setServices] = useState([{ name: '', description: '', priceRange: '' }])
   const [faqs, setFaqs] = useState([
     { question: '', answer: '' },
     { question: '', answer: '' },
     { question: '', answer: '' },
   ])
-  const [tags, setTags] = useState('')
+  const [tags, setTags] = useState<string[]>([])
+  const [recommendedFor, setRecommendedFor] = useState<string[]>([])
+  const [strengths, setStrengths] = useState<string[]>([])
   const [photoRefs, setPhotoRefs] = useState<string[]>([])
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
 
@@ -97,7 +97,8 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
     !selectedPlace && (naverResults.length > 0 || loading) ? 2 :
     selectedPlace ? 3 : 1
 
-  // ── 액션 ─────────────────────────────────────────────────────────
+  // ── 액션 ────────────────────────────────────────────────────────────
+
   async function handleSearch() {
     if (!query.trim()) return
     setLoading(true)
@@ -131,19 +132,20 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
     }
     setSelectedPlace(naverBased)
     setNaverResults([])
-    if (c.phone) setPhone(c.phone)
-    setNaverPlaceUrl(c.naverPlaceUrl)
-    if (c.latitude && c.longitude) {
-      setKakaoMapUrl(`https://map.kakao.com/link/map/${encodeURIComponent(c.displayName)},${c.latitude},${c.longitude}`)
-    } else {
-      setKakaoMapUrl(`https://map.kakao.com/link/search/${encodeURIComponent(c.displayName)}`)
-    }
+    if (c.phone) setPhone(formatKoreanPhone(c.phone))
+    // Naver/Kakao 는 공식 비즈니스 URL 이 없으면 검색 링크로 치환해도 빈 페이지/지도 핀만 나옴.
+    // 사장님이 직접 본인 업체 페이지 URL 을 붙여넣도록 빈 값 유지 — 옆 "새창에서 찾기" 버튼으로 보조.
+    setNaverPlaceUrl('')
+    setKakaoMapUrl('')
 
-    const slugCandidate = c.displayName
-      .replace(/\s+/g, '-').toLowerCase()
-      .replace(/[^a-z0-9-가-힣]/g, '')
-      .replace(/-+/g, '-').replace(/^-|-$/g, '')
-    setSlug(slugCandidate.slice(0, 100) || `${c.detectedCategorySlug ?? 'place'}-${Date.now().toString(36).slice(-4)}`)
+    // 한글명 → Revised Romanization → slug. 40자 cap (Naver 이름은 지점·상호·분야 다 붙여서 매우 김).
+    // 바로 뒤에 Google enrichment 가 nameEn 을 주면 재생성함.
+    const naverSlug = buildSlug(romanizeKorean(c.displayName))
+    const fallbackStamp = new Date().getTime().toString(36).slice(-4)
+    setSlug(naverSlug || `${c.detectedCategorySlug ?? 'place'}-${fallbackStamp}`)
+
+    // 한글명 → 영문명 초안 자동 생성
+    setNameEn(suggestEnglishName(c.displayName))
 
     setLoading(true)
     const enriched = await enrichFromGoogle({
@@ -160,33 +162,30 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
       rating: d.rating,
       reviewCount: d.reviewCount,
     } : prev)
-    if (d.nameEn) setNameEn(d.nameEn)
-    if (d.phone && !c.phone) setPhone(d.phone)
+    if (d.nameEn) {
+      setNameEn(d.nameEn)
+      // Google 영문명 기준 slug 재생성 — 한글 음절 나열보다 훨씬 깔끔·짧음.
+      const enSlug = buildSlug(d.nameEn)
+      if (enSlug) setSlug(enSlug)
+    }
+    if (d.phone && !c.phone) setPhone(formatKoreanPhone(d.phone))
+    // Google 영업시간 → Schema.org 약어 배열로 변환 후 hoursMap 에 병합
     if (d.openingHours) {
-      const dayMap: Record<string, string> = { '월요일': 'Mo', '화요일': 'Tu', '수요일': 'We', '목요일': 'Th', '금요일': 'Fr', '토요일': 'Sa', '일요일': 'Su' }
-      setHours((prev) => prev.map((h) => {
-        const line = d.openingHours?.find((l) => {
-          const dayKr = Object.entries(dayMap).find(([, v]) => v === h.day)?.[0]
-          return dayKr && l.startsWith(dayKr)
-        })
-        if (!line) return { ...h, closed: true, open: '', close: '' }
-        if (line.includes('휴무')) return { ...h, closed: true, open: '', close: '' }
-        const timeMatch = line.match(/(\d{1,2}:\d{2})\s*~\s*.*?(\d{1,2}:\d{2})/)
-        if (!timeMatch) return h
-        const rawOpen = timeMatch[1]
-        const rawClose = timeMatch[2]
-        const openTime = line.indexOf('오후') < line.indexOf(rawOpen) && parseInt(rawOpen) < 12
-          ? `${parseInt(rawOpen) + 12}:${rawOpen.split(':')[1]}`
-          : rawOpen.padStart(5, '0')
-        const closeIdx = line.lastIndexOf('오후')
-        const closeTime = closeIdx > line.indexOf(rawOpen) && parseInt(rawClose) < 12
-          ? `${parseInt(rawClose) + 12}:${rawClose.split(':')[1]}`
-          : rawClose.padStart(5, '0')
-        return { ...h, closed: false, open: openTime, close: closeTime }
-      }))
+      const schemaArr = convertGoogleHoursToSchemaOrg(d.openingHours)
+      if (schemaArr.length > 0) {
+        setHoursMap(parseHoursArray(schemaArr))
+      }
     }
     if (d.reviews) setEnrichedReviews(d.reviews)
-    setEnrichedData({ openingHours: d.openingHours, editorialSummary: d.editorialSummary })
+    setEnrichedData({
+      openingHours: d.openingHours,
+      editorialSummary: d.editorialSummary,
+      websiteUri: d.websiteUri,
+      googleMapsUri: d.googleMapsUri,
+    })
+    // 외부 링크 자동 채움 — Google 에서 받아온 URL 이 있으면 빈 필드에 주입
+    if (d.googleMapsUri) setGoogleBusinessUrl(d.googleMapsUri)
+    if (d.websiteUri) setHomepageUrl(d.websiteUri)
     if (d.photoRefs && d.photoRefs.length > 0) {
       setPhotoRefs(d.photoRefs)
       setSelectedPhotos(new Set(d.photoRefs))
@@ -200,7 +199,10 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
     }
     setAiLoading(true)
     setError(null)
-    const result = await generatePlaceContent({
+
+    // Content(소개/서비스/FAQ/태그) + Recommendation(추천대상/강점) 병렬 호출.
+    // 서비스 초안이 먼저 필요한 recommendation 은 content 완료 후 실행.
+    const contentResult = await generatePlaceContent({
       name: selectedPlace.name,
       category,
       address: selectedPlace.address,
@@ -210,15 +212,39 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
       openingHours: enrichedData?.openingHours,
       editorialSummary: enrichedData?.editorialSummary,
     })
-    setAiLoading(false)
-    if (result.success) {
-      if (result.data.description) setDescription(result.data.description)
-      setServices(result.data.services)
-      setFaqs(result.data.faqs)
-      setTags(result.data.tags.join(', '))
-    } else {
-      setError(result.error)
+
+    if (!contentResult.success) {
+      setAiLoading(false)
+      setError(contentResult.error)
+      return
     }
+
+    if (contentResult.data.description) setDescription(contentResult.data.description)
+    const generatedServices = contentResult.data.services.map((s) => ({
+      name: s.name,
+      description: s.description ?? '',
+      priceRange: s.priceRange ?? '',
+    }))
+    setServices(generatedServices)
+    setFaqs(contentResult.data.faqs)
+    setTags(contentResult.data.tags)
+
+    // 추천 대상·강점 — 서비스 초안을 컨텍스트로 넣어 품질↑.
+    const recoResult = await generateRecommendation({
+      name: selectedPlace.name,
+      category,
+      address: selectedPlace.address,
+      services: generatedServices,
+      rating: selectedPlace.rating,
+      reviewCount: selectedPlace.reviewCount,
+      reviews: enrichedReviews,
+    })
+    setAiLoading(false)
+    if (recoResult.success) {
+      if (recoResult.data.recommendedFor.length > 0) setRecommendedFor(recoResult.data.recommendedFor)
+      if (recoResult.data.strengths.length > 0) setStrengths(recoResult.data.strengths)
+    }
+    // recoResult 실패해도 content 는 성공했으므로 에러 표시 안 함.
   }
 
   async function handleSubmit() {
@@ -230,7 +256,7 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
     setLoading(true)
     setError(null)
     const isNaverOnly = selectedPlace.placeId === 'naver'
-    const hoursArray = hours.filter((h) => !h.closed && h.open && h.close).map((h) => `${h.day} ${h.open}-${h.close}`)
+    const hoursArray = serializeHoursMap(hoursMap)
     const images = [...selectedPhotos]
       .filter((ref) => photoRefs.includes(ref))
       .map((ref) => ({
@@ -250,12 +276,18 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
       phone: phone || undefined,
       openingHours: hoursArray.length > 0 ? hoursArray : undefined,
       description: description || undefined,
-      tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+      tags,
+      recommendedFor,
+      strengths,
       services: services.filter((s) => s.name.trim()),
       faqs: faqs.filter((f) => f.question.trim() && f.answer.trim()),
       images: images.length > 0 ? images : undefined,
       naverPlaceUrl: naverPlaceUrl || undefined,
       kakaoMapUrl: kakaoMapUrl || undefined,
+      googleBusinessUrl: googleBusinessUrl || undefined,
+      homepageUrl: homepageUrl || undefined,
+      blogUrl: blogUrl || undefined,
+      instagramUrl: instagramUrl || undefined,
       googlePlaceId: isNaverOnly ? undefined : selectedPlace.placeId,
       rating: selectedPlace.rating,
       reviewCount: selectedPlace.reviewCount,
@@ -279,7 +311,17 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
     setError(null)
   }
 
-  // ── 렌더 ──────────────────────────────────────────────────────────
+  // chip helpers
+  function addChip(list: string[], setList: (v: string[]) => void, value: string, max: number) {
+    const v = value.trim()
+    if (!v || list.includes(v) || list.length >= max) return
+    setList([...list, v])
+  }
+
+  const descLen = description.length
+  const descValid = descLen >= 80 && descLen <= 160
+
+  // ── 렌더 ────────────────────────────────────────────────────────────
   return (
     <>
       <div className="steps-nav">
@@ -289,18 +331,20 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
         <StepPill n={4} label="등록" current={currentStep} />
       </div>
 
-      {error && <div className="form-inline-error" role="alert">{error}</div>}
+      {error && <div className="pl-info err" role="alert">⚠️ {error}</div>}
 
-      <form className="form-card" onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
-        {/* ── STEP 1: 검색 ────────────────────────────────────────── */}
-        <div className="field">
-          <label className="lbl" htmlFor="biz-search">
-            업체명 + 지역 <span style={{ color: 'var(--accent)' }}>*</span>
-          </label>
-          <div className="hint">네이버 플레이스에서 찾고, Google 에서 자동으로 정보를 가져옵니다.</div>
-          <div className="search-row">
+      <form className="pl-form" onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
+
+        {/* ========== SEARCH ========== */}
+        <section className="pl-sec">
+          <div className="pl-sec-head">
+            <div>
+              <div className="eyebrow">Step 1</div>
+              <h3>업체명 검색</h3>
+            </div>
+          </div>
+          <div className="pl-search">
             <input
-              id="biz-search"
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -309,23 +353,17 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
               autoFocus
               disabled={!!selectedPlace}
             />
-            <button
-              type="button"
-              onClick={handleSearch}
-              disabled={loading || !!selectedPlace}
-              className="btn accent"
-            >
+            <button type="button" onClick={handleSearch} disabled={loading || !!selectedPlace}>
               {loading ? '검색 중…' : '검색'}
             </button>
           </div>
-        </div>
+          <p className="hint" style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
+            네이버 플레이스에서 찾고, Google 에서 자동으로 정보를 가져옵니다.
+          </p>
 
-        {/* STEP 2: 후보 카드 */}
-        {!selectedPlace && naverResults.length > 0 && (
-          <div className="field">
-            <label className="lbl">후보 {naverResults.length}곳</label>
-            <div className="hint">업체명을 클릭하면 Google 에서 자동으로 평점·리뷰·영업시간을 가져옵니다.</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* 후보 결과 */}
+          {!selectedPlace && naverResults.length > 0 && (
+            <div className="candidate-list">
               {naverResults.map((c, idx) => {
                 const disabled = c.alreadyRegistered != null
                 return (
@@ -339,7 +377,7 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
                     <div className="row-1">
                       <b>{c.displayName}</b>
                       {disabled
-                        ? <span className="chip" style={{ background: 'color-mix(in oklab, #c24b2f 12%, transparent)', color: '#9a2c00' }}>이미 등록됨</span>
+                        ? <span className="chip bad">이미 등록됨</span>
                         : <span className="chip good">naver</span>}
                       {c.naverCategory && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{c.naverCategory}</span>}
                     </div>
@@ -382,288 +420,580 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
                 )
               })}
             </div>
-          </div>
-        )}
+          )}
 
-        {!selectedPlace && naverResults.length === 0 && query.length > 0 && !loading && (
-          <div className="form-inline-info">
-            <b style={{ color: 'var(--ink)' }}>네이버 플레이스에 없는 업체는 등록 불가</b>입니다.
-            <div style={{ marginTop: 6, fontSize: 12 }}>
+          {!selectedPlace && naverResults.length === 0 && query.length > 0 && !loading && (
+            <div className="pl-info warn" style={{ marginTop: 12 }}>
+              <b>네이버 플레이스에 없는 업체는 등록 불가</b> 입니다.
               먼저{' '}
-              <a href="https://smartplace.naver.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
+              <a href="https://smartplace.naver.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
                 네이버 스마트플레이스
               </a>
               {' '}또는{' '}
-              <a href="https://www.google.com/business" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
+              <a href="https://www.google.com/business" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
                 Google Business Profile
               </a>
-              {' '}에 업체를 등록하신 후 다시 검색해 주세요.
+              {' '}에 등록 후 다시 검색해 주세요.
             </div>
-          </div>
-        )}
+          )}
+        </section>
 
-        {/* STEP 3: 선택 후 자동 채움 ─────────────────────────────── */}
         {selectedPlace && (
           <>
-            <div className="form-inline-info" style={{ marginBottom: 20 }}>
-              <b style={{ color: 'var(--ink)' }}>선택: {selectedPlace.name}</b>
-              {' '}· {selectedPlace.address}
-              {selectedPlace.rating != null && ` · ★ ${selectedPlace.rating}`}
-              {' '}
-              <button type="button" onClick={handleReset} className="btn ghost sm" style={{ marginLeft: 10 }}>
-                변경
-              </button>
-            </div>
-
-            <div className="field">
-              <label className="lbl">자동 분류 결과 (필요시 수정)</label>
-              <div className="grid-2">
+            {/* ========== SELECTED ========== */}
+            <section className="pl-sec">
+              <div className="pl-sec-head">
                 <div>
-                  <label className="lbl" htmlFor="f-city" style={{ fontSize: 12 }}>도시</label>
-                  <select id="f-city" value={city} onChange={(e) => setCity(e.target.value)}>
-                    {cities.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
-                  </select>
+                  <div className="eyebrow">선택된 업체</div>
+                  <h3>{selectedPlace.name}</h3>
                 </div>
-                <div>
-                  <label className="lbl" htmlFor="f-cat" style={{ fontSize: 12 }}>업종</label>
-                  <input
-                    id="f-cat"
-                    type="text"
-                    value={catSearch}
-                    onChange={(e) => { setCatSearch(e.target.value); setCategory('') }}
-                    placeholder={category ? (categories.find((c) => c.slug === category)?.name ?? '') : '검색하여 변경'}
-                  />
-                  {filteredCategories.length > 0 && catSearch && !category && (
-                    <div style={{
-                      marginTop: 6, maxHeight: 140, overflowY: 'auto',
-                      border: '1px solid var(--line-2)', borderRadius: 8, background: 'var(--card)',
-                    }}>
-                      {filteredCategories.slice(0, 10).map((c) => (
-                        <button
-                          key={c.slug}
-                          type="button"
-                          onClick={() => { setCategory(c.slug); setCatSearch(c.name); setSelectedSector(c.sector) }}
-                          style={{
-                            display: 'block', width: '100%', textAlign: 'left',
-                            padding: '8px 12px', fontSize: 13, background: 'transparent',
-                            border: 'none', cursor: 'pointer', color: 'var(--ink)',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-2)')}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                        >
-                          {c.name} <span style={{ color: 'var(--muted-2)', fontFamily: 'var(--mono)' }}>({c.slug})</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {category && (
-                    <div style={{ marginTop: 4, fontSize: 12, color: 'var(--good)', fontFamily: 'var(--mono)' }}>
-                      ✓ {categories.find((c) => c.slug === category)?.name}
-                    </div>
-                  )}
+                <button type="button" className="back" onClick={handleReset} style={{ padding: '6px 12px', fontSize: 12 }}>
+                  다시 선택
+                </button>
+              </div>
+              <div className="pl-info ok">
+                {selectedPlace.address}
+                {selectedPlace.rating != null && ` · ★ ${selectedPlace.rating} (${selectedPlace.reviewCount ?? 0})`}
+              </div>
+
+              {/* 도시/업종 */}
+              <div className="pe-field" style={{ marginTop: 16 }}>
+                <label>자동 분류 — 틀리면 수정</label>
+                <div className="row-2">
+                  <div>
+                    <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>도시</label>
+                    <select className="pe-inp" value={city} onChange={(e) => setCity(e.target.value)}>
+                      {cities.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="cat-picker">
+                    <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>업종</label>
+                    <input
+                      className="pe-inp"
+                      type="text"
+                      value={catSearch}
+                      onChange={(e) => { setCatSearch(e.target.value); setCategory('') }}
+                      placeholder={category ? (categories.find((c) => c.slug === category)?.name ?? '') : '검색하여 변경'}
+                    />
+                    {filteredCategories.length > 0 && catSearch && !category && (
+                      <div className="suggest">
+                        {filteredCategories.slice(0, 10).map((c) => (
+                          <button
+                            key={c.slug}
+                            type="button"
+                            onClick={() => { setCategory(c.slug); setCatSearch(c.name); setSelectedSector(c.sector) }}
+                          >
+                            {c.name} <span className="slug">{c.slug}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {category && (
+                      <div className="confirmed">✓ {categories.find((c) => c.slug === category)?.name}</div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            </section>
 
+            {/* ========== AI CTA ========== */}
             <button
               type="button"
+              className="ai-cta"
               onClick={handleAiGenerate}
               disabled={aiLoading}
-              className="btn accent lg"
-              style={{ width: '100%', marginBottom: 20 }}
             >
-              {aiLoading ? 'AI 생성 중…' : '✨ 소개 · 서비스 · FAQ · 태그 AI 자동 생성'}
+              <span className="sparkle">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z" />
+                </svg>
+              </span>
+              <span className="body">
+                {aiLoading ? 'AI 가 작성 중…' : '소개 · 서비스 · FAQ · 태그 AI 자동 생성'}
+                <small>Google 리뷰·영업시간 기반 초안 · 수정 가능</small>
+              </span>
             </button>
 
-            <div className="grid-2">
-              <div className="field">
-                <label className="lbl" htmlFor="f-name-en">영문 이름 <span style={{ color: 'var(--muted)', fontSize: 11 }}>(자동)</span></label>
-                <input id="f-name-en" type="text" value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
-              </div>
-              <div className="field">
-                <label className="lbl" htmlFor="f-slug">URL 슬러그 <span style={{ color: 'var(--muted)', fontSize: 11 }}>(자동)</span></label>
-                <input id="f-slug" type="text" value={slug} onChange={(e) => setSlug(e.target.value)} />
-                <div className="hint" style={{ marginTop: 4 }}>
-                  aiplace.kr/{city}/{category || '...'}/{slug || '...'}
+            {/* ========== BASIC ========== */}
+            <section className="pl-sec">
+              <div className="pl-sec-head">
+                <div>
+                  <div className="eyebrow">Section 01</div>
+                  <h3>기본 정보</h3>
                 </div>
               </div>
-            </div>
 
-            <div className="field">
-              <label className="lbl" htmlFor="f-desc">
-                소개
-                {' '}<span style={{ fontSize: 11, color: description.length >= 40 && description.length <= 60 ? 'var(--good)' : 'var(--muted)', fontFamily: 'var(--mono)' }}>
-                  {description.length}/60자 권장
-                </span>
-              </label>
-              <div className="hint">AI 가 인용하기 좋은 문장: 구체적인 숫자·경력·자격.</div>
-              <textarea id="f-desc" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={100} rows={3} />
-            </div>
+              <div className="row-2">
+                <div className="pe-field">
+                  <label>영문 / 대체 이름</label>
+                  <p className="hint">AI 자동 변환된 초안입니다. 수정 가능.</p>
+                  <input
+                    className="pe-inp"
+                    type="text"
+                    value={nameEn}
+                    onChange={(e) => setNameEn(e.target.value)}
+                    placeholder="예: Cleanhue Clinic"
+                  />
+                </div>
+                <div className="pe-field">
+                  <label>URL 슬러그 <span className="opt">자동</span></label>
+                  <p className="hint">aiplace.kr/{city}/{category || '...'}/{slug || '...'}</p>
+                  <input
+                    className="pe-inp mono"
+                    type="text"
+                    value={slug}
+                    onChange={(e) => setSlug(buildSlug(e.target.value))}
+                    placeholder="cleanhue-clinic"
+                    maxLength={40}
+                  />
+                </div>
+              </div>
 
-            <div className="field">
-              <label className="lbl">영업시간 <span className="chip good" style={{ fontSize: 10.5, padding: '1px 7px', marginLeft: 6 }}>Google 자동</span></label>
-              <div className="hours-list">
-                {hours.map((h, i) => (
-                  <div key={h.day} className="hours-row">
-                    <span className="d">{h.label}</span>
-                    <label className="closed-lbl">
+              <div className="pe-field">
+                <label>소개 문구 <span className="opt">권장 80–160자 (2~3문장)</span></label>
+                <p className="hint">
+                  첫 문장에 <b>누가·어디서·무엇을 잘하는지</b>, 이어서 <b>이 업체만의 특징·강점</b> (장비·경력·시술 시그니처·동선) 을
+                  1~2문장 더 쓰면 AI 인용률이 평균 2.8배 올라갑니다. 권장 범위일 뿐 강제하지 않습니다.
+                </p>
+                <textarea
+                  className="pe-ta"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  maxLength={400}
+                  rows={5}
+                />
+                <div className={`count${descValid ? ' ok' : descLen > 0 && descLen < 40 ? ' warn' : ''}`}>
+                  <span>{descLen}</span>자
+                </div>
+              </div>
+            </section>
+
+            {/* ========== CONTACT ========== */}
+            <section className="pl-sec">
+              <div className="pl-sec-head">
+                <div>
+                  <div className="eyebrow">Section 02</div>
+                  <h3>연락처 · 영업시간</h3>
+                </div>
+              </div>
+
+              <div className="pe-field">
+                <label>대표 전화</label>
+                <p className="hint">숫자만 입력하면 자동으로 하이픈이 붙습니다.</p>
+                <input
+                  className="pe-inp mono"
+                  type="tel"
+                  inputMode="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(formatKoreanPhone(e.target.value))}
+                  placeholder="041-123-4567"
+                  maxLength={14}
+                />
+              </div>
+
+              <div className="pe-field">
+                <label>영업시간</label>
+                <p className="hint">요일별로 선택하세요. Schema.org 포맷으로 저장되어 AI 가 정확히 인식합니다.</p>
+                <div className="hours-presets">
+                  <span className="hp-lbl">빠른 설정</span>
+                  {HOURS_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      className="hp"
+                      onClick={() => setHoursMap(preset.apply(hoursMap))}
+                    >
+                      <b>{preset.label}</b>
+                      <span>{preset.description}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="hours-grid">
+                  {DAY_ORDER.map((d) => {
+                    const row = hoursMap[d]
+                    const dayCls = d === 'Su' ? 'day sun' : d === 'Sa' ? 'day sat' : 'day'
+                    return (
+                      <div key={d} className={`hrow${row.closed ? ' closed' : ''}`}>
+                        <span className={dayCls}>{DAY_LABEL_KO[d]}</span>
+                        {row.closed ? (
+                          <span className="closed-chip">휴무</span>
+                        ) : (
+                          <div className="times">
+                            <select
+                              value={row.open}
+                              onChange={(e) => updateHoursDay(setHoursMap, d, { open: e.target.value })}
+                              aria-label={`${DAY_LABEL_KO[d]}요일 여는 시간`}
+                            >
+                              {TIME_OPTS.map((t) => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                            <span className="sep-d">–</span>
+                            <select
+                              value={row.close}
+                              onChange={(e) => updateHoursDay(setHoursMap, d, { close: e.target.value })}
+                              aria-label={`${DAY_LABEL_KO[d]}요일 닫는 시간`}
+                            >
+                              {TIME_OPTS.map((t) => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                          </div>
+                        )}
+                        <label className="tg">
+                          <input
+                            type="checkbox"
+                            checked={row.closed}
+                            onChange={(e) => updateHoursDay(setHoursMap, d, { closed: e.target.checked })}
+                          />
+                          휴무
+                        </label>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </section>
+
+            {/* ========== SERVICES ========== */}
+            <section className="pl-sec">
+              <div className="pl-sec-head">
+                <div>
+                  <div className="eyebrow">Section 03</div>
+                  <h3>제공 서비스</h3>
+                </div>
+              </div>
+              <p className="hint" style={{ marginBottom: 12 }}>
+                서비스명 + 한 줄 설명 + 가격대. AI 자동 생성이 초안을 채워줍니다.
+              </p>
+              <div className="svc-list">
+                {services.map((s, i) => (
+                  <div className="svc" key={i}>
+                    <span className="drag" aria-hidden="true" title="드래그">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <circle cx="9" cy="6" r="1.2" /><circle cx="15" cy="6" r="1.2" />
+                        <circle cx="9" cy="12" r="1.2" /><circle cx="15" cy="12" r="1.2" />
+                        <circle cx="9" cy="18" r="1.2" /><circle cx="15" cy="18" r="1.2" />
+                      </svg>
+                    </span>
+                    <div className="sv-main">
                       <input
-                        type="checkbox"
-                        checked={h.closed}
+                        className="name"
+                        aria-label="서비스명"
+                        placeholder="서비스명 (예: 주택 인테리어)"
+                        value={s.name}
                         onChange={(e) => {
-                          const next = [...hours]
-                          next[i] = { ...next[i], closed: e.target.checked }
-                          setHours(next)
+                          const next = [...services]; next[i] = { ...next[i], name: e.target.value }; setServices(next)
                         }}
                       />
-                      <span>휴무</span>
-                    </label>
-                    {!h.closed && (
-                      <>
-                        <TimeSelect
-                          value={h.open}
-                          onChange={(val) => setHours((prev) => prev.map((item, j) => j === i ? { ...item, open: val } : item))}
-                          ariaLabel={`${h.label} 오픈`}
-                        />
-                        <span style={{ color: 'var(--muted)' }}>~</span>
-                        <TimeSelect
-                          value={h.close}
-                          onChange={(val) => setHours((prev) => prev.map((item, j) => j === i ? { ...item, close: val } : item))}
-                          ariaLabel={`${h.label} 마감`}
-                        />
-                      </>
-                    )}
+                      <input
+                        className="desc"
+                        aria-label="한 줄 설명"
+                        placeholder="한 줄 설명"
+                        value={s.description}
+                        onChange={(e) => {
+                          const next = [...services]; next[i] = { ...next[i], description: e.target.value }; setServices(next)
+                        }}
+                      />
+                    </div>
+                    <input
+                      className="price"
+                      aria-label="가격대"
+                      placeholder="50-300만원"
+                      value={s.priceRange}
+                      onChange={(e) => {
+                        const next = [...services]; next[i] = { ...next[i], priceRange: e.target.value }; setServices(next)
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="x"
+                      onClick={() => setServices(services.filter((_, j) => j !== i))}
+                      title="삭제"
+                      aria-label="서비스 삭제"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path d="M6 6l12 12M6 18L18 6" />
+                      </svg>
+                    </button>
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="grid-2">
-              <div className="field">
-                <label className="lbl" htmlFor="f-phone">전화번호</label>
-                <input id="f-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </div>
-              <div className="field">
-                <label className="lbl" htmlFor="f-kakao">카카오맵 URL</label>
-                <input id="f-kakao" type="url" value={kakaoMapUrl} onChange={(e) => setKakaoMapUrl(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="field">
-              <label className="lbl" htmlFor="f-naver">네이버 플레이스 URL</label>
-              <input id="f-naver" type="url" value={naverPlaceUrl} onChange={(e) => setNaverPlaceUrl(e.target.value)} />
-            </div>
-
-            <div className="field">
-              <label className="lbl">서비스</label>
-              <div className="hint">서비스명 · 설명 · 가격대. AI 자동 생성에서 초안이 들어옵니다.</div>
-              {services.map((s, i) => (
-                <div key={i} className="grid-3" style={{ marginBottom: 8 }}>
-                  <input placeholder="서비스명" value={s.name} onChange={(e) => { const next = [...services]; next[i] = { ...next[i], name: e.target.value }; setServices(next) }} />
-                  <input placeholder="설명" value={s.description} onChange={(e) => { const next = [...services]; next[i] = { ...next[i], description: e.target.value }; setServices(next) }} />
-                  <input placeholder="가격대" value={s.priceRange} onChange={(e) => { const next = [...services]; next[i] = { ...next[i], priceRange: e.target.value }; setServices(next) }} />
-                </div>
-              ))}
               <button
                 type="button"
+                className="add-btn"
                 onClick={() => setServices([...services, { name: '', description: '', priceRange: '' }])}
-                className="btn ghost sm"
               >
-                + 서비스 추가
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                서비스 추가
               </button>
-            </div>
+            </section>
 
-            <div className="field">
-              <label className="lbl">FAQ</label>
-              <div className="hint">업체명으로 시작하는 질문 3~5개 권장 (AI 답변 인용률 ↑).</div>
-              {faqs.map((f, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-                  <input
-                    placeholder="질문 (업체명 포함 · ?로 끝)"
-                    value={f.question}
-                    onChange={(e) => { const next = [...faqs]; next[i] = { ...next[i], question: e.target.value }; setFaqs(next) }}
-                  />
-                  <input
-                    placeholder="답변"
-                    value={f.answer}
-                    onChange={(e) => { const next = [...faqs]; next[i] = { ...next[i], answer: e.target.value }; setFaqs(next) }}
-                  />
+            {/* ========== FAQ ========== */}
+            <section className="pl-sec">
+              <div className="pl-sec-head">
+                <div>
+                  <div className="eyebrow">Section 04</div>
+                  <h3>자주 묻는 질문</h3>
                 </div>
-              ))}
+              </div>
+              <p className="hint" style={{ marginBottom: 12 }}>
+                업체명으로 시작하는 질문 3~5개 권장 (AI 답변 인용률 ↑).
+              </p>
+              <div className="faq-list">
+                {faqs.map((f, i) => (
+                  <div className="faq" key={i}>
+                    <button
+                      type="button"
+                      className="f-x"
+                      onClick={() => setFaqs(faqs.filter((_, j) => j !== i))}
+                      title="삭제" aria-label="FAQ 삭제"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path d="M6 6l12 12M6 18L18 6" />
+                      </svg>
+                    </button>
+                    <input
+                      className="f-q"
+                      aria-label="질문"
+                      placeholder="Q. 업체명으로 시작하는 질문 (예: 영업시간은 어떻게 되나요?)"
+                      value={f.question}
+                      onChange={(e) => {
+                        const next = [...faqs]; next[i] = { ...next[i], question: e.target.value }; setFaqs(next)
+                      }}
+                    />
+                    <textarea
+                      className="f-a"
+                      aria-label="답변"
+                      placeholder="A. 구어체 답변"
+                      value={f.answer}
+                      onChange={(e) => {
+                        const next = [...faqs]; next[i] = { ...next[i], answer: e.target.value }; setFaqs(next)
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
               <button
                 type="button"
+                className="add-btn"
                 onClick={() => setFaqs([...faqs, { question: '', answer: '' }])}
-                className="btn ghost sm"
               >
-                + FAQ 추가
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                FAQ 추가
               </button>
-            </div>
+            </section>
 
-            <div className="field">
-              <label className="lbl" htmlFor="f-tags">태그</label>
-              <div className="hint">쉼표로 구분 · 예: 여드름, 레이저, 보톡스</div>
-              <input id="f-tags" type="text" value={tags} onChange={(e) => setTags(e.target.value)} />
-            </div>
+            {/* ========== TAGS / RECOMMENDED / STRENGTHS ========== */}
+            <section className="pl-sec">
+              <div className="pl-sec-head">
+                <div>
+                  <div className="eyebrow">Section 05</div>
+                  <h3>태그 · 추천 대상 · 강점</h3>
+                </div>
+              </div>
+              <p className="hint" style={{ marginBottom: 12 }}>
+                AI 가 &ldquo;어떤 사람에게 이 업체를 추천할까?&rdquo; 를 결정할 때 참고합니다.
+              </p>
 
-            <div className="field">
-              <label className="lbl">사진 <span className="chip good" style={{ fontSize: 10.5, padding: '1px 7px', marginLeft: 6 }}>Google 자동</span></label>
+              <RegChipGroup
+                label="태그" hint={`${tags.length} / 10개`}
+                chips={tags} placeholder="태그 입력 후 Enter, 또는 쉼표"
+                onAdd={(v) => addChip(tags, setTags, v, 10)}
+                onRemove={(v) => setTags(tags.filter((t) => t !== v))}
+              />
+              <RegChipGroup
+                label="추천 대상" hint={`${recommendedFor.length} / 6개`}
+                chips={recommendedFor} placeholder="예: 신혼부부, 자영업자, 카페 오픈 예정"
+                onAdd={(v) => addChip(recommendedFor, setRecommendedFor, v, 6)}
+                onRemove={(v) => setRecommendedFor(recommendedFor.filter((t) => t !== v))}
+              />
+              <RegChipGroup
+                label="강점" hint={strengths.length > 0 ? `${strengths.length}개` : '선택'}
+                chips={strengths} placeholder="예: 20년 경력, 야간 진료, 면허 보유"
+                onAdd={(v) => addChip(strengths, setStrengths, v, 8)}
+                onRemove={(v) => setStrengths(strengths.filter((t) => t !== v))}
+              />
+            </section>
+
+            {/* ========== LINKS ========== */}
+            <section className="pl-sec">
+              <div className="pl-sec-head">
+                <div>
+                  <div className="eyebrow">Section 06</div>
+                  <h3>외부 포털 링크</h3>
+                </div>
+              </div>
+              <p className="hint" style={{ marginBottom: 12 }}>
+                Google, 네이버, 카카오 등 외부 포털에 이미 업체가 있다면 <b>실제 업체 페이지 URL</b> 을 붙여넣어 주세요.
+                AI 가 여러 출처를 함께 읽을 때 신뢰도가 올라갑니다. 오른쪽 &ldquo;새창에서 찾기&rdquo; 버튼은 검색 페이지만 열어 줍니다.
+              </p>
+              <div className="row-2">
+                <RegLinkField
+                  label="네이버 플레이스" value={naverPlaceUrl} onChange={setNaverPlaceUrl}
+                  placeholder="https://naver.me/... 또는 https://m.place.naver.com/..."
+                  searchUrl={`https://map.naver.com/p/search/${encodeURIComponent(selectedPlace.name)}`}
+                  searchLabel="네이버에서 찾기"
+                />
+                <RegLinkField
+                  label="카카오맵" value={kakaoMapUrl} onChange={setKakaoMapUrl}
+                  placeholder="https://place.map.kakao.com/..."
+                  searchUrl={`https://map.kakao.com/?q=${encodeURIComponent(selectedPlace.name)}`}
+                  searchLabel="카카오에서 찾기"
+                />
+                <RegLinkField
+                  label="Google Business Profile" value={googleBusinessUrl} onChange={setGoogleBusinessUrl}
+                  placeholder="https://maps.google.com/..."
+                  searchUrl={`https://www.google.com/maps/search/${encodeURIComponent(selectedPlace.name)}`}
+                  searchLabel="Google 에서 찾기"
+                />
+                <RegLinkField label="홈페이지" value={homepageUrl} onChange={setHomepageUrl} placeholder="https://example.com" />
+                <RegLinkField label="블로그" value={blogUrl} onChange={setBlogUrl} placeholder="https://blog.naver.com/..." />
+                <RegLinkField label="인스타그램" value={instagramUrl} onChange={setInstagramUrl} placeholder="@business_account" />
+              </div>
+            </section>
+
+            {/* ========== PHOTOS ========== */}
+            <section className="pl-sec">
+              <div className="pl-sec-head">
+                <div>
+                  <div className="eyebrow">Section 07</div>
+                  <h3>사진 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', marginLeft: 6 }}>Google 자동</span></h3>
+                </div>
+              </div>
               {photoRefs.length === 0 ? (
-                <div className="form-inline-info">
-                  Google Places 에 사진이 없거나 매칭 실패했습니다. 업체 등록 후 Google Business Profile 에 사진을 올리면 자동 반영됩니다.
+                <div className="pl-info">
+                  Google Places 에 사진이 없거나 매칭 실패. 등록 후 Google Business Profile 에 올리면 자동 반영됩니다.
                 </div>
               ) : (
                 <>
-                  <div className="photo-grid">
+                  <div className="ph-grid">
                     {photoRefs.map((ref) => {
                       const checked = selectedPhotos.has(ref)
                       return (
-                        <label key={ref} className={checked ? 'sel' : undefined}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                              setSelectedPhotos((prev) => {
-                                const next = new Set(prev)
-                                if (e.target.checked) next.add(ref)
-                                else next.delete(ref)
-                                return next
-                              })
-                            }}
-                          />
-                          { /* eslint-disable-next-line @next/next/no-img-element */ }
+                        <button
+                          key={ref}
+                          type="button"
+                          className={`ph${checked ? ' selected' : ''}`}
+                          onClick={() => {
+                            setSelectedPhotos((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(ref)) next.delete(ref)
+                              else next.add(ref)
+                              return next
+                            })
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={`/api/places/photo?ref=${encodeURIComponent(ref)}&w=400`}
                             alt=""
                             loading="lazy"
                           />
-                        </label>
+                        </button>
                       )
                     })}
                   </div>
-                  <div className="hint" style={{ marginTop: 8 }}>
+                  <p className="hint" style={{ marginTop: 8 }}>
                     {selectedPhotos.size} / {photoRefs.length} 장 선택됨. 체크 해제한 사진은 페이지에 노출되지 않습니다.
-                  </div>
+                  </p>
                 </>
               )}
+            </section>
+
+            {/* Submit */}
+            <div className="pl-actions">
+              <Link href="/owner/places" className="back">← 업체 목록</Link>
+              <button
+                type="submit"
+                disabled={loading}
+                className="submit"
+              >
+                {loading ? '등록 중…' : '업체 등록 →'}
+              </button>
             </div>
           </>
         )}
-
-        {/* Actions */}
-        {selectedPlace && (
-          <div className="actions-row">
-            <Link href="/owner" className="btn ghost">← 대시보드로</Link>
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn accent lg"
-            >
-              {loading ? '등록 중…' : '업체 등록 →'}
-            </button>
-          </div>
-        )}
       </form>
     </>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 보조 컴포넌트 (pe-* chip / link-field 와 동일 UX)
+// ─────────────────────────────────────────────────────────────────────
+
+interface RegChipGroupProps {
+  label: string; hint: string; chips: string[]; placeholder: string
+  onAdd: (v: string) => void; onRemove: (v: string) => void
+}
+
+function RegChipGroup({ label, hint, chips, placeholder, onAdd, onRemove }: RegChipGroupProps) {
+  const [input, setInput] = useState('')
+  function commit(value: string) {
+    const v = value.trim().replace(/,$/, '')
+    if (!v) return
+    onAdd(v); setInput('')
+  }
+  return (
+    <div className="chip-group">
+      <div className="lbl">
+        {label}
+        <span className="cnt-sm">{hint}</span>
+      </div>
+      <div className="chip-box">
+        {chips.map((c) => (
+          <span key={c} className="pe-chip">
+            {c}
+            <button type="button" onClick={() => onRemove(c)} aria-label={`${c} 삭제`}>×</button>
+          </span>
+        ))}
+        <input
+          className="chip-add-inp"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); commit(input) }
+            else if (e.key === 'Backspace' && !input && chips.length > 0) onRemove(chips[chips.length - 1])
+          }}
+          onBlur={() => { if (input) commit(input) }}
+          placeholder={placeholder}
+        />
+      </div>
+    </div>
+  )
+}
+
+interface RegLinkFieldProps {
+  label: string; value: string; onChange: (v: string) => void; placeholder: string
+  searchUrl?: string; searchLabel?: string
+}
+
+function RegLinkField({ label, value, onChange, placeholder, searchUrl, searchLabel }: RegLinkFieldProps) {
+  const connected = value.trim().length > 0
+  return (
+    <div className="pe-field">
+      <div className="link-label-row">
+        <label>{label}</label>
+        {searchUrl && (
+          <a href={searchUrl} target="_blank" rel="noopener noreferrer" className="link-search">
+            {searchLabel ?? '새창에서 찾기'} ↗
+          </a>
+        )}
+      </div>
+      <div className="link-field">
+        <input
+          type="url"
+          className="pe-inp mono"
+          value={value}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+          placeholder={placeholder}
+          style={{ paddingLeft: 14 }}
+        />
+        <span className={`stat ${connected ? 'ok' : 'empty'}`}>{connected ? '연결됨' : '미연결'}</span>
+      </div>
+    </div>
   )
 }
 
@@ -675,4 +1005,65 @@ function StepPill({ n, label, current }: { n: number; label: string; current: nu
       <b>{label}</b>
     </div>
   )
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 헬퍼
+// ─────────────────────────────────────────────────────────────────────
+
+function updateHoursDay(
+  setter: React.Dispatch<React.SetStateAction<HoursMap>>,
+  day: DayCode,
+  patch: Partial<HoursMap[DayCode]>,
+) {
+  setter((prev) => ({ ...prev, [day]: { ...prev[day], ...patch } }))
+}
+
+/**
+ * slug 정규화 공통 로직.
+ * - 소문자화 → 공백·비허용 문자를 하이픈으로 → 연속 하이픈 1개로 → 양 끝 하이픈 제거
+ * - 40자 cap (너무 길면 AI·검색 URL 미리보기에서 잘림)
+ */
+function buildSlug(source: string, maxLen = 40): string {
+  return source
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, maxLen)
+    .replace(/-$/g, '') // cap 직후 끝이 하이픈이면 제거
+}
+
+/**
+ * Google Places 의 한글 요일 설명("월요일 9시~18시 · ...") 을 Schema.org 약어 배열로 변환.
+ * 기존 구현의 인라인 파서를 분리.
+ */
+function convertGoogleHoursToSchemaOrg(rows: string[]): string[] {
+  const dayMap: Record<string, string> = {
+    '월요일': 'Mo', '화요일': 'Tu', '수요일': 'We',
+    '목요일': 'Th', '금요일': 'Fr', '토요일': 'Sa', '일요일': 'Su',
+  }
+  const out: string[] = []
+  for (const line of rows) {
+    const dayKey = Object.keys(dayMap).find((k) => line.startsWith(k))
+    if (!dayKey) continue
+    const code = dayMap[dayKey]
+    if (line.includes('휴무') || line.includes('정기휴무')) continue
+    const match = line.match(/(\d{1,2}):(\d{2})\s*[~-]\s*.*?(\d{1,2}):(\d{2})/)
+    if (!match) continue
+    const [, h1, m1, h2, m2] = match
+    // '오후' 가 라인에 없으면 indexOf = -1. -1 < any-non-negative 가 true 로 평가되어
+    // AM-only / 24h 라인이 +12 시프트되던 버그(bug_007) 방지 — >= 0 가드 필수.
+    const openIdx = line.indexOf('오후')
+    const openH = openIdx >= 0 && openIdx < line.indexOf(h1) && parseInt(h1, 10) < 12
+      ? String(parseInt(h1, 10) + 12).padStart(2, '0')
+      : h1.padStart(2, '0')
+    const closeIdx = line.lastIndexOf('오후')
+    const closeH = closeIdx >= 0 && closeIdx > line.indexOf(h1) && parseInt(h2, 10) < 12
+      ? String(parseInt(h2, 10) + 12).padStart(2, '0')
+      : h2.padStart(2, '0')
+    out.push(`${code} ${openH}:${m1}-${closeH}:${m2}`)
+  }
+  return out
 }

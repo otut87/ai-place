@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest'
-import * as seedData from '@/lib/data'
 
 // sitemap 테스트: DB 없이 시드 데이터 기반으로 검증
 // data.supabase의 getAllPlaces/getPlaces를 시드 데이터로 mock

@@ -34,7 +34,8 @@ export function SignupForm() {
   const [error, setError] = useState<string | null>(null)
   const [verifyMsg, setVerifyMsg] = useState<string | null>(null)
 
-  const [emailState, setEmailState] = useState<EmailState>('idle')
+  // API 결과는 요청 시점의 email 을 함께 저장 — 입력 변경 시 자동 stale 처리.
+  const [apiResult, setApiResult] = useState<{ email: string; state: 'available' | 'taken' | 'invalid' } | null>(null)
 
   const pwChecks = useMemo<Record<PwCheck, boolean>>(
     () => ({
@@ -52,22 +53,28 @@ export function SignupForm() {
   const requiredTerms = termsAge && termsTos && termsPrivacy
   const allTerms = requiredTerms && termsMarketing
 
+  // sync 상태 — 렌더 시점 파생. 비효과 효과(cascading render)를 피하려 setState 를 useEffect 에서 제거.
+  const syncEmailState: EmailState = !emailValid
+    ? (email.length > 0 ? 'invalid' : 'idle')
+    : 'checking'
+  // API 결과가 현재 email 과 일치할 때만 덮어씀 — 입력이 바뀌면 자동으로 'checking' 표시.
+  const emailState: EmailState = syncEmailState === 'checking' && apiResult?.email === email
+    ? apiResult.state
+    : syncEmailState
+
   // 이메일 중복 체크 — 500ms debounce. invalid 포맷은 서버 호출 X.
   useEffect(() => {
-    if (!emailValid) {
-      setEmailState(email.length > 0 ? 'invalid' : 'idle')
-      return
-    }
-    setEmailState('checking')
+    if (syncEmailState !== 'checking') return
+    const currentEmail = email
     const timer = setTimeout(async () => {
-      const r = await checkEmailAvailableAction(email)
-      if (r.status === 'available') setEmailState('available')
-      else if (r.status === 'taken') setEmailState('taken')
-      else if (r.status === 'invalid') setEmailState('invalid')
-      else setEmailState('idle') // error — fail open
+      const r = await checkEmailAvailableAction(currentEmail)
+      if (r.status === 'available' || r.status === 'taken' || r.status === 'invalid') {
+        setApiResult({ email: currentEmail, state: r.status })
+      }
+      // 에러는 fail-open — apiResult 건드리지 않음 (syncEmailState='checking' 유지)
     }, 500)
     return () => clearTimeout(timer)
-  }, [email, emailValid])
+  }, [email, syncEmailState])
 
   const canSubmit =
     name.trim().length > 0 &&

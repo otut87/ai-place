@@ -1,6 +1,7 @@
 // T-155/T-156/T-157 — Owner 자동 입력·수정용 AI 생성.
-// Rate limit: 업체당 월 5회 + 주 1회.
-// 비용 통제: $0.075/업체/월 이하.
+// Rate limit: 업체당 30일 rolling 5회 + 주 1회 cooldown.
+// T-218: 기존 "달력 월(1일~말일)" 기준을 "지난 30일 rolling" 으로 변경 (결제일 기준 30일 과금 모델과 정렬).
+// 비용 통제: $0.075/업체/30일 이하.
 
 import Anthropic from '@anthropic-ai/sdk'
 import { getAdminClient } from '@/lib/supabase/admin-client'
@@ -9,6 +10,7 @@ const MODEL = 'claude-sonnet-4-5-20250929'
 const MAX_TOKENS = 3000
 const MONTHLY_LIMIT = 5
 const WEEKLY_MS = 7 * 24 * 60 * 60 * 1000
+const ROLLING_WINDOW_MS = 30 * 24 * 60 * 60 * 1000
 
 export interface OwnerAiInput {
   placeId?: string                  // 신규 등록 시엔 없음 (업체 생성 전 프리뷰 용도)
@@ -49,14 +51,15 @@ export async function checkAiRateLimit(placeId: string): Promise<RateLimitStatus
   if (!admin) return { allowed: false, monthlyUsed: 0, monthlyLimit: MONTHLY_LIMIT, nextAllowedAt: null, remainingHours: 0 }
 
   const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  // T-218: 달력 월 → 지난 30일 rolling 으로 변경.
+  const windowStart = new Date(now.getTime() - ROLLING_WINDOW_MS).toISOString()
 
   const { data: rows } = await admin
     .from('ai_generations')
     .select('created_at')
     .eq('place_id', placeId)
     .eq('stage', 'owner_draft')
-    .gte('created_at', monthStart)
+    .gte('created_at', windowStart)
     .order('created_at', { ascending: false })
 
   const list = (rows ?? []) as Array<{ created_at: string }>

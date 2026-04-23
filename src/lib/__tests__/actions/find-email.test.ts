@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockMaybeSingle = vi.fn()
 const mockLimit = vi.fn(() => ({ maybeSingle: mockMaybeSingle }))
-const mockEq = vi.fn(() => ({ limit: mockLimit }))
+// 2개 인자(column, value) 시그니처 명시 — .mock.calls[i][1] 타입 추론용.
+const mockEq = vi.fn((_col: string, _val: unknown) => ({ limit: mockLimit }))
 const mockSelect = vi.fn(() => ({ eq: mockEq }))
 const mockFrom = vi.fn(() => ({ select: mockSelect }))
 

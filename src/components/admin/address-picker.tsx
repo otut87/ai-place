@@ -75,6 +75,7 @@ export function AddressPicker({ onSelect, triggerLabel = '주소 검색', classN
   useEffect(() => {
     if (!open) return
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 모달 open→true 전환 시 1회성 초기화. open 이 false 면 return 으로 조기 종료되어 cascading render 발생 경로 없음.
     setLoading(true)
     setError(null)
     loadDaumScript()

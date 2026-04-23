@@ -5,7 +5,7 @@
  * - admin/login/page.tsx: 로그인 폼 존재
  * - admin/layout.tsx: 인증된 유저만 접근
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 

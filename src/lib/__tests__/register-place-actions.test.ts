@@ -23,20 +23,6 @@ vi.mock('@/lib/google-places', () => ({
 // insert() 는 체이닝 가능한 builder 를 반환해야 함 — .select('id').single() 으로 id 회수.
 const mockInsert = vi.fn()
 const mockSelect = vi.fn()
-// insert 결과의 편의 설정을 위해 mockInsert 는 { error } 를 리턴하는 Promise.
-// .select('id').single() 체이닝을 지원하려면 Proxy/체이닝 헬퍼 필요.
-function buildInsertChain(insertResult: { error: unknown }) {
-  const single = vi.fn().mockResolvedValue({
-    data: insertResult.error ? null : { id: 'inserted-id' },
-    error: insertResult.error ?? null,
-  })
-  const select = vi.fn().mockReturnValue({ single })
-  // 직접 await 도 지원하려면 then 구현. 테스트는 { error } 만 쓰므로 필수.
-  return {
-    select,
-    then: (resolve: (v: { error: unknown }) => void) => resolve(insertResult),
-  }
-}
 vi.mock('@/lib/supabase/server', () => ({
   createServerClient: vi.fn(() => ({
     from: vi.fn(() => ({
@@ -44,7 +30,7 @@ vi.mock('@/lib/supabase/server', () => ({
         const result = mockInsert(...args)
         // mockInsert 가 Promise 반환 시 이를 resolve 하여 체이닝 builder 생성
         return {
-          select: (cols: string) => {
+          select: (_cols: string) => {
             const single = vi.fn(async () => {
               const r = await result
               return {
@@ -182,19 +168,12 @@ const validInput = {
 }
 
 describe('registerPlace validation', () => {
-  it('description 40자 미만 → 에러', async () => {
+  it('description 30자 미만 → 에러', async () => {
     mockInsert.mockResolvedValue({ error: null })
     const { registerPlace } = await import('@/lib/actions/register-place')
     const result = await registerPlace({ ...validInput, description: '짧은 설명' })
     expect(result.success).toBe(false)
-    if (!result.success) expect(result.error).toContain('40~60자')
-  })
-
-  it('description 60자 초과 → 에러', async () => {
-    const { registerPlace } = await import('@/lib/actions/register-place')
-    const result = await registerPlace({ ...validInput, description: '가'.repeat(61) })
-    expect(result.success).toBe(false)
-    if (!result.success) expect(result.error).toContain('40~60자')
+    if (!result.success) expect(result.error).toContain('짧습니다')
   })
 
   it('FAQ 3개 미만 → 에러', async () => {

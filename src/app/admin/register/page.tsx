@@ -139,7 +139,9 @@ export default function RegisterPage() {
       .replace(/\s+/g, '-').toLowerCase()
       .replace(/[^a-z0-9-가-힣]/g, '')
       .replace(/-+/g, '-').replace(/^-|-$/g, '')
-    setSlug(slugCandidate.slice(0, 100) || `${c.detectedCategorySlug ?? 'place'}-${Date.now().toString(36).slice(-4)}`)
+    // eslint-disable-next-line react-hooks/purity -- 이벤트 핸들러 내부 fallback slug stamp, 렌더 중 호출 안 됨.
+    const fallbackStamp = Date.now().toString(36).slice(-4)
+    setSlug(slugCandidate.slice(0, 100) || `${c.detectedCategorySlug ?? 'place'}-${fallbackStamp}`)
 
     // Google 보강 — 이름 + 주소로 Places Text Search + Details. 매칭 실패해도 등록 진행 가능.
     setLoading(true)

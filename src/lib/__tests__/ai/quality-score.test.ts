@@ -8,7 +8,7 @@ const HIGH_QUALITY = {
   businessName: '닥터에버스',
   city: '천안시',
   categoryKeyword: '피부과',
-  description: '천안시 서북구 불당동 위치. 여드름·리프팅·스킨부스터 특화 피부과 전문.',
+  description: '천안시 서북구 불당동 위치. 여드름·리프팅·스킨부스터 특화 피부과 전문. PDT 병행 3~6회 코스 운영, 인모드 장비 보유, 야간 진료 가능 (화·목 20시까지).',
   services: [
     { name: '여드름 레이저', description: 'PDT 병행 염증 집중 관리 3~6회 코스.', priceRange: '5~12만원' },
     { name: '리프팅', description: '인모드 1회 35분 시술.', priceRange: '25~55만원' },
@@ -53,17 +53,18 @@ describe('scoreQuality', () => {
     expect(r.suggestions.length).toBeGreaterThan(0)
   })
 
-  it('descLength: 40~60자 만점, 벗어나면 감점', () => {
+  it('descLength: 80~160자 만점, 벗어나면 감점', () => {
     const base = { ...HIGH_QUALITY }
-    const r40to60 = scoreQuality(base)
-    expect(r40to60.breakdown.descLength).toBe(15)
+    const r80to160 = scoreQuality(base)
+    expect(r80to160.breakdown.descLength).toBe(15)
 
     const rTooShort = scoreQuality({ ...base, description: '짧음.' })
     expect(rTooShort.breakdown.descLength).toBe(0)
 
+    // 400자 — 권장 범위(160)를 훌쩍 넘어 300자까지도 넘기면 0점.
     const rTooLong = scoreQuality({
       ...base,
-      description: '아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주아주긴설명.',
+      description: '아'.repeat(400),
     })
     expect(rTooLong.breakdown.descLength).toBe(0)
   })

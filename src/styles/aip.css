@@ -36,8 +36,8 @@
   --shadow-xl: 0 50px 100px -40px rgba(0,0,0,.25), 0 30px 60px -30px rgba(0,0,0,.15);
 
   --font: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', system-ui, sans-serif;
-  --serif: 'Instrument Serif', 'Apple SD Gothic Neo', ui-serif, serif;
-  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --serif: var(--font-instrument-serif), 'Instrument Serif', 'Apple SD Gothic Neo', ui-serif, serif;
+  --mono: var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --h1: clamp(40px, 6.2vw, 88px);
   --h2: clamp(28px, 3.6vw, 52px);

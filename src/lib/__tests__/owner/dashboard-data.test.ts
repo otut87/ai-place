@@ -258,10 +258,18 @@ describe('loadOwnerDashboard', () => {
 
   it('detectOwnerTodos / getMeasurementWindow 호출되며 결과 전달', async () => {
     mockDetectTodos.mockReturnValueOnce([{ id: 't1', title: 'Todo1', category: 'aeo' }])
-    mockGetWindow.mockReturnValueOnce({ state: 'ready', daysSinceSignup: 20 })
+    // MeasurementWindow 의 실제 필드(daysElapsed / daysRemaining / isMeasuring / label) 로 목업.
+    mockGetWindow.mockReturnValueOnce({
+      daysElapsed: 20,
+      daysRemaining: 0,
+      isMeasuring: false,
+      referenceCreatedAt: '2024-01-01T00:00:00Z',
+      label: '측정 완료',
+    })
     const { loadOwnerDashboard } = await import('@/lib/owner/dashboard-data')
     const d = await loadOwnerDashboard()
     expect(d.todos).toHaveLength(1)
-    expect(d.window.state).toBe('ready')
+    expect(d.window.isMeasuring).toBe(false)
+    expect(d.window.daysElapsed).toBe(20)
   })
 })

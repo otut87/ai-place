@@ -72,7 +72,7 @@ export function runCoverageCapture(projectRoot = process.cwd()): CoverageSummary
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
     })
-  } catch (err) {
+  } catch {
     // Even when tests fail, the summary may exist — proceed to parse.
     console.warn('[harness] vitest exited non-zero — attempting to read summary anyway')
   }

@@ -12,7 +12,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Mock Supabase 모듈 — 체이닝 가능한 mock
 function createChainMock(resolveValue: { data: unknown; error: unknown }) {
   const chain: Record<string, unknown> = {}
-  const handler = () => chain
   chain.select = vi.fn().mockReturnValue(chain)
   chain.eq = vi.fn().mockReturnValue(chain)
   chain.not = vi.fn().mockReturnValue(chain)

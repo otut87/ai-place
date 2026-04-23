@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import type { Place } from '@/lib/types'
-import { normalizeAddress } from '@/lib/format/address'
 import { composePageTitle } from '@/lib/seo/compose-title'
 import { formatEvidenceTitle } from '@/lib/seo/title-formula'
 

@@ -3,6 +3,7 @@
 // Hero 우측 "AI 답변" mock 카드 + GPT/Claude/Gemini 탭 전환 (클라이언트 상태).
 
 import { useState } from 'react'
+import Link from 'next/link'
 
 type PresetKey = 'gpt' | 'claude' | 'gemini'
 
@@ -101,7 +102,7 @@ export function HeroChatCard() {
               더 자세한 비교는 <span className="cite-chip">aiplace.kr/cheonan/dermatology</span> 에서 확인할 수 있습니다.
             </div>
             <div className="source-line">
-              출처 · <a href="/cheonan/dermatology">aiplace.kr</a> · 네이버 플레이스 · 구글 (2026년 4월 기준)
+              출처 · <Link href="/cheonan/dermatology">aiplace.kr</Link> · 네이버 플레이스 · 구글 (2026년 4월 기준)
             </div>
           </div>
         </div>

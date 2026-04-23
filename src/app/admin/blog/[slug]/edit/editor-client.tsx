@@ -94,7 +94,6 @@ export function BlogEditorClient({
       } else {
         const msg = r.error ?? '삭제 실패'
         toast.error(`삭제 실패: ${msg}`)
-        // eslint-disable-next-line no-console
         console.error('[blog-delete] id=', post.id, 'error=', msg)
       }
     })

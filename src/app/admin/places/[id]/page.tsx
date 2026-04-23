@@ -7,7 +7,7 @@ import { parseFieldMeta, summarizeSource, type FieldMetaField } from '@/lib/admi
 import { summarizeAction, actorTypeLabel, type AuditAction, type ActorType } from '@/lib/admin/audit'
 import { getBlogPostsByPlace } from '@/lib/blog/data.supabase'
 import { AdminLink } from '@/components/admin/admin-link'
-import { User, Bot, Cog, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { User, Bot, Cog, AlertTriangle } from 'lucide-react'
 import { notFound } from 'next/navigation'
 
 interface Params {
@@ -266,16 +266,6 @@ function EmptyMessage({ kind }: { kind: string }) {
   return <p className="text-sm text-[#6a6a6a]">아직 {label}가 없습니다. 편집폼에서 추가하거나 AI 자동 생성을 이용하세요.</p>
 }
 
-function StubTab({ task, label }: { task: string; label: string }) {
-  return (
-    <div className="flex items-start gap-2 rounded-md border border-dashed border-[#dddddd] bg-[#fafafa] p-4 text-sm text-[#484848]">
-      <CheckCircle2 className="mt-0.5 h-4 w-4 text-[#9ca3af]" />
-      <span>
-        <strong>{label}</strong> 탭은 <code className="rounded bg-[#f3f4f6] px-1">{task}</code> 에서 구현 예정입니다.
-      </span>
-    </div>
-  )
-}
 
 // T-128: 이 업체와 연결된 블로그 글 (related_place_slugs 기반)
 async function BlogTab({ placeSlug }: { placeSlug: string }) {
@@ -326,6 +316,7 @@ async function SeoTab({
   const admin = getAdminClient()
   if (!admin) return <p className="text-sm text-red-600">DB 연결 실패</p>
 
+  // eslint-disable-next-line react-hooks/purity -- async 서버 컴포넌트에서는 request 당 1회 평가되므로 안전.
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const path = `/${city}/${category}/${placeSlug}`
 

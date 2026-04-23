@@ -3,7 +3,7 @@
 // T-063 — 파괴적 액션용 이름 입력 확인 모달.
 // 업체명·항목명을 정확히 타이핑해야 버튼 활성화. window.confirm 대체.
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 
 export interface ConfirmNameModalProps {
@@ -32,12 +32,17 @@ export function ConfirmNameModal({
   const [typed, setTyped] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const titleId = useId()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => setMounted(true), [])
+  // Portal 은 document.body 에 attach — SSR hydration 충돌 방지용 mounted 가드.
+  // useSyncExternalStore 로 setState-in-effect 회피: SSR 은 false, 클라이언트는 항상 true.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 모달 open 전환 시 입력값 리셋. 조건부라 cascading render 없음.
       setTyped('')
       // 모달 오픈 직후 포커스
       queueMicrotask(() => inputRef.current?.focus())

@@ -92,7 +92,7 @@ describe('fetchExternalReferences', () => {
     const r = await fetchExternalReferences({
       sector: 'medical', cityName: '천안', internalActiveCount: 0,
     })
-    const item = r.places[0] as Record<string, unknown>
+    const item = r.places[0] as unknown as Record<string, unknown>
     expect('slug' in item).toBe(false)
     expect('id' in item).toBe(false)
     expect('placeId' in item).toBe(false)

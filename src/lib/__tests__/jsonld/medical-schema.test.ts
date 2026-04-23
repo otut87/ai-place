@@ -44,10 +44,10 @@ describe('T-112 의료 카테고리 JSON-LD', () => {
       bestRating: 5,
     })
 
-    const noRating = generateLocalBusiness(makeMedical({ rating: null, reviewCount: 100 }))
+    const noRating = generateLocalBusiness(makeMedical({ rating: undefined, reviewCount: 100 }))
     expect(noRating.aggregateRating).toBeUndefined()
 
-    const noCount = generateLocalBusiness(makeMedical({ rating: 4.5, reviewCount: null }))
+    const noCount = generateLocalBusiness(makeMedical({ rating: 4.5, reviewCount: undefined }))
     expect(noCount.aggregateRating).toBeUndefined()
   })
 

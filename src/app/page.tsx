@@ -184,13 +184,7 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: safeJsonLd(faqPageJsonLd) }}
       />
 
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap"
-      />
-
+      {/* Instrument Serif + JetBrains Mono 는 root layout 에서 next/font 로 로드 */}
       <HomeNav />
 
       <main>

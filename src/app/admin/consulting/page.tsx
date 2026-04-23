@@ -6,19 +6,6 @@ import Link from 'next/link'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-interface EngagementRow {
-  id: string
-  target_url: string
-  status: string
-  client_name: string | null
-  contract_amount: number | null
-  started_at: string
-  completed_at: string | null
-  baseline_run: { score: number } | null
-  final_run: { score: number } | null
-  task_count: number
-}
-
 export default async function ConsultingListPage() {
   await requireAuth()
   const admin = getAdminClient()

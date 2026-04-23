@@ -21,7 +21,7 @@ describe('saveDiagnosticRun', () => {
   })
 
   it('정상 결과 → insert 호출 + id 반환', async () => {
-    const insertMock = vi.fn(() => ({
+    const insertMock = vi.fn((_payload: Record<string, unknown>) => ({
       select: () => ({ single: () => Promise.resolve({ data: { id: 'run-1' }, error: null }) }),
     }))
     mockFrom.mockReturnValue({ insert: insertMock })
@@ -31,11 +31,12 @@ describe('saveDiagnosticRun', () => {
       triggeredBy: 'owner', customerId: 'c1', userAgent: 'Mozilla',
     })
     expect(r).toBe('run-1')
-    const payload = insertMock.mock.calls[0][0]
-    expect(payload.origin).toBe('https://x.com')
-    expect(payload.score).toBe(85)
-    expect(payload.triggered_by).toBe('owner')
-    expect(payload.customer_id).toBe('c1')
+    const payload = insertMock.mock.calls[0]?.[0]
+    expect(payload).toBeDefined()
+    expect(payload?.origin).toBe('https://x.com')
+    expect(payload?.score).toBe(85)
+    expect(payload?.triggered_by).toBe('owner')
+    expect(payload?.customer_id).toBe('c1')
   })
 
   it('DB error → null + 로그 (throw 안 함)', async () => {
