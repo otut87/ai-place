@@ -39,6 +39,8 @@ export interface ChargeSubscriptionOutcome {
     retried_count: number
     attempted_at: string
     succeeded_at: string | null
+    /** T-223: Toss 영수증 URL. 실패 케이스에서는 항상 null. */
+    receipt_url: string | null
   }
   subscriptionPatch: {
     status: 'active' | 'past_due' | 'suspended'
@@ -97,6 +99,8 @@ export async function chargeSubscriptionOnce(
         retried_count: input.retriedCount,
         attempted_at: now.toISOString(),
         succeeded_at: chargedAt,
+        // T-223: Toss receipts.url 전달 — migration 046 에서 컬럼 추가됨.
+        receipt_url: result.receiptUrl ?? null,
       },
       subscriptionPatch: {
         status: 'active',
@@ -107,7 +111,7 @@ export async function chargeSubscriptionOnce(
         type: 'payment.succeeded',
         chargedAt,
         nextChargeAt: nextCharge.toISOString(),
-        // T-223 이후: result.receiptUrl 이 있으면 여기에 채움 (현재는 adapter 미지원 → undefined)
+        receiptUrl: result.receiptUrl,
       },
     }
   }
@@ -132,6 +136,7 @@ export async function chargeSubscriptionOnce(
       retried_count: input.retriedCount,
       attempted_at: now.toISOString(),
       succeeded_at: null,
+      receipt_url: null,
     },
   }
 

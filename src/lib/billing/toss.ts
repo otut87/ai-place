@@ -71,6 +71,9 @@ interface TossChargeResponse {
   orderId: string
   status: string                      // 'DONE' | 'ABORTED' | 'EXPIRED' ...
   approvedAt?: string
+  receipt?: {
+    url?: string                      // T-223: 영수증 URL
+  }
 }
 
 async function parseErrorBody(res: Response): Promise<TossErrorBody> {
@@ -173,6 +176,7 @@ export const tossAdapter: PgAdapter = {
         paymentKey: data.paymentKey,
         orderId: data.orderId,
         approvedAt: data.approvedAt,
+        receiptUrl: data.receipt?.url,
       }
     } catch (e) {
       return {

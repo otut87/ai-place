@@ -21,16 +21,21 @@ export async function GET(req: Request) {
   if (!admin) return NextResponse.json({ error: 'admin_unavailable' }, { status: 500 })
 
   const nowIso = new Date().toISOString()
+  // T-224: 오너 수동 재시도 advisory lock (charging_started_at) 도 체크.
+  //   lock 이 최근 60초 이내면 동시 charge 방지하기 위해 cron 도 skip.
+  const lockCutoff = new Date(Date.now() - 60_000).toISOString()
   const { data, error } = await admin
     .from('subscriptions')
     .select(`
       id, customer_id, billing_key_id, failed_retry_count, status, amount,
+      charging_started_at,
       billing_keys:billing_key_id ( billing_key, status ),
       customers:customer_id ( name, email )
     `)
     // T-204: 파일럿 종료(next_charge_at) 도래한 pending 구독도 첫 결제 대상 포함.
     .in('status', ['pending', 'active', 'past_due'])
     .lte('next_charge_at', nowIso)
+    .or(`charging_started_at.is.null,charging_started_at.lt.${lockCutoff}`)
     .limit(100)
 
   if (error || !data) {
@@ -49,6 +54,7 @@ export async function GET(req: Request) {
     failed_retry_count: number
     status: string
     amount: number
+    charging_started_at: string | null
     billing_keys: { billing_key: string; status: string } | null
     customers: { name: string | null; email: string | null } | null
   }>) {
@@ -73,7 +79,11 @@ export async function GET(req: Request) {
     await admin.from('payments').insert({ ...outcome.paymentRow, billing_key_id: row.billing_key_id })
     await admin
       .from('subscriptions')
-      .update({ ...outcome.subscriptionPatch, updated_at: new Date().toISOString() })
+      .update({
+        ...outcome.subscriptionPatch,
+        charging_started_at: null,       // T-224: lock 해제
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', row.id)
 
     if (outcome.paymentRow.status === 'succeeded') succeeded += 1

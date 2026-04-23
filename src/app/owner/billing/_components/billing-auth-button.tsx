@@ -30,20 +30,20 @@ declare global {
 }
 
 export function BillingAuthButton({ clientKey, customerKey, hasActiveCard }: Props) {
-  const [ready, setReady] = useState(false)
+  // SDK 가 이미 로드된 상태로 mount 되면 lazy init 으로 즉시 ready=true —
+  // useEffect 에서 setReady(true) 동기 호출을 제거하여 cascading render 방지.
+  const [ready, setReady] = useState(() => typeof window !== 'undefined' && !!window.TossPayments)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const scriptInjected = useRef(false)
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (window.TossPayments) { setReady(true); return }
+    if (typeof window === 'undefined' || ready) return
     if (scriptInjected.current) return
 
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${TOSS_SDK_SRC}"]`)
     if (existing) {
       existing.addEventListener('load', () => setReady(true), { once: true })
-      if (window.TossPayments) setReady(true)
       return
     }
 
@@ -54,7 +54,7 @@ export function BillingAuthButton({ clientKey, customerKey, hasActiveCard }: Pro
     script.onload = () => setReady(true)
     script.onerror = () => setError('Toss SDK 로드 실패 — 네트워크 확인 후 새로고침해 주세요.')
     document.head.appendChild(script)
-  }, [])
+  }, [ready])
 
   const handleAuth = useCallback(async () => {
     if (!window.TossPayments) {

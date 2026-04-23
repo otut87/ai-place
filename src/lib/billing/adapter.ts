@@ -36,6 +36,8 @@ export interface ChargeResult {
   paymentKey?: string              // 토스 paymentKey
   orderId: string
   approvedAt?: string              // ISO 8601
+  /** T-223: Toss receipts.url 등 PG 영수증 URL. 없으면 undefined. */
+  receiptUrl?: string
   error?: {
     code: string                   // PG 원 코드 (예: REJECT_CARD_COMPANY)
     message: string                // PG 한글 메시지

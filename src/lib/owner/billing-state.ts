@@ -23,6 +23,8 @@ export interface BillingKeyRow {
   expiryMonth: number | null
   status: 'active' | 'revoked' | 'expired' | string
   authenticatedAt: string
+  /** T-223.5: charging 대상 primary 카드 여부. */
+  isPrimary: boolean
 }
 
 export interface SubscriptionRow {
@@ -45,11 +47,16 @@ export interface PaymentRow {
   retriedCount: number
   attemptedAt: string
   succeededAt: string | null
+  /** T-223: Toss 영수증 URL. null 이면 표시 안 함. */
+  receiptUrl: string | null
 }
 
 export interface OwnerBillingState {
   customer: CustomerRow | null
-  billingKey: BillingKeyRow | null     // status=active 중 가장 최근 1건
+  /** @deprecated T-223.5 다중카드 — primary 카드 (billingKeys 에서 is_primary=true). */
+  billingKey: BillingKeyRow | null
+  /** T-223.5 — 등록된 모든 active 카드. primary 는 is_primary=true 인 1건. */
+  billingKeys: BillingKeyRow[]
   subscription: SubscriptionRow | null // 활성 또는 해지 예정 1건
   recentPayments: PaymentRow[]         // 최근 5건
   pilotRemainingDays: number
@@ -68,6 +75,7 @@ export async function loadOwnerBillingState(userId: string, now: Date = new Date
   const empty: OwnerBillingState = {
     customer: null,
     billingKey: null,
+    billingKeys: [],
     subscription: null,
     recentPayments: [],
     pilotRemainingDays: 30,
@@ -99,34 +107,35 @@ export async function loadOwnerBillingState(userId: string, now: Date = new Date
 
   const pilotRemainingDays = daysUntilIso(c.trial_ends_at, now) ?? 30
 
-  // 활성 카드 1건
-  const { data: bRow } = await admin
+  // 활성 카드 전부 (T-223.5 다중카드). primary = is_primary=true.
+  const { data: bRows } = await admin
     .from('billing_keys')
-    .select('id, billing_key, method, card_company, card_number_masked, card_type, expiry_year, expiry_month, status, authenticated_at')
+    .select('id, billing_key, method, card_company, card_number_masked, card_type, expiry_year, expiry_month, status, authenticated_at, is_primary')
     .eq('customer_id', c.id)
     .eq('status', 'active')
+    .order('is_primary', { ascending: false })      // primary 먼저
     .order('authenticated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  const b = bRow as {
+
+  const billingKeys: BillingKeyRow[] = ((bRows ?? []) as Array<{
     id: string; billing_key: string; method: string | null; card_company: string | null
     card_number_masked: string | null; card_type: string | null
     expiry_year: number | null; expiry_month: number | null
-    status: string; authenticated_at: string
-  } | null
-
-  const billingKey: BillingKeyRow | null = b ? {
-    id: b.id,
-    billingKey: b.billing_key,
-    method: b.method,
-    cardCompany: b.card_company,
-    cardNumberMasked: b.card_number_masked,
-    cardType: b.card_type,
-    expiryYear: b.expiry_year,
-    expiryMonth: b.expiry_month,
-    status: b.status,
-    authenticatedAt: b.authenticated_at,
-  } : null
+    status: string; authenticated_at: string; is_primary: boolean
+  }>).map((r) => ({
+    id: r.id,
+    billingKey: r.billing_key,
+    method: r.method,
+    cardCompany: r.card_company,
+    cardNumberMasked: r.card_number_masked,
+    cardType: r.card_type,
+    expiryYear: r.expiry_year,
+    expiryMonth: r.expiry_month,
+    status: r.status,
+    authenticatedAt: r.authenticated_at,
+    isPrimary: !!r.is_primary,
+  }))
+  // 구 UI 호환 — primary (없으면 첫번째) 를 billingKey 로 노출.
+  const billingKey: BillingKeyRow | null = billingKeys.find((k) => k.isPrimary) ?? billingKeys[0] ?? null
 
   // 구독 — active 우선, 없으면 pending/past_due/pending_cancellation
   const { data: sRow } = await admin
@@ -160,7 +169,7 @@ export async function loadOwnerBillingState(userId: string, now: Date = new Date
   if (subscription) {
     const { data: pRows } = await admin
       .from('payments')
-      .select('id, amount, status, pg_response_message, retried_count, attempted_at, succeeded_at')
+      .select('id, amount, status, pg_response_message, retried_count, attempted_at, succeeded_at, receipt_url')
       .eq('subscription_id', subscription.id)
       .order('attempted_at', { ascending: false })
       .limit(5)
@@ -168,6 +177,7 @@ export async function loadOwnerBillingState(userId: string, now: Date = new Date
       id: string; amount: number; status: string
       pg_response_message: string | null; retried_count: number
       attempted_at: string; succeeded_at: string | null
+      receipt_url: string | null
     }>).map((r) => ({
       id: r.id,
       amount: r.amount,
@@ -176,6 +186,7 @@ export async function loadOwnerBillingState(userId: string, now: Date = new Date
       retriedCount: r.retried_count,
       attemptedAt: r.attempted_at,
       succeededAt: r.succeeded_at,
+      receiptUrl: r.receipt_url,
     }))
   }
 
@@ -187,7 +198,7 @@ export async function loadOwnerBillingState(userId: string, now: Date = new Date
     .eq('status', 'active')
 
   return {
-    customer, billingKey, subscription, recentPayments, pilotRemainingDays,
+    customer, billingKey, billingKeys, subscription, recentPayments, pilotRemainingDays,
     activePlaceCount: activePlaceCount ?? 0,
   }
 }

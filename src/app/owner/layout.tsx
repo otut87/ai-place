@@ -11,6 +11,11 @@ import '@/styles/owner-dashboard.css'
 import '@/styles/owner-dashboard-remix.css'
 import '@/styles/owner-citations-remix.css'
 import '@/styles/owner-content-remix.css'
+import '@/styles/owner-places-remix.css'
+import '@/styles/owner-edit-remix.css'
+import '@/styles/owner-place-dashboard-remix.css'
+import '@/styles/owner-register-remix.css'
+import '@/styles/owner-billing-remix.css'
 
 export const runtime = 'nodejs'
 
