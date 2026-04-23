@@ -207,4 +207,98 @@ describe('buildEmailPayload — 결제 이벤트', () => {
     const p = buildEmailPayload(ev)!
     expect(p.subject).toContain('7일')
   })
+
+  // T-230 — 결제 성공 이벤트
+  it('payment.succeeded — 영수증 URL + 다음 결제일 + 업체수 포함', () => {
+    const ev: NotifyEvent = {
+      type: 'payment.succeeded',
+      customerName: '홍길동',
+      customerEmail: 'h@x.com',
+      amount: 14900,
+      chargedAt: '2026-05-15T12:00:00Z',
+      nextChargeAt: '2026-06-14T12:00:00Z',
+      receiptUrl: 'https://dashboard.tosspayments.com/receipt/abc',
+      activePlaceCount: 1,
+    }
+    const p = buildEmailPayload(ev)!
+    expect(p.to).toBe('h@x.com')
+    expect(p.subject).toContain('2026-05-15')
+    expect(p.subject).toContain('14,900')
+    expect(p.body).toContain('https://dashboard.tosspayments.com/receipt/abc')
+    expect(p.body).toContain('2026-06-14')
+    expect(p.body).toContain('업체 1개')
+  })
+
+  it('payment.succeeded — 영수증 URL 없으면 카드사 안내 fallback', () => {
+    const ev: NotifyEvent = {
+      type: 'payment.succeeded',
+      customerName: '홍', customerEmail: 'h@x.com',
+      amount: 29800, chargedAt: '2026-05-01T00:00:00Z',
+      nextChargeAt: '2026-05-31T00:00:00Z', activePlaceCount: 2,
+    }
+    const p = buildEmailPayload(ev)!
+    expect(p.body).toContain('카드사 앱')
+    expect(p.body).toContain('29,800')
+  })
+
+  it('payment.succeeded — customerEmail 없으면 null', () => {
+    const ev: NotifyEvent = {
+      type: 'payment.succeeded',
+      customerName: '홍', amount: 14900,
+      chargedAt: '2026-05-01T00:00:00Z', nextChargeAt: null, activePlaceCount: 1,
+    }
+    expect(buildEmailPayload(ev)).toBeNull()
+  })
+
+  // T-230 — 파일럿 종료 예고 (카드 선등록 모델)
+  it('billing.trial_ending — D-3 예고 (금액 + 업체수 + 종료일)', () => {
+    const ev: NotifyEvent = {
+      type: 'billing.trial_ending',
+      customerName: '홍', customerEmail: 'h@x.com',
+      daysLeft: 3, trialEndsAt: '2026-05-04T00:00:00Z',
+      amount: 14900, activePlaceCount: 1,
+    }
+    const p = buildEmailPayload(ev)!
+    expect(p.subject).toContain('D-3')
+    expect(p.subject).toContain('14,900')
+    expect(p.body).toContain('3일 후')
+    expect(p.body).toContain('활성 업체 1개')
+    expect(p.body).toContain('/owner/billing/cancel')
+  })
+
+  it('billing.trial_ending — D-0 (당일) 제목 다름', () => {
+    const ev: NotifyEvent = {
+      type: 'billing.trial_ending',
+      customerName: '홍', customerEmail: 'h@x.com',
+      daysLeft: 0, trialEndsAt: '2026-05-01T00:00:00Z',
+      amount: 29800, activePlaceCount: 2,
+    }
+    const p = buildEmailPayload(ev)!
+    expect(p.subject).toContain('오늘')
+    expect(p.body).toContain('오늘 등록된 카드로')
+  })
+
+  // T-230 — Slack 페이로드
+  it('payment.succeeded → slack 메시지', () => {
+    const ev: NotifyEvent = {
+      type: 'payment.succeeded',
+      customerName: '홍', customerEmail: 'h@x.com',
+      amount: 14900, chargedAt: '2026-05-01T00:00:00Z',
+      nextChargeAt: '2026-05-31T00:00:00Z', activePlaceCount: 1,
+    }
+    const s = buildSlackPayload(ev)!
+    expect(s.text).toContain('결제 성공')
+    expect(s.text).toContain('홍')
+    expect(s.text).toContain('14,900')
+  })
+
+  it('billing.trial_ending → slack 메시지 없음 (사장님 전용)', () => {
+    const ev: NotifyEvent = {
+      type: 'billing.trial_ending',
+      customerName: '홍', customerEmail: 'h@x.com',
+      daysLeft: 1, trialEndsAt: '2026-05-02T00:00:00Z',
+      amount: 14900, activePlaceCount: 1,
+    }
+    expect(buildSlackPayload(ev)).toBeNull()
+  })
 })

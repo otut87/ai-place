@@ -48,6 +48,7 @@ export interface ChargeSubscriptionOutcome {
   }
   notify:
     | { type: 'none' }
+    | { type: 'payment.succeeded'; chargedAt: string; nextChargeAt: string; receiptUrl?: string }
     | { type: 'payment.failed'; nextRetryAt: string | null; failureMessage: string }
     | { type: 'payment.retry_exhausted' }
 }
@@ -82,6 +83,7 @@ export async function chargeSubscriptionOnce(
   if (result.success) {
     const nextCharge = new Date(now)
     nextCharge.setDate(nextCharge.getDate() + MONTH_DAYS)
+    const chargedAt = result.approvedAt ?? now.toISOString()
     return {
       paymentRow: {
         subscription_id: input.subscriptionId,
@@ -94,14 +96,19 @@ export async function chargeSubscriptionOnce(
         pg_response_message: null,
         retried_count: input.retriedCount,
         attempted_at: now.toISOString(),
-        succeeded_at: (result.approvedAt ?? now.toISOString()),
+        succeeded_at: chargedAt,
       },
       subscriptionPatch: {
         status: 'active',
         failed_retry_count: 0,
         next_charge_at: nextCharge.toISOString(),
       },
-      notify: { type: 'none' },
+      notify: {
+        type: 'payment.succeeded',
+        chargedAt,
+        nextChargeAt: nextCharge.toISOString(),
+        // T-223 이후: result.receiptUrl 이 있으면 여기에 채움 (현재는 adapter 미지원 → undefined)
+      },
     }
   }
 

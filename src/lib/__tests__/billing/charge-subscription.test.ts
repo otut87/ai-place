@@ -48,7 +48,12 @@ describe('chargeSubscriptionOnce — 성공', () => {
     expect(r.subscriptionPatch.status).toBe('active')
     expect(r.subscriptionPatch.failed_retry_count).toBe(0)
     expect(r.subscriptionPatch.next_charge_at).toBe('2026-05-20T00:00:00.000Z')
-    expect(r.notify.type).toBe('none')
+    // T-230: 성공 시 'payment.succeeded' 이벤트 emit — cron 이 dispatchNotify 로 이메일 발송.
+    expect(r.notify.type).toBe('payment.succeeded')
+    if (r.notify.type === 'payment.succeeded') {
+      expect(r.notify.chargedAt).toBe('2026-04-20T00:00:00Z')
+      expect(r.notify.nextChargeAt).toBe('2026-05-20T00:00:00.000Z')
+    }
   })
 })
 

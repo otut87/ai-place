@@ -98,6 +98,23 @@ export async function GET(req: Request) {
         amount: outcome.paymentRow.amount,
         adminEmail: process.env.ADMIN_NOTIFY_EMAIL,
       })
+    } else if (outcome.notify.type === 'payment.succeeded') {
+      // T-230: 결제 성공 시 고객에게 영수증 안내 + 다음 결제일 안내.
+      const { count: activeCount } = await admin
+        .from('places')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_id', row.customer_id)
+        .eq('status', 'active')
+      await dispatchNotify({
+        type: 'payment.succeeded',
+        customerName: row.customers?.name ?? '(이름 없음)',
+        customerEmail: row.customers?.email ?? undefined,
+        amount: outcome.paymentRow.amount,
+        chargedAt: outcome.notify.chargedAt,
+        nextChargeAt: outcome.notify.nextChargeAt,
+        receiptUrl: outcome.notify.receiptUrl,
+        activePlaceCount: activeCount ?? 0,
+      })
     }
   }
 

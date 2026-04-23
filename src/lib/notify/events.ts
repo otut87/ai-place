@@ -51,6 +51,28 @@ export type NotifyEvent =
       cardNumberMasked: string | null
       daysUntilExpiry: number        // 30 or 7
     }
+  | {
+      // T-230 — 결제 성공 시 영수증 안내 (T-223 receipt_url 반영).
+      type: 'payment.succeeded'
+      customerName: string
+      customerEmail?: string
+      amount: number
+      chargedAt: string              // ISO
+      nextChargeAt: string | null    // ISO, null 이면 구독 종료
+      receiptUrl?: string            // Toss 영수증 URL (T-223 이후)
+      activePlaceCount: number       // "{N}개 업체 × 14,900원"
+    }
+  | {
+      // T-230 — 카드 선등록 모델 파일럿 종료 예고.
+      //   D-3 / D-1 / D-0 (당일) 은 "예정" 안내 (카드는 이미 있음).
+      type: 'billing.trial_ending'
+      customerName: string
+      customerEmail: string
+      daysLeft: 3 | 1 | 0
+      trialEndsAt: string            // ISO
+      amount: number                 // 첫 청구 예정 금액
+      activePlaceCount: number
+    }
 
 export interface EmailPayload {
   to: string
@@ -150,6 +172,50 @@ export function buildEmailPayload(ev: NotifyEvent): EmailPayload | null {
         ].join('\n'),
       }
     }
+    case 'payment.succeeded': {
+      if (!ev.customerEmail) return null
+      const chargedDate = ev.chargedAt.slice(0, 10)
+      const nextLine = ev.nextChargeAt
+        ? `다음 결제일: ${ev.nextChargeAt.slice(0, 10)} · ₩${ev.amount.toLocaleString('ko-KR')} (업체 ${ev.activePlaceCount}개 기준)`
+        : '구독이 종료되어 추가 결제가 없습니다.'
+      const receiptLine = ev.receiptUrl
+        ? `영수증(카드매출전표): ${ev.receiptUrl}`
+        : '카드매출전표는 카드사 앱·명세서에서 확인 가능합니다.'
+      return {
+        to: ev.customerEmail,
+        subject: `[aiplace] ${chargedDate} 결제 완료 — ₩${ev.amount.toLocaleString('ko-KR')}`,
+        body: [
+          `${ev.customerName}님, AI Place 월 구독 결제(₩${ev.amount.toLocaleString('ko-KR')})가 완료되었습니다.`,
+          '',
+          receiptLine,
+          nextLine,
+          '',
+          '해지 · 카드 변경: https://aiplace.kr/owner/billing',
+        ].join('\n'),
+      }
+    }
+    case 'billing.trial_ending': {
+      const endDate = ev.trialEndsAt.slice(0, 10)
+      const subject = ev.daysLeft === 0
+        ? `[aiplace] 오늘 ₩${ev.amount.toLocaleString('ko-KR')} 첫 결제 예정`
+        : `[aiplace] 파일럿 D-${ev.daysLeft} · ${endDate} 첫 결제 ₩${ev.amount.toLocaleString('ko-KR')}`
+      const headline = ev.daysLeft === 0
+        ? '오늘 등록된 카드로 첫 자동 결제가 진행됩니다.'
+        : `${ev.daysLeft}일 후(${endDate}) 등록된 카드로 첫 자동 결제가 진행됩니다.`
+      return {
+        to: ev.customerEmail,
+        subject,
+        body: [
+          `${ev.customerName}님, AI Place 30일 파일럿 기간이 곧 종료됩니다.`,
+          '',
+          headline,
+          `결제 금액: ₩${ev.amount.toLocaleString('ko-KR')} (활성 업체 ${ev.activePlaceCount}개 × ₩14,900)`,
+          '',
+          '변경 · 확인: https://aiplace.kr/owner/billing',
+          '해지: https://aiplace.kr/owner/billing/cancel',
+        ].join('\n'),
+      }
+    }
   }
 }
 
@@ -168,6 +234,12 @@ export function buildSlackPayload(ev: NotifyEvent): SlackPayload | null {
       return {
         text: `:rotating_light: 결제 3회 실패 → 일시 중단 — *${ev.customerName}* · ${ev.amount.toLocaleString('ko-KR')}원`,
       }
+    case 'payment.succeeded':
+      return {
+        text: `:white_check_mark: 결제 성공 — *${ev.customerName}* · ₩${ev.amount.toLocaleString('ko-KR')} · 업체 ${ev.activePlaceCount}개 · 다음 ${ev.nextChargeAt ? ev.nextChargeAt.slice(0, 10) : '없음'}`,
+      }
+    case 'billing.trial_ending':
+      return null   // 사장님 전용 (admin 불필요)
     case 'place.approved':
     case 'place.rejected':
     case 'billing.expiry_warning':
