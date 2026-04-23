@@ -12,6 +12,7 @@ import { getTossClientKey, isUsingTossTestKey } from '@/lib/billing/toss'
 import { PLAN_AMOUNT_PER_PLACE, calculatePlanAmount } from '@/lib/billing/types'
 import { composePageTitle } from '@/lib/seo/compose-title'
 import { PageHeader } from '../_components/page-header'
+import { PilotEndingBanner } from '../_components/pilot-ending-banner'
 import { BillingAuthButton } from './_components/billing-auth-button'
 
 export const dynamic = 'force-dynamic'
@@ -29,6 +30,7 @@ interface Params {
     registered?: string
     code?: string
     message?: string
+    need_card?: string
   }>
 }
 
@@ -55,6 +57,11 @@ export default async function OwnerBillingPage({ searchParams }: Params) {
 
   return (
     <>
+      {params.need_card === '1' && !state.billingKey && (
+        <div className="owner-banner warn" role="alert">
+          <span>🚫 업체 등록 전에 결제 카드를 먼저 등록해 주세요. 카드 등록 후 30일 파일럿 동안은 무료입니다.</span>
+        </div>
+      )}
       {params.success && (
         <div className="owner-banner ok" role="status">
           <span>✅ 카드가 등록됐습니다. 파일럿 종료 후 자동 결제로 전환됩니다.</span>
@@ -64,6 +71,16 @@ export default async function OwnerBillingPage({ searchParams }: Params) {
         <div className="owner-banner danger" role="alert">
           <span>⚠️ 카드 등록 실패 · {params.message ?? params.code}</span>
         </div>
+      )}
+
+      {/* T-226: 파일럿 D-3 이하면 첫 청구 예고 (빌링 페이지 내부라 hideDetailCta=true) */}
+      {state.billingKey && state.customer && (
+        <PilotEndingBanner
+          pilotRemainingDays={state.pilotRemainingDays}
+          trialEndsAt={state.customer.trialEndsAt}
+          activePlaceCount={state.activePlaceCount}
+          hideDetailCta
+        />
       )}
 
       <PageHeader

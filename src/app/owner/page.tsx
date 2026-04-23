@@ -14,6 +14,7 @@ import { DashPlaceList } from './_components/dash-place-list'
 import { DashAeoChecklist } from './_components/dash-aeo-checklist'
 import { DashBotCard } from './_components/dash-bot-card'
 import { DashTodoCard } from './_components/dash-todo-card'
+import { PilotEndingBanner } from './_components/pilot-ending-banner'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,6 +49,8 @@ export default async function OwnerHomePage({ searchParams }: Params) {
   const email = data.user.email ?? ''
   const userName = email.split('@')[0] || '사장님'
   const placesLinked = data.places.filter((p) => p.mentionCount > 0).length
+  // T-226: 파일럿 D-3 예고 배너용 활성 업체 수 (14,900원 × N 계산).
+  const activePlaceCount = data.places.length
 
   return (
     <div className="dash-page">
@@ -58,10 +61,19 @@ export default async function OwnerHomePage({ searchParams }: Params) {
         </div>
       )}
 
-      <BillingBanner
-        hasCard={data.billing.hasCard}
-        pilotRemainingDays={data.billing.pilotRemainingDays}
-      />
+      {/* T-226: 파일럿 종료 D-3 이하 + 카드 있으면 첫 청구 예고. 그 외엔 기존 BillingBanner 가 담당. */}
+      {data.billing.hasCard && data.billing.pilotRemainingDays <= 3 && data.billing.pilotRemainingDays >= 0 ? (
+        <PilotEndingBanner
+          pilotRemainingDays={data.billing.pilotRemainingDays}
+          trialEndsAt={data.billing.pilotEndsAt}
+          activePlaceCount={activePlaceCount}
+        />
+      ) : (
+        <BillingBanner
+          hasCard={data.billing.hasCard}
+          pilotRemainingDays={data.billing.pilotRemainingDays}
+        />
+      )}
 
       {data.places.length === 0 ? (
         <EmptyState
