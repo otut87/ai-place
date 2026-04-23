@@ -174,7 +174,7 @@ export async function writeBlog(input: WriterInput): Promise<WriterOutput> {
   const start = Date.now()
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6' as never,
-    max_tokens: 4096,
+    max_tokens: 8192,
     system: SYSTEM,
     tools: [{
       name: 'generate_blog',
