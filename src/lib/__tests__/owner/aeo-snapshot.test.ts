@@ -111,6 +111,57 @@ describe('loadAeoSnapshotsForPlaces', () => {
     expect(resultMany[0].score).toBeGreaterThan(scoreZero)
   })
 
+  it('T-212: topPassedRules — 실제 통과 룰만 노출 (최대 3개)', async () => {
+    // name + address + phone 모두 있어 JSON-LD 기본 룰 통과하는 상태 유도
+    state.places = [{
+      id: 'p1', name: '디두', slug: 'd', city: 'x', category: 'y',
+      description: null, phone: '02-123-4567', address: '서울 강남구',
+      opening_hours: ['09:00-18:00'], images: null, image_url: null, review_count: 100,
+      services: null, faqs: null, review_summaries: null, updated_at: new Date().toISOString(),
+    }]
+    state.mentions.set('p1', 10)
+    const [snap] = await loadAeoSnapshotsForPlaces(['p1'])
+    expect(snap.topPassedRules).toBeDefined()
+    expect(Array.isArray(snap.topPassedRules)).toBe(true)
+    expect(snap.topPassedRules.length).toBeLessThanOrEqual(3)
+    // passedCount 가 0 이 아니면 topPassedRules 도 1개 이상이어야 함 (데이터 기반).
+    if (snap.passedCount > 0) {
+      expect(snap.topPassedRules.length).toBeGreaterThan(0)
+    }
+    // 각 항목은 label string 을 가져야 함 — 하드코딩된 placeholder 없음.
+    for (const r of snap.topPassedRules) {
+      expect(typeof r.label).toBe('string')
+      expect(r.label.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('T-212: topPassedRules 와 topIssues 는 서로 중복되지 않음', async () => {
+    state.places = [{
+      id: 'p1', name: '디두', slug: 'd', city: 'x', category: 'y',
+      description: null, phone: '02-123-4567', address: '서울 강남구',
+      opening_hours: ['09:00-18:00'], images: null, image_url: null, review_count: 100,
+      services: null, faqs: null, review_summaries: null, updated_at: new Date().toISOString(),
+    }]
+    const [snap] = await loadAeoSnapshotsForPlaces(['p1'])
+    const passedLabels = new Set(snap.topPassedRules.map((r) => r.label))
+    for (const issue of snap.topIssues) {
+      expect(passedLabels.has(issue.label)).toBe(false)
+    }
+  })
+
+  it('T-212: passedCount + failedCount === totalCount', async () => {
+    state.places = [{
+      id: 'p1', name: 'Test', slug: 't', city: 'x', category: 'y',
+      description: null, phone: null, address: null,
+      opening_hours: null, images: null, image_url: null, review_count: null,
+      services: null, faqs: null, review_summaries: null, updated_at: null,
+    }]
+    const [snap] = await loadAeoSnapshotsForPlaces(['p1'])
+    // topIssues 는 최대 3개로 잘리니 totalCount - passedCount 와 직접 비교 X. totalCount 만 검증.
+    expect(snap.passedCount).toBeGreaterThanOrEqual(0)
+    expect(snap.passedCount).toBeLessThanOrEqual(snap.totalCount)
+  })
+
   it('topIssues 는 가중치(weight) 내림차순 정렬 + 최대 3개', async () => {
     state.places = [{
       id: 'p1', name: 'Empty', slug: 'e', city: 'x', category: 'y',

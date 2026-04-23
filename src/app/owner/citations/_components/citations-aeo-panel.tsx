@@ -1,5 +1,6 @@
-// T-209/T-211 — /owner/citations AEO 패널 (ai-citations-v2.html 디자인).
-// 업체별 카드 나열 — SVG 링 점수 + 체크리스트(ok/no) + 완성도 태그 + 하단 CTA 링크.
+// T-209/T-211/T-212 — /owner/citations AEO 패널 (ai-citations-v2.html 디자인).
+// T-212: 허수 금지 — 체크리스트는 snapshot.topPassedRules / topIssues 실데이터만 렌더.
+// 화면을 채우기 위한 추론된(synthetic) 통과 항목을 표시하지 않는다.
 
 import Link from 'next/link'
 import type { AeoSnapshot } from '@/lib/owner/aeo-snapshot'
@@ -49,12 +50,9 @@ export function CitationsAeoPanel({ snapshots, placeNameById }: Props) {
         const dashboardHref = `/owner/places/${s.placeId}/dashboard`
         const publicHref = `/${s.citySlug}/${s.categorySlug}/${s.placeSlug}`
 
-        // 체크리스트: passed rules 우선 + 실패 top 3 = 상위 5개
-        const rulesToShow = [
-          ...s.topIssues.slice(0, 3).map((i) => ({ label: i.label, detail: i.detail, passed: false })),
-        ]
-        const passedVisible = Math.max(0, 5 - rulesToShow.length)
-        // 실제 passedRules 데이터는 snapshot 에 없음 — "N/M 룰 통과" 로 대체.
+        // T-212: 실데이터만 렌더. 경계 케이스 (전부 통과 / 전부 실패) 명시.
+        const allPassed = s.topIssues.length === 0 && s.passedCount > 0
+        const allFailed = s.topPassedRules.length === 0 && s.passedCount === 0
 
         return (
           <article key={s.placeId} className="score">
@@ -93,20 +91,35 @@ export function CitationsAeoPanel({ snapshots, placeNameById }: Props) {
             </div>
 
             <ul className="s-list">
-              <li className="ok">
+              <li className="ok count">
                 <span>{s.passedCount}/{s.totalCount} 룰 통과</span>
                 <i>✓</i>
               </li>
-              {rulesToShow.map((r, idx) => (
-                <li key={idx} className="no">
+
+              {s.topPassedRules.map((r, idx) => (
+                <li key={`p-${idx}`} className="ok">
+                  <span>{r.label}{r.detail ? ` — ${r.detail}` : ''}</span>
+                  <i>✓</i>
+                </li>
+              ))}
+
+              {s.topIssues.map((r, idx) => (
+                <li key={`f-${idx}`} className="no">
                   <span>{r.label}{r.detail ? ` — ${r.detail}` : ''}</span>
                   <i>!</i>
                 </li>
               ))}
-              {passedVisible > 0 && rulesToShow.length < 4 && (
-                <li className="ok">
-                  <span>기본 메타데이터</span>
+
+              {allPassed && (
+                <li className="ok neutral">
+                  <span>개선 대기 중인 항목 없음</span>
                   <i>✓</i>
+                </li>
+              )}
+              {allFailed && (
+                <li className="no neutral">
+                  <span>통과한 룰 없음 — 가장 기본부터 채워보세요</span>
+                  <i>!</i>
                 </li>
               )}
             </ul>

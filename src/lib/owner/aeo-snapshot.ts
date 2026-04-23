@@ -17,7 +17,10 @@ export interface AeoSnapshot {
   placeSlug: string
   score: number
   grade: AeoGrade
+  /** T-212: 실패 룰 상위 3개 (가중치 기준). "다음 개선 항목" 으로 표시. */
   topIssues: Array<{ label: string; detail: string | undefined }>
+  /** T-212: 통과 룰 상위 3개 (가중치 기준). 실데이터만 — 허수 표시 금지. */
+  topPassedRules: Array<{ label: string; detail: string | undefined }>
   passedCount: number
   totalCount: number
 }
@@ -86,8 +89,14 @@ export async function loadAeoSnapshotsForPlaces(
     })
 
     const failed = aeo.rules.filter((r) => !r.passed)
-    // 가중치 큰 순 = 감점이 큰 이슈부터 — 우선 개선 항목 3개.
+    const passed = aeo.rules.filter((r) => r.passed)
+
+    // 가중치 내림차순 — 실패는 "가장 아픈 감점", 통과는 "가장 값어치 있는 칭찬".
     const topIssues = failed
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 3)
+      .map((r) => ({ label: r.label, detail: r.detail }))
+    const topPassedRules = passed
       .sort((a, b) => b.weight - a.weight)
       .slice(0, 3)
       .map((r) => ({ label: r.label, detail: r.detail }))
@@ -101,7 +110,8 @@ export async function loadAeoSnapshotsForPlaces(
       score: aeo.score,
       grade: aeo.grade,
       topIssues,
-      passedCount: aeo.rules.filter((r) => r.passed).length,
+      topPassedRules,
+      passedCount: passed.length,
       totalCount: aeo.rules.length,
     })
   }
