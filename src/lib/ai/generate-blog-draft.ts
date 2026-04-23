@@ -93,6 +93,50 @@ const TOOL_INPUT_SCHEMA = {
   },
 }
 
+// postType 별 구조 지시 — 같은 7블록이라도 섹션별 길이·초점을 다르게.
+// writer.ts 의 buildPostTypeStructure 와 철학 동일 (공개 pipeline + draft 양쪽 일관성).
+function buildPostTypeStructure(input: GenerateBlogDraftInput): string[] {
+  const hero = input.candidatePlaces[0]?.name ?? '첫 번째 업체'
+  const others = input.candidatePlaces.slice(1).map(p => p.name).join(', ') || '나머지 업체'
+  switch (input.postType) {
+    case 'detail':
+      return [
+        '## 구조 지시 (postType=detail — 1곳 주인공 심층)',
+        `- **주인공**: ${hero} 를 "### ${hero}" 블록에서 **600자 이상** 심층 서술 (강점·서비스 상세·추천 대상·리뷰 하이라이트).`,
+        `- **보조**: ${others} 는 각각 150자 내 짧게 "참고" 톤으로만 언급.`,
+        '- **비교표**: 행 3개 (주인공 1곳 강조 + 나머지 2곳 축약).',
+        '- **FAQ**: 주인공 업체 관점 질문 (예약·소요시간·주차) 중심.',
+      ]
+    case 'compare':
+      return [
+        '## 구조 지시 (postType=compare — 3곳 동등 비교)',
+        '- **업체별 상세**: 각 업체 200자 내 **균등**. 한 곳을 띄우지 말 것.',
+        '- **비교표**: 필수 **6열+** — 가격대 / 영업시간 / 접근성 / 주요 서비스 / 전문의·자격 / 강점 한 줄.',
+        '- **결론**: "목적별 추천" 형식 — "~이 목적이면 A, ~이면 B, ~이면 C".',
+        '- **FAQ**: "어느 곳이 가성비?" / "야간 진료?" 같은 **비교형 질문** 중심.',
+      ]
+    case 'guide':
+      return [
+        '## 구조 지시 (postType=guide — 첫 방문자 선택 가이드)',
+        '- **체크리스트**: 10개+ 항목으로 확장 — 방문 전 / 상담 중 / 결제 전 / 재방문 전 단계별.',
+        '- **위험 신호**: 6개+ — 피해야 할 업체 특징 (부작용 미고지·과장 광고·가격 비공개 등).',
+        '- **업체별 상세**: 각 150자 내 — "이럴 땐 여기" 포지셔닝 위주로 초보자가 빠르게 판단 가능하게.',
+        '- **FAQ**: "처음 방문 비용은?" / "상담만 받아도 되나?" 같은 **첫 방문자 관점**.',
+      ]
+    case 'keyword':
+      return [
+        '## 구조 지시 (postType=keyword — 검색 랜딩 / AI 답변 최적화)',
+        '- **결론**: Direct Answer Block **120자+** 로 확장. 바로 뒤 번호 매김 리스트 3개로 핵심 반복.',
+        '- **업체별 상세**: 평균 250자 — 타깃 키워드 포함 자연 문장.',
+        '- **FAQ**: **5개** 이상 — 롱테일 검색어 변형 커버 ("~ 비용", "~ 추천", "~ 야간", "~ 후기", "~ 잘하는 곳").',
+        '- **위험 신호**: 4개 내로 축약 (체크리스트보다 실용 질문 강조).',
+      ]
+    case 'general':
+    default:
+      return []
+  }
+}
+
 function buildUserMessage(input: GenerateBlogDraftInput): string {
   const placesText = input.candidatePlaces.map((p, i) => {
     const rating = p.rating ? `${p.rating.toFixed(1)}점` : '평점 없음'
@@ -119,6 +163,7 @@ function buildUserMessage(input: GenerateBlogDraftInput): string {
     general: '일반 추천·분석 글',
   }
   const postTypeDescription = postTypeHint[input.postType]
+  const structureLines = buildPostTypeStructure(input)
 
   return `**도시**: ${input.cityName} (${input.city})
 **업종**: ${input.categoryName} (${input.category})
@@ -132,7 +177,7 @@ ${input.selectionReasoning}
 
 ${placesText}
 
-위 데이터로 7블록 한국어 블로그 초안을 작성하세요. 도구 generate_blog_draft 호출 필수.`
+${structureLines.length > 0 ? structureLines.join('\n') + '\n\n' : ''}위 데이터로 7블록 한국어 블로그 초안을 작성하세요. 도구 generate_blog_draft 호출 필수.`
 }
 
 export async function generateBlogDraft(

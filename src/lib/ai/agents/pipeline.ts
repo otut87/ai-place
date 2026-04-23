@@ -8,12 +8,14 @@
 //  5. medical-law-checker (조건부, Haiku)
 //  6. writer-rewrite   — Sonnet (max 1회)
 //  7. quality-score-final — 재스코어
-//  8. image-generator  — gpt-image-2 low + Places photo
-//  9. similarity-guard — Jaccard 25/35
+//  8. similarity-guard — Jaccard 25/35
+//
+// 이미지 단계 제거 — 텍스트 중심 전략, AI 검색은 이미지 비중 낮음.
+// Storage/thumbnail_url 은 migration 042 에서 drop.
 //
 // 반환:
 //  - status: 'success' | 'failed_quality' | 'failed_similarity' | 'failed_timeout'
-//  - 전체 draft + images + pipelineLog + qualityResult + similarity
+//  - 전체 draft + pipelineLog + qualityResult + similarity
 
 import type { Place } from '@/lib/types'
 import type { AngleKey } from '@/lib/ai/angles'
@@ -21,7 +23,6 @@ import type { ExternalPlace } from '@/lib/blog/external-reference'
 import { writeBlog, type WriterInput, type WriterOutput, type ResearchPack } from './writer'
 import { reviewQuality, type RewritePatch } from './quality-reviewer'
 import { checkCompliance, getDisclaimer, type ComplianceIssue } from './medical-law-checker'
-import { generateMainThumbnail, fetchPlacePhotos, type GenerateThumbnailResult } from './image-generator'
 import { buildResearchPack } from './researcher'
 import { scoreBlogPostV2, type BlogQualityV2Result } from '@/lib/blog/quality-v2'
 import { guardBeforeInsert, type SimilarityGuardResult } from '@/lib/blog/similarity-guard'
@@ -52,9 +53,6 @@ export interface PipelineInput {
   totalTimeoutMs?: number
   /** 테스트 override. */
   apiKey?: string
-  openaiApiKey?: string
-  /** 이미지 생성 생략 (테스트). */
-  skipImage?: boolean
 }
 
 export interface PipelineResult {
@@ -64,8 +62,6 @@ export interface PipelineResult {
   qualityIssues: string[]
   rewritePatches: RewritePatch[]
   complianceIssues: ComplianceIssue[]
-  thumbnail: GenerateThumbnailResult | null
-  placePhotos: Array<{ placeSlug: string; placeName: string; url: string; alt: string }>
   similarity: SimilarityGuardResult | null
   pipelineLog: PipelineLog
   reason?: string                  // failed_* 상세
@@ -271,45 +267,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     })
   }
 
-  // ─── 7. image-generator ──────────────────────────────────
-  let thumbnail: GenerateThumbnailResult | null = null
-  let placePhotos: PipelineResult['placePhotos'] = []
-  if (!input.skipImage) {
-    // 썸네일 일러스트 의미 앵커: draft.summary + 상위 highlights 추출.
-    // highlights 는 verifiedPlaces 의 리뷰·평점 요약 + researchPack 에서 몇 개 추림.
-    const highlights = extractHighlights(draft, input)
-    thumbnail = await telemetry.run(
-      'image-thumbnail',
-      () => withTimeout(generateMainThumbnail({
-        title: draft.title,
-        summary: draft.summary,
-        highlights,
-        categoryName: input.categoryName,
-        cityName: input.cityName,
-        sector: input.sector,
-        angle: input.angle,
-        slug: input.slug,
-        apiKey: input.openaiApiKey,
-      }), Math.min(remaining(), 30_000), 'image-thumbnail'),
-      {
-        model: 'gpt-image-2',
-        extractStatus: r => r?.error ? 'warn' : 'pass',
-        extractResult: r => r ? { url: r.url, error: r.error } : {},
-      },
-    )
-
-    if (input.postType === 'detail' && input.verifiedPlaces.length > 0) {
-      telemetry.record({
-        stage: 'image-place-photos',
-        latencyMs: 0,
-        status: 'pass',
-        result: { attempted: input.verifiedPlaces.length },
-      })
-      placePhotos = fetchPlacePhotos({ places: input.verifiedPlaces }).photos
-    }
-  }
-
-  // ─── 8. similarity-guard ─────────────────────────────────
+  // ─── 7. similarity-guard ─────────────────────────────────
   const similarity = await telemetry.run(
     'similarity-guard',
     () => withTimeout(guardBeforeInsert({
@@ -328,7 +286,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     },
   )
 
-  // ─── 9. 최종 status 결정 ─────────────────────────────────
+  // ─── 8. 최종 status 결정 ─────────────────────────────────
   let status: PipelineStatus = 'success'
   let reason: string | undefined
 
@@ -349,49 +307,10 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     qualityIssues,
     rewritePatches,
     complianceIssues,
-    thumbnail,
-    placePhotos,
     similarity,
     pipelineLog: telemetry.build(),
     reason,
   }
-}
-
-/**
- * draft + input 에서 썸네일 일러스트용 "숫자/사실 훅" 1~3개 추출.
- * - verifiedPlaces 수 / 평균 평점 / 총 리뷰 수 를 우선 활용 (post 의 실제 데이터).
- * - researchPack.reviewHighlights 가 있으면 첫 항목 추가.
- */
-function extractHighlights(draft: WriterOutput, input: PipelineInput): string[] {
-  const hooks: string[] = []
-
-  const places = input.verifiedPlaces
-  if (places.length >= 2) {
-    hooks.push(`${places.length}곳 비교 분석`)
-  }
-
-  const ratings = places.map(p => p.rating).filter((r): r is number => typeof r === 'number')
-  if (ratings.length > 0) {
-    const avg = ratings.reduce((s, r) => s + r, 0) / ratings.length
-    hooks.push(`평균 평점 ${avg.toFixed(1)}`)
-  }
-
-  const reviewCounts = places
-    .map(p => p.reviewCount)
-    .filter((r): r is number => typeof r === 'number')
-  if (reviewCounts.length > 0) {
-    const total = reviewCounts.reduce((s, r) => s + r, 0)
-    if (total > 0) hooks.push(`리뷰 ${total}건 반영`)
-  }
-
-  // researchPack 으로부터 의미 있는 하이라이트 1개
-  const rhl = input.researchPack?.reviewHighlights?.[0]
-  if (rhl) hooks.push(rhl)
-
-  // draft.tags 의 첫 번째 키워드도 훅으로 활용 가능
-  if (hooks.length < 2 && draft.tags[0]) hooks.push(draft.tags[0])
-
-  return hooks.slice(0, 3)
 }
 
 function buildFailure(
@@ -406,8 +325,6 @@ function buildFailure(
     qualityIssues: [],
     rewritePatches: [],
     complianceIssues: [],
-    thumbnail: null,
-    placePhotos: [],
     similarity: null,
     pipelineLog: telemetry.build(),
     reason,

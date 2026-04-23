@@ -1,4 +1,5 @@
-// T-195 — Pipeline 통합 테스트 (writer/reviewer/checker/image/similarity 전부 mock).
+// T-195 — Pipeline 통합 테스트 (writer/reviewer/checker/similarity 전부 mock).
+// 이미지 단계는 제거됨 (2026-04 텍스트 전용 전략).
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Place } from '@/lib/types'
 
@@ -12,24 +13,14 @@ vi.mock('@anthropic-ai/sdk', () => {
   return { default: MockAnthropic }
 })
 
-// --- Supabase admin mock (storage + blog_posts 조회)
-const { mockStorageUpload, mockGetPublicUrl, mockFrom } = vi.hoisted(() => ({
-  mockStorageUpload: vi.fn(),
-  mockGetPublicUrl: vi.fn(),
+// --- Supabase admin mock (blog_posts 유사도 조회용)
+const { mockFrom } = vi.hoisted(() => ({
   mockFrom: vi.fn(),
 }))
 vi.mock('@/lib/supabase/admin-client', () => ({
   getAdminClient: () => ({
-    storage: {
-      from: () => ({ upload: mockStorageUpload, getPublicUrl: mockGetPublicUrl }),
-    },
     from: mockFrom,
   }),
-}))
-
-// --- Google Places mock
-vi.mock('@/lib/google-places', () => ({
-  getPhotoUrl: (ref: string) => `https://places/${ref}`,
 }))
 
 import { runBlogPipeline } from '@/lib/ai/agents/pipeline'
@@ -120,8 +111,6 @@ b 는 천안 서북구 소재 전문의 1인 의원입니다. 리뷰 95건 평�
 
 beforeEach(() => {
   mockCreate.mockReset()
-  mockStorageUpload.mockReset()
-  mockGetPublicUrl.mockReset()
   mockFrom.mockReset()
 })
 
@@ -165,7 +154,6 @@ describe('runBlogPipeline', () => {
       slug: 'cheonan-dermatology-abc',
       verifiedPlaces: [mkPlace('a'), mkPlace('b')],
       externalReferences: [],
-      skipImage: true,
       apiKey: 'k',
     })
 
@@ -193,7 +181,6 @@ describe('runBlogPipeline', () => {
       slug: 's',
       verifiedPlaces: [mkPlace('a')],
       externalReferences: [],
-      skipImage: true,
       apiKey: 'k',
     })
 
@@ -221,7 +208,6 @@ describe('runBlogPipeline', () => {
       slug: 's',
       verifiedPlaces: [mkPlace('a')],
       externalReferences: [],
-      skipImage: true,
       apiKey: 'k',
     })
 
@@ -244,7 +230,6 @@ describe('runBlogPipeline', () => {
       slug: 's',
       verifiedPlaces: [mkPlace('a')],
       externalReferences: [],
-      skipImage: true,
       apiKey: 'k',
     })
 
@@ -271,7 +256,6 @@ describe('runBlogPipeline', () => {
       slug: 's',
       verifiedPlaces: [mkPlace('a'), mkPlace('b')],
       externalReferences: [],
-      skipImage: true,
       apiKey: 'k',
     })
 
@@ -295,7 +279,6 @@ describe('runBlogPipeline', () => {
       verifiedPlaces: [mkPlace('a')],
       externalReferences: [],
       researchPack: { reviewHighlights: ['친절'], priceBands: [], channels: {} },
-      skipImage: true,
       apiKey: 'k',
     })
 
@@ -341,7 +324,6 @@ describe('runBlogPipeline', () => {
       slug: 's',
       verifiedPlaces: [mkPlace('a')],
       externalReferences: [],
-      skipImage: true,
       apiKey: 'k',
     })
 
@@ -383,7 +365,6 @@ describe('runBlogPipeline', () => {
       slug: 's',
       verifiedPlaces: [mkPlace('a')],
       externalReferences: [],
-      skipImage: true,
       apiKey: 'k',
     })
 
@@ -411,63 +392,11 @@ describe('runBlogPipeline', () => {
       slug: 's',
       verifiedPlaces: [mkPlace('a')],
       externalReferences: [],
-      skipImage: true,
       apiKey: 'k',
     })
 
     expect(r.draft).not.toBeNull()
     expect(r.pipelineLog.stages.some(s => s.stage === 'quality-score')).toBe(true)
-  })
-
-  it('skipImage=false — image-generator 호출 + Place photos 추출 (detail)', async () => {
-    // global fetch mock — OpenAI gpt-image-2 성공 응답
-    const pngB64 = Buffer.from('fake-png-bytes').toString('base64')
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ data: [{ b64_json: pngB64 }] }),
-      text: async () => '',
-    })) as unknown as typeof fetch
-
-    process.env.OPENAI_API_KEY = 'sk-test'
-    mockStorageUpload.mockResolvedValueOnce({ error: null })
-    mockGetPublicUrl.mockReturnValueOnce({ data: { publicUrl: 'https://cdn/abc.png' } })
-
-    mockCreate.mockResolvedValueOnce({
-      content: [{ type: 'tool_use', name: 'generate_blog', input: HEALTHY_DRAFT }],
-      usage: { input_tokens: 100, output_tokens: 100 },
-    })
-    mockCreate.mockResolvedValueOnce({
-      content: [{ type: 'tool_use', name: 'compliance_check', input: { issues: [], disclaimerNeeded: false } }],
-      usage: { input_tokens: 50, output_tokens: 50 },
-    })
-    mockFrom.mockReturnValueOnce(blogPostsEmpty())
-
-    // Place 에 photoRefs 있도록 — fetchPlacePhotos 가 URL 생성
-    const placeWithPhoto = { ...mkPlace('a'), photoRefs: ['photo-ref-1'] } as Place & { photoRefs: string[] }
-
-    try {
-      const r = await runBlogPipeline({
-        city: 'cheonan', cityName: '천안시',
-        category: 'dermatology', categoryName: '피부과', sector: 'medical',
-        postType: 'detail', angle: 'review-deepdive',
-        targetQuery: '천안 피부과',
-        slug: 'with-image',
-        verifiedPlaces: [placeWithPhoto],
-        externalReferences: [],
-        // skipImage 기본값 false
-        apiKey: 'k',
-      })
-
-      const stages = r.pipelineLog.stages.map(s => s.stage)
-      expect(stages).toContain('image-thumbnail')
-      expect(stages).toContain('image-place-photos')
-      expect(r.thumbnail?.url).toBe('https://cdn/abc.png')
-      expect(r.placePhotos.length).toBeGreaterThan(0)
-    } finally {
-      globalThis.fetch = originalFetch
-      delete process.env.OPENAI_API_KEY
-    }
   })
 
   it('medical 금칙 표현 감지 시 compliance issues 기록 + 면책 자동 삽입', async () => {
@@ -510,7 +439,6 @@ describe('runBlogPipeline', () => {
       slug: 's',
       verifiedPlaces: [mkPlace('a')],
       externalReferences: [],
-      skipImage: true,
       apiKey: 'k',
     })
 

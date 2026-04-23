@@ -152,4 +152,93 @@ describe('T-129 generateBlogDraft', () => {
       }),
     ).rejects.toThrow(/tool 을 호출하지 않았습니다/)
   })
+
+  // ─────────────────────────────────────────────────────────────────────
+  // 4개 자동 발행 타입 — user message 에 타입별 설명이 정확히 주입되는지 검증.
+  // 프롬프트 drift 로 타입 구분이 사라지면 바로 감지.
+  // ─────────────────────────────────────────────────────────────────────
+
+  function makeToolResponse() {
+    return {
+      content: [{
+        type: 'tool_use',
+        name: 'generate_blog_draft',
+        input: {
+          title: '천안 피부과 추천 3곳 — 리뷰 412건 분석 (2026)',
+          summary: '천안 피부과 중 여드름 치료로 만족도가 높은 3곳. 평균 평점 4.7점.',
+          content: FULL_MARKDOWN,
+          tags: ['천안', '피부과', '여드름'],
+          faqs: [{ question: '여드름 치료 몇 회?', answer: '4~6회 내외' }],
+        },
+      }],
+      usage: { input_tokens: 1200, output_tokens: 3400 },
+    }
+  }
+
+  const baseInput = {
+    city: 'cheonan', cityName: '천안시',
+    category: 'dermatology', categoryName: '피부과',
+    sector: 'medical',
+    candidatePlaces: [mkPlace('a'), mkPlace('b'), mkPlace('c')],
+    selectionReasoning: 'top 3 by rating',
+    apiKey: 'test-key',
+  }
+
+  it("postType='detail' — 심층 소개 힌트가 prompt 에 주입", async () => {
+    mockCreate.mockResolvedValueOnce(makeToolResponse())
+    const { generateBlogDraft } = await import('@/lib/ai/generate-blog-draft')
+    await generateBlogDraft({ ...baseInput, postType: 'detail' })
+
+    const userMessage = mockCreate.mock.calls[0]?.[0].messages[0].content as string
+    expect(userMessage).toContain('**글 유형**: detail')
+    expect(userMessage).toContain('특정 업체 1곳을 주인공으로 한 심층 소개')
+  })
+
+  it("postType='keyword' — 랜딩 글 힌트가 prompt 에 주입", async () => {
+    mockCreate.mockResolvedValueOnce(makeToolResponse())
+    const { generateBlogDraft } = await import('@/lib/ai/generate-blog-draft')
+    await generateBlogDraft({ ...baseInput, postType: 'keyword' })
+
+    const userMessage = mockCreate.mock.calls[0]?.[0].messages[0].content as string
+    expect(userMessage).toContain('**글 유형**: keyword')
+    expect(userMessage).toContain('특정 키워드에 최적화된 검색·답변용 랜딩')
+  })
+
+  it("postType='compare' — 비교 글 힌트가 prompt 에 주입", async () => {
+    mockCreate.mockResolvedValueOnce(makeToolResponse())
+    const { generateBlogDraft } = await import('@/lib/ai/generate-blog-draft')
+    await generateBlogDraft({ ...baseInput, postType: 'compare' })
+
+    const userMessage = mockCreate.mock.calls[0]?.[0].messages[0].content as string
+    expect(userMessage).toContain('**글 유형**: compare')
+    expect(userMessage).toContain('업체·시술·가격을 나란히 비교')
+  })
+
+  it("postType='guide' — 선택 가이드 힌트가 prompt 에 주입", async () => {
+    mockCreate.mockResolvedValueOnce(makeToolResponse())
+    const { generateBlogDraft } = await import('@/lib/ai/generate-blog-draft')
+    await generateBlogDraft({ ...baseInput, postType: 'guide' })
+
+    const userMessage = mockCreate.mock.calls[0]?.[0].messages[0].content as string
+    expect(userMessage).toContain('**글 유형**: guide')
+    expect(userMessage).toContain('처음 이용하는 독자를 위한 선택 가이드')
+  })
+
+  it('4개 타입 모두 후보 업체 리스트와 선정 근거가 동일하게 주입', async () => {
+    const types: Array<'detail' | 'keyword' | 'compare' | 'guide'> = ['detail', 'keyword', 'compare', 'guide']
+    const { generateBlogDraft } = await import('@/lib/ai/generate-blog-draft')
+    for (const postType of types) {
+      mockCreate.mockResolvedValueOnce(makeToolResponse())
+      await generateBlogDraft({ ...baseInput, postType })
+    }
+
+    // 각 호출의 user message 에 동일한 3개 업체 slug 와 reasoning 포함.
+    for (let i = 0; i < types.length; i += 1) {
+      const msg = mockCreate.mock.calls[i]?.[0].messages[0].content as string
+      expect(msg).toContain('slug: a')
+      expect(msg).toContain('slug: b')
+      expect(msg).toContain('slug: c')
+      expect(msg).toContain('top 3 by rating')
+    }
+  })
 })

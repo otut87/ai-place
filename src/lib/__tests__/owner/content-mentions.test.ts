@@ -5,7 +5,7 @@ interface State {
   blogs: Array<{
     slug: string; title: string | null; summary: string | null; content: string | null
     tags: string[] | null; status: string | null; published_at: string | null
-    thumbnail_url: string | null; city: string | null; sector: string | null
+    city: string | null; sector: string | null
     post_type: string | null; created_at: string | null
   }>
   mentionsError: { message: string } | null
@@ -109,21 +109,21 @@ describe('loadOwnerContent', () => {
       {
         slug: 'p-detail', title: '업체 심층', summary: 'summary',
         content: '본문...', tags: ['tag1', 'tag2'], status: 'active',
-        published_at: '2026-04-20T00:00:00Z', thumbnail_url: 'http://img/1.jpg',
+        published_at: '2026-04-20T00:00:00Z',
         city: 'cheonan', sector: 'medical', post_type: 'detail',
         created_at: '2026-04-20T00:00:00Z',
       },
       {
         slug: 'p-compare', title: '비교', summary: null,
         content: 'XYZ', tags: null, status: 'active',
-        published_at: '2026-04-21T00:00:00Z', thumbnail_url: null,
+        published_at: '2026-04-21T00:00:00Z',
         city: 'cheonan', sector: 'medical', post_type: 'compare',
         created_at: '2026-04-21T00:00:00Z',
       },
       {
         slug: 'p-general', title: '일반', summary: null,
         content: null, tags: null, status: 'draft',
-        published_at: null, thumbnail_url: null,
+        published_at: null,
         city: 'cheonan', sector: 'medical', post_type: 'general',
         created_at: '2026-04-22T00:00:00Z',
       },
@@ -147,7 +147,6 @@ describe('loadOwnerContent', () => {
     expect(d.city).toBe('cheonan')
     expect(d.sector).toBe('medical')
     expect(d.postType).toBe('detail')
-    expect(d.thumbnailUrl).toBe('http://img/1.jpg')
 
     const g = byPath.get('/blog/cheonan/medical/p-general')!
     expect(g.contentType).toBeNull() // general → '전체' 탭에만
@@ -197,12 +196,12 @@ describe('loadOwnerContent', () => {
     state.blogs = [
       {
         slug: 'old', title: '오래된', summary: null, content: null, tags: null,
-        status: 'active', published_at: '2026-04-22T00:00:00Z', thumbnail_url: null,
+        status: 'active', published_at: '2026-04-22T00:00:00Z',
         city: 'a', sector: 'b', post_type: 'compare', created_at: '2026-01-01T00:00:00Z',
       },
       {
         slug: 'new', title: '최근', summary: null, content: null, tags: null,
-        status: 'active', published_at: '2026-04-01T00:00:00Z', thumbnail_url: null,
+        status: 'active', published_at: '2026-04-01T00:00:00Z',
         city: 'a', sector: 'b', post_type: 'guide', created_at: '2026-04-01T00:00:00Z',
       },
     ]
@@ -219,7 +218,7 @@ describe('loadOwnerContent', () => {
     state.blogs = [
       {
         slug: 'broken', title: 'Broken', summary: null, content: null, tags: null,
-        status: null, published_at: null, thumbnail_url: null,
+        status: null, published_at: null,
         city: null, sector: null, post_type: null, created_at: null,
       },
     ]

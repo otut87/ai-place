@@ -41,7 +41,6 @@ export interface OwnerContentItem {
   sector: string | null
   status: string | null
   publishedAt: string | null
-  thumbnailUrl: string | null
   /** blog_posts.post_type — seed 는 null. */
   postType: BlogPostType | null
   /** blog_posts.published_at | created_at | place_mentions.created_at (fallback). */
@@ -115,7 +114,6 @@ export async function loadOwnerContent(placeIds: string[]): Promise<LoadOwnerCon
         sector: null,
         status: null,
         publishedAt: null,
-        thumbnailUrl: null,
         postType: null,
         sortKey: r.created_at,
       }
@@ -138,7 +136,7 @@ export async function loadOwnerContent(placeIds: string[]): Promise<LoadOwnerCon
     if (slugs.length > 0) {
       const { data: blogData, error: bErr } = await admin
         .from('blog_posts')
-        .select('slug, title, summary, content, tags, status, published_at, thumbnail_url, city, sector, post_type, created_at')
+        .select('slug, title, summary, content, tags, status, published_at, city, sector, post_type, created_at')
         .in('slug', slugs)
 
       if (bErr) {
@@ -152,7 +150,6 @@ export async function loadOwnerContent(placeIds: string[]): Promise<LoadOwnerCon
           tags: string[] | null
           status: string | null
           published_at: string | null
-          thumbnail_url: string | null
           city: string | null
           sector: string | null
           post_type: BlogPostType | null
@@ -172,7 +169,6 @@ export async function loadOwnerContent(placeIds: string[]): Promise<LoadOwnerCon
           item.sector = b.sector
           item.status = b.status ?? null
           item.publishedAt = b.published_at ?? null
-          item.thumbnailUrl = b.thumbnail_url ?? null
           item.postType = b.post_type ?? null
           // post_type 으로 탭 분류 확정 ('general' 은 null → '전체' 탭에만)
           item.contentType = mapPostTypeToTab(b.post_type)

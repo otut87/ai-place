@@ -61,13 +61,6 @@ describe('estimateStageCostKrw', () => {
     expect(c).toBeLessThan(26000)
   })
 
-  it('gpt-image-2 per image ≈ $0.006 × 1400 = 8.4원', () => {
-    const c = estimateStageCostKrw({
-      stage: 'image-thumbnail', model: 'gpt-image-2', latencyMs: 1,
-    })
-    expect(c).toBeCloseTo(8.4, 0)
-  })
-
   it('model 지정 없으면 0', () => {
     expect(estimateStageCostKrw({ stage: 'writer', latencyMs: 1 })).toBe(0)
   })

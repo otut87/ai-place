@@ -10,13 +10,11 @@ export type PipelineStage =
   | 'medical-law-checker'
   | 'writer-rewrite'
   | 'quality-score-final'
-  | 'image-thumbnail'
-  | 'image-place-photos'
   | 'similarity-guard'
 
 export interface PipelineStageLog {
   stage: PipelineStage
-  model?: string                         // e.g. 'claude-sonnet-4-6', 'gpt-image-2'
+  model?: string                         // e.g. 'claude-sonnet-4-6', 'claude-haiku-4-5'
   inputTokens?: number
   outputTokens?: number
   latencyMs: number
@@ -48,8 +46,6 @@ const PRICING: Record<string, { input: number; output: number } | { perImage: nu
   'claude-sonnet-4-6': { input: 3, output: 15 },
   'claude-haiku-4-5-20251001': { input: 0.8, output: 4 },
   'claude-haiku-4-5': { input: 0.8, output: 4 },
-  'gpt-image-2': { perImage: 0.006 },      // low quality 1024×1024
-  'google-places-photo': { perImage: 0.007 },
   'google-places-text-search': { perImage: 0.032 },
 }
 

@@ -200,11 +200,6 @@ export async function GET(req: Request) {
         quality_rules_report: result.quality?.rulesReport ?? null,
         hard_failures: result.quality?.hardFailures ?? [],
         similarity_score: result.similarity?.similarity ?? null,
-        thumbnail_url: result.thumbnail?.url ?? null,
-        image_urls: {
-          infographics: [],
-          placePhotos: result.placePhotos.map(p => p.url),
-        },
         pipeline_log: result.pipelineLog,
         status: 'draft',               // 관리자 검수 후 수동 active 전환
         published_at: null,

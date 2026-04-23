@@ -29,7 +29,7 @@ const SECTOR_GRADIENTS = new Set([
 ])
 
 export function ContentCard({ item, placesById, citationCount }: Props) {
-  const { path, contentType, postType, placeIds, title, summary, tags, charCount, sector, status, publishedAt, thumbnailUrl } = item
+  const { path, contentType, postType, placeIds, title, summary, tags, charCount, sector, status, publishedAt } = item
 
   const displayKey: DisplayKey = contentType ?? 'general'
   const tab = TAB_LABELS[displayKey]
@@ -48,12 +48,8 @@ export function ContentCard({ item, placesById, citationCount }: Props) {
   return (
     <article className="c-item">
       <div className="thumb">
-        {thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="kimg" src={thumbnailUrl} alt="" loading="lazy" />
-        ) : (
-          <div className={`kbg ${gradientKey}`} />
-        )}
+        {/* 이미지 단계 제거 — sector gradient + 큰 글자만 사용 */}
+        <div className={`kbg ${gradientKey}`} />
         <div className="overlay" />
         <span className="cat-lbl"><i /> {tab.long}</span>
         {bigLetter && <span className="big-letter">{bigLetter}</span>}
