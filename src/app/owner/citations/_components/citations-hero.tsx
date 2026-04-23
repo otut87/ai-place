@@ -1,12 +1,14 @@
 'use client'
 
-// /owner/citations hero — 검정 카드 + 구간·업체 필터 + 3 stats.
-// T-209: 월 프리셋 + 사용자 지정 날짜 범위 추가 (기존 7/30/90 셀렉터와 병존).
+// /owner/citations hero — 검정 카드 + 월 필터 통합 바 + 3 stats.
+// T-211: 월 피커(연도 라벨 + 이전/다음 + 3개월 pill + 캘린더 드롭다운) + 업체 필터를
+// 하나의 컴포넌트로 통합. 캘린더는 body portal (hero overflow:hidden 탈출).
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import type { OwnerBotSummary, OwnerDailyTrendRow } from '@/lib/owner/bot-stats'
-import { monthPresets, toDateInputValue } from '@/lib/owner/period-parser'
+import { monthBounds, toDateInputValue } from '@/lib/owner/period-parser'
 
 interface PlaceOption {
   id: string
@@ -14,14 +16,11 @@ interface PlaceOption {
 }
 
 interface Props {
-  /** 현재 URL 해석 결과 */
   periodMode: 'days' | 'month' | 'custom'
-  periodLabel: string               // '지난 30일' · '2026년 3월' · '2026-03-15 ~ 2026-04-05'
-  periodDays: number                // 차트 rangeDays 용
-  /** days 모드일 때만 값 존재 */
+  periodLabel: string
+  periodDays: number
   days: 7 | 30 | 90 | null
-  /** month 모드일 때만 값 존재 (YYYY-MM) */
-  monthKey: string | null
+  monthKey: string | null        // 'YYYY-MM' when mode === 'month'
   from: Date
   to: Date
   selectedPlaceId: string | null
@@ -49,63 +48,136 @@ function sparkPath(values: number[]): { d: string; lastX: number; lastY: number 
   return { d, lastX: last.x, lastY: last.y }
 }
 
-function formatKstDate(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  const hh = String(date.getHours()).padStart(2, '0')
-  const mm = String(date.getMinutes()).padStart(2, '0')
-  return `${y}-${m}-${d} ${hh}:${mm}`
+// KST 기준 현재 연/월
+function kstNowYM(now: Date = new Date()): { y: number; m: number } {
+  const kst = new Date(now.getTime() + 9 * 3_600_000)
+  return { y: kst.getUTCFullYear(), m: kst.getUTCMonth() + 1 }
+}
+
+function kickerText(mode: string, monthKey: string | null, totalCount: number, from: Date, to: Date): string {
+  const kst = kstNowYM()
+  if (mode === 'month' && monthKey) {
+    const [y, m] = monthKey.split('-').map(Number)
+    const isCurrent = y === kst.y && m === kst.m
+    const lastDay = isCurrent
+      ? String(new Date().getDate())
+      : String(new Date(y, m, 0).getDate())
+    return `${y}. ${m}월 · ${m}/1 – ${m}/${lastDay} · 누적 ${totalCount}회`
+  }
+  if (mode === 'custom') {
+    const f = toDateInputValue(from).replace(/^\d{4}-/, '').replace('-', '/')
+    const tInclusive = new Date(to.getTime() - 1)
+    const t = toDateInputValue(tInclusive).replace(/^\d{4}-/, '').replace('-', '/')
+    return `${f} – ${t} · 누적 ${totalCount}회`
+  }
+  // days
+  return `${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'numeric', day: 'numeric' }).replace(/\.\s*$/, '')} · 누적 ${totalCount}회`
 }
 
 export function CitationsHero({
-  periodMode, periodLabel, periodDays,
-  days, monthKey, from, to,
+  periodMode, monthKey, from, to, periodDays,
   selectedPlaceId, places,
   botSummary, dailyTrend, lastVisitIso, lastVisitSub,
 }: Props) {
   const router = useRouter()
   const params = useSearchParams()
   const [pending, startTransition] = useTransition()
-  const [customOpen, setCustomOpen] = useState(periodMode === 'custom')
-  const [customFrom, setCustomFrom] = useState(toDateInputValue(from))
-  const [customTo, setCustomTo] = useState(toDateInputValue(new Date(to.getTime() - 1)))
+  const [panelOpen, setPanelOpen] = useState(false)
+  const [panelYear, setPanelYear] = useState(() => {
+    if (monthKey) return parseInt(monthKey.split('-')[0], 10)
+    return kstNowYM().y
+  })
+  const [panelCoords, setPanelCoords] = useState<{ top: number; left: number } | null>(null)
+  const dropBtnRef = useRef<HTMLButtonElement | null>(null)
+  const filtRef = useRef<HTMLDivElement | null>(null)
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  // document.body 접근 가능 여부 — portal 은 클라이언트에서만 렌더.
+  const canPortal = typeof document !== 'undefined'
 
-  const presets = useMemo(() => monthPresets(new Date()), [])
+  const nowYM = useMemo(() => kstNowYM(new Date()), [])
 
-  function navigate(patch: Record<string, string | null>) {
-    const sp = new URLSearchParams(params?.toString() ?? '')
-    for (const [k, v] of Object.entries(patch)) {
-      if (v === null || v === '') sp.delete(k)
-      else sp.set(k, v)
+  // 현재 활성 월 (month 모드 or 오늘 기준)
+  const activeYM = useMemo(() => {
+    if (periodMode === 'month' && monthKey) {
+      const [y, m] = monthKey.split('-').map(Number)
+      return { y, m }
     }
+    return nowYM
+  }, [periodMode, monthKey, nowYM])
+
+  // 3개월 pill — active 기준 -2, -1, 0 offset
+  const pillMonths = useMemo(() => {
+    const out: Array<{ y: number; m: number; key: string; isActive: boolean; isCurrent: boolean }> = []
+    for (let off = -2; off <= 0; off++) {
+      let mm = activeYM.m + off, yy = activeYM.y
+      if (mm < 1) { mm += 12; yy -= 1 }
+      if (mm > 12) { mm -= 12; yy += 1 }
+      const key = `${yy}-${String(mm).padStart(2, '0')}`
+      out.push({
+        y: yy, m: mm, key,
+        isActive: yy === activeYM.y && mm === activeYM.m,
+        isCurrent: yy === nowYM.y && mm === nowYM.m,
+      })
+    }
+    return out
+  }, [activeYM, nowYM])
+
+  function navigateToMonth(y: number, m: number) {
+    // future month block
+    if (y > nowYM.y || (y === nowYM.y && m > nowYM.m)) return
+    const { from: fD, to: tD } = monthBounds(y, m - 1)
+    const fromStr = toDateInputValue(fD)
+    const toStr = toDateInputValue(tD)
+    const sp = new URLSearchParams(params?.toString() ?? '')
+    sp.set('from', fromStr); sp.set('to', toStr); sp.delete('days')
+    startTransition(() => router.replace(`/owner/citations${sp.toString() ? `?${sp}` : ''}`))
+    setPanelOpen(false)
+  }
+
+  function navigateDir(dir: 1 | -1) {
+    let mm = activeYM.m + dir, yy = activeYM.y
+    if (mm < 1) { mm += 12; yy -= 1 }
+    if (mm > 12) { mm -= 12; yy += 1 }
+    navigateToMonth(yy, mm)
+  }
+
+  function togglePanel() {
+    if (panelOpen) {
+      setPanelOpen(false)
+      return
+    }
+    const btn = dropBtnRef.current
+    if (btn) {
+      const r = btn.getBoundingClientRect()
+      setPanelCoords({
+        top: r.bottom + 8,
+        left: Math.max(12, Math.min(r.left, window.innerWidth - 320)),
+      })
+    }
+    setPanelYear(activeYM.y)
+    setPanelOpen(true)
+  }
+
+  // outside click close
+  useEffect(() => {
+    if (!panelOpen) return
+    function onClick(e: MouseEvent) {
+      if (filtRef.current?.contains(e.target as Node)) return
+      if (panelRef.current?.contains(e.target as Node)) return
+      setPanelOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [panelOpen])
+
+  function onPlaceChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const v = e.target.value
+    const sp = new URLSearchParams(params?.toString() ?? '')
+    if (v) sp.set('place', v); else sp.delete('place')
     startTransition(() => router.replace(`/owner/citations${sp.toString() ? `?${sp}` : ''}`))
   }
 
-  function applyDaysPreset(d: 7 | 30 | 90) {
-    navigate({ days: String(d), from: null, to: null })
-  }
-
-  function applyMonthPreset(p: typeof presets[number]) {
-    const fromStr = toDateInputValue(p.from)
-    // to 는 다음 달 1일 00:00 KST — URL 에는 period-parser 호환 날짜만 주면 됨
-    const toStr = toDateInputValue(p.to)
-    navigate({ from: fromStr, to: toStr, days: null })
-  }
-
-  function applyCustom() {
-    if (!customFrom || !customTo) return
-    // to 는 마지막 일의 **다음 날** 00:00 KST 로 전송 → SQL `<` 기준 포함되도록
-    const toDate = new Date(customTo + 'T00:00:00+09:00')
-    toDate.setUTCDate(toDate.getUTCDate() + 1)
-    const y = toDate.getUTCFullYear()
-    const m = String(toDate.getUTCMonth() + 1).padStart(2, '0')
-    const d = String(toDate.getUTCDate()).padStart(2, '0')
-    const toStr = `${y}-${m}-${d}`
-    navigate({ from: customFrom, to: toStr, days: null })
-    setCustomOpen(false)
-  }
-
+  // Hero stats 계산
   const recent7 = dailyTrend.slice(-7)
   const searchSeries = recent7.map((r) => r.aiSearch.chatgpt + r.aiSearch.claude + r.aiSearch.perplexity + r.aiSearch.other)
   const trainingSeries = recent7.map((r) => r.aiTraining.chatgpt + r.aiTraining.claude + r.aiTraining.gemini + r.aiTraining.other)
@@ -117,13 +189,12 @@ export function CitationsHero({
   const grandTotal = searchTotal + trainingTotal
   const placesCount = places.length
 
-  const kickerStr = `${formatKstDate(new Date())} · ${periodLabel}`
+  const kicker = kickerText(periodMode, monthKey, grandTotal, from, to)
 
   const zeros: string[] = []
   if ((botSummary.aiSearch.byEngine.claude ?? 0) === 0) zeros.push('Claude 실시간')
   if ((botSummary.aiSearch.byEngine.perplexity ?? 0) === 0) zeros.push('Perplexity')
-  if ((botSummary.aiTraining.byEngine.claude ?? 0) === 0) zeros.push('ClaudeBot')
-  if ((botSummary.aiTraining.byEngine.gemini ?? 0) === 0) zeros.push('Gemini')
+  if ((botSummary.aiTraining.byEngine.gemini ?? 0) === 0) zeros.push('Gemini 크롤링')
 
   const lastVisitLabel = lastVisitIso
     ? new Date(lastVisitIso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric' })
@@ -137,7 +208,7 @@ export function CitationsHero({
   return (
     <section className="hero" data-pending={pending ? 'true' : undefined}>
       <div>
-        <p className="kicker">{kickerStr}</p>
+        <p className="kicker">{kicker}</p>
         <h1>
           AI가 당신의 업체를<br />
           총 <span className="serif">{grandTotal}회</span> 접촉했습니다.
@@ -147,79 +218,63 @@ export function CitationsHero({
           {zeros.length > 0 && <> <span className="zero">{zeros.join('·')}는 아직 기록 없음.</span></>}
         </p>
 
-        {/* 1행: days 프리셋 + 업체 필터 */}
-        <div className="filt">
-          <label>구간</label>
-          <div className="pill-group" role="tablist">
-            {[7, 30, 90].map((n) => (
-              <button
-                key={n}
-                type="button"
-                role="tab"
-                aria-selected={periodMode === 'days' && days === n}
-                className={periodMode === 'days' && days === n ? 'pill active' : 'pill'}
-                onClick={() => applyDaysPreset(n as 7 | 30 | 90)}
-              >
-                최근 {n}일
-              </button>
-            ))}
-          </div>
-          <span className="sep">·</span>
-          <label>업체</label>
-          <select
-            value={selectedPlaceId ?? ''}
-            onChange={(e) => navigate({ place: e.target.value || null })}
-          >
-            <option value="">전체 업체</option>
-            {places.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
+        <div className="filt" ref={filtRef} id="monthFilt">
+          <span className="mf-year-lbl">{activeYM.y}</span>
 
-        {/* 2행: 월 프리셋 + 사용자 지정 토글 */}
-        <div className="filt">
-          <label>월별</label>
-          <div className="pill-group">
-            {presets.map((p) => (
-              <button
-                key={p.key}
-                type="button"
-                aria-pressed={periodMode === 'month' && monthKey === p.yearMonth}
-                className={periodMode === 'month' && monthKey === p.yearMonth ? 'pill active' : 'pill'}
-                onClick={() => applyMonthPreset(p)}
-              >
-                {p.label} <small>{p.koreanLabel}</small>
-              </button>
-            ))}
-          </div>
-          <span className="sep">·</span>
-          <button
-            type="button"
-            aria-expanded={customOpen}
-            className={customOpen ? 'pill active' : 'pill'}
-            onClick={() => setCustomOpen((v) => !v)}
-          >
-            📅 기간 지정
+          <button className="mf-nav" aria-label="이전 월" onClick={() => navigateDir(-1)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6" /></svg>
           </button>
-        </div>
 
-        {customOpen && (
-          <div className="custom-range">
-            <label>
-              시작 <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
-            </label>
-            <label>
-              종료 <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
-            </label>
-            <button type="button" className="pill active" onClick={applyCustom}>
-              적용
+          {pillMonths.map((p) => (
+            <button
+              key={p.key}
+              className={p.isActive ? 'mf-pill active' : 'mf-pill'}
+              onClick={() => navigateToMonth(p.y, p.m)}
+            >
+              {p.m}월
+              {p.isCurrent && !p.isActive && <span className="mf-cur">·오늘</span>}
             </button>
-            {periodMode === 'custom' && (
-              <button type="button" className="pill" onClick={() => applyDaysPreset(30)}>
-                초기화
-              </button>
-            )}
+          ))}
+
+          <button
+            ref={dropBtnRef}
+            className="mf-drop"
+            aria-label="월 선택 열기"
+            aria-haspopup="true"
+            onClick={togglePanel}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+          </button>
+
+          <button
+            className="mf-nav"
+            aria-label="다음 월"
+            onClick={() => navigateDir(1)}
+            disabled={activeYM.y === nowYM.y && activeYM.m >= nowYM.m}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6" /></svg>
+          </button>
+
+          <span className="sep sep-biz" />
+          <div className="mf-biz">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+              <path d="M3 21h18M6 21V7l6-4 6 4v14" />
+            </svg>
+            <select
+              aria-label="업체 선택"
+              value={selectedPlaceId ?? ''}
+              onChange={onPlaceChange}
+            >
+              <option value="">전체 업체 ({places.length})</option>
+              {places.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="divide" />
@@ -237,7 +292,6 @@ export function CitationsHero({
           </div>
           <SparkSvg d={sSpark.d} color="#10a37f" lastX={sSpark.lastX} lastY={sSpark.lastY} hasData={searchTotal > 0} />
         </div>
-
         <div className="stat">
           <div>
             <div className="lbl"><i style={{ background: 'var(--warn)' }} /> 간접 노출 (학습 크롤링)</div>
@@ -250,13 +304,10 @@ export function CitationsHero({
           </div>
           <SparkSvg d={tSpark.d} color="#b45309" lastX={tSpark.lastX} lastY={tSpark.lastY} hasData={trainingTotal > 0} />
         </div>
-
         <div className="stat">
           <div>
             <div className="lbl"><i style={{ background: 'var(--accent)' }} /> 마지막 발생</div>
-            <div className="v" style={{ fontSize: lastVisitIso ? 22 : 26 }}>
-              {lastVisitLabel}
-            </div>
+            <div className="v" style={{ fontSize: lastVisitIso ? 22 : 26 }}>{lastVisitLabel}</div>
             <div className="sub">
               {lastVisitTime ? <>{lastVisitTime} · {lastVisitSub ?? '—'}</> : 'AI 봇 방문 대기 중'}
             </div>
@@ -268,69 +319,92 @@ export function CitationsHero({
         </div>
       </div>
 
-      <style>{`
-        .hero .pill-group {
-          display: inline-flex;
-          gap: 4px;
-          flex-wrap: wrap;
-        }
-        .hero .pill {
-          padding: 4px 10px;
-          border-radius: 999px;
-          border: 1px solid rgba(255,255,255,.18);
-          background: transparent;
-          color: rgba(255,255,255,.82);
-          font-size: 12px;
-          cursor: pointer;
-          transition: background .15s, color .15s, border-color .15s;
-        }
-        .hero .pill:hover { background: rgba(255,255,255,.08); color: #fff; }
-        .hero .pill.active {
-          background: #fff;
-          color: #191919;
-          border-color: #fff;
-          font-weight: 600;
-        }
-        .hero .pill small {
-          font-weight: 400;
-          font-size: 11px;
-          opacity: .8;
-          margin-left: 4px;
-        }
-        .hero .custom-range {
-          margin-top: 10px;
-          display: inline-flex;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 10px;
-          padding: 10px 12px;
-          background: rgba(255,255,255,.06);
-          border-radius: 10px;
-          font-size: 12px;
-        }
-        .hero .custom-range label {
-          color: rgba(255,255,255,.82);
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .hero .custom-range input[type="date"] {
-          padding: 4px 8px;
-          border-radius: 6px;
-          border: 1px solid rgba(255,255,255,.2);
-          background: rgba(255,255,255,.08);
-          color: #fff;
-          font-size: 12px;
-          color-scheme: dark;
-        }
-      `}</style>
+      {/* 캘린더 드롭다운 — body portal (클라이언트에서만) */}
+      {canPortal && panelOpen && panelCoords && createPortal(
+        <CalendarPanel
+          refProp={panelRef}
+          year={panelYear}
+          setYear={setPanelYear}
+          activeYM={activeYM}
+          nowYM={nowYM}
+          top={panelCoords.top}
+          left={panelCoords.left}
+          onPick={navigateToMonth}
+          onJumpToday={() => {
+            navigateToMonth(nowYM.y, nowYM.m)
+          }}
+        />,
+        document.body,
+      )}
     </section>
   )
 }
 
-function SparkSvg({
-  d, color, lastX, lastY, hasData,
-}: { d: string; color: string; lastX: number; lastY: number; hasData: boolean }) {
+interface CalendarPanelProps {
+  refProp: React.RefObject<HTMLDivElement | null>
+  year: number
+  setYear: (y: number) => void
+  activeYM: { y: number; m: number }
+  nowYM: { y: number; m: number }
+  top: number
+  left: number
+  onPick: (y: number, m: number) => void
+  onJumpToday: () => void
+}
+
+function CalendarPanel({ refProp, year, setYear, activeYM, nowYM, top, left, onPick, onJumpToday }: CalendarPanelProps) {
+  return (
+    <div
+      ref={refProp}
+      className="mf-panel"
+      style={{ position: 'fixed', top, left }}
+    >
+      <div className="mf-panel-head">
+        <button className="mf-py" aria-label="이전 년" onClick={() => setYear(year - 1)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <b>{year}</b>
+        <button
+          className="mf-py"
+          aria-label="다음 년"
+          onClick={() => setYear(year + 1)}
+          disabled={year >= nowYM.y}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6" /></svg>
+        </button>
+      </div>
+      <div className="mf-grid">
+        {Array.from({ length: 12 }, (_, i) => {
+          const m = i + 1
+          const isFuture = year > nowYM.y || (year === nowYM.y && m > nowYM.m)
+          const isActive = year === activeYM.y && m === activeYM.m
+          const isCurrent = year === nowYM.y && m === nowYM.m
+          const cls = [
+            'mf-m',
+            isActive ? 'active' : '',
+            isCurrent && !isActive ? 'current' : '',
+            isFuture ? 'future' : '',
+          ].filter(Boolean).join(' ')
+          return (
+            <button
+              key={m}
+              className={cls}
+              disabled={isFuture}
+              onClick={() => !isFuture && onPick(year, m)}
+            >
+              {m}월
+            </button>
+          )
+        })}
+      </div>
+      <div className="mf-panel-foot">
+        <button className="mf-today" onClick={onJumpToday}>이번 달로</button>
+      </div>
+    </div>
+  )
+}
+
+function SparkSvg({ d, color, lastX, lastY, hasData }: { d: string; color: string; lastX: number; lastY: number; hasData: boolean }) {
   if (!hasData || !d) {
     return (
       <svg className="spark" viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} fill="none" preserveAspectRatio="none">
