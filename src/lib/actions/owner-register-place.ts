@@ -32,6 +32,9 @@ export interface OwnerPlaceDraft {
   kakaoMapUrl?: string
   googleBusinessUrl?: string
   googlePlaceId?: string
+  homepageUrl?: string        // T-220: 027 migration 의 homepage_url 명시적 매핑
+  blogUrl?: string             // T-220
+  instagramUrl?: string        // T-220
   rating?: number
   reviewCount?: number
 }
@@ -105,6 +108,30 @@ export async function registerOwnerPlaceAction(draft: OwnerPlaceDraft): Promise<
 
   const admin = getAdminClient()
   if (!admin) return { success: false, error: 'admin_unavailable' }
+
+  // T-223.5: 카드 선등록 게이트 (서버쪽 defense-in-depth).
+  //   user 의 customers row → active billing_key 1개 이상 확인.
+  //   customers row 가 아직 없으면 이후 "customer 자동 복구" 단계에서 만들어지고,
+  //   그 직후 이 검증을 다시 타야 함 — 하지만 그 경우엔 카드가 있을 수 없으므로
+  //   여기서 pre-check 로 바로 차단하는 게 맞다.
+  {
+    const { data: cByUser } = await admin
+      .from('customers').select('id').eq('user_id', user.id).maybeSingle()
+    const preCust = cByUser as { id: string } | null
+    if (preCust) {
+      const { count: cardCount } = await admin
+        .from('billing_keys')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_id', preCust.id)
+        .eq('status', 'active')
+      if ((cardCount ?? 0) === 0) {
+        return { success: false, error: '업체 등록 전에 결제 카드를 먼저 등록해 주세요. (/owner/billing)' }
+      }
+    } else {
+      // customer 자체가 없으면 카드도 있을 수 없음 → 즉시 차단.
+      return { success: false, error: '업체 등록 전에 결제 카드를 먼저 등록해 주세요. (/owner/billing)' }
+    }
+  }
 
   // 2) customer 조회 + 자동 복구
   // 과거 버그로 auth user 는 생성됐지만 customers row 가 없는 케이스 대응.
@@ -268,7 +295,9 @@ export async function registerOwnerPlaceAction(draft: OwnerPlaceDraft): Promise<
       latitude: draft.latitude ?? null,
       longitude: draft.longitude ?? null,
       phone: draft.phone ? normalizePhone(draft.phone) : null,
-      homepage_url: draft.website?.trim() || null,
+      homepage_url: (draft.homepageUrl ?? draft.website)?.trim() || null,
+      blog_url: draft.blogUrl?.trim() || null,
+      instagram_url: draft.instagramUrl?.trim() || null,
       opening_hours: hoursArray,
       description: descriptionSafe,
       tags: draft.tags ?? [],

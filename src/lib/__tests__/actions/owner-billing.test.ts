@@ -4,19 +4,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const state: {
   customer: { id: string; user_id: string | null; email: string; name: string | null; trial_ends_at: string | null } | null
   billingKeyId: string
+  existingActiveCards: Array<{ id: string; is_primary: boolean }>
   existingSubId: string | null
   existingSubStatus: string
   bkInsertError: { message: string } | null
   subInsertError: { message: string } | null
   capturedSubUpdates: Record<string, unknown>[]
+  capturedBkInserts: Record<string, unknown>[]
 } = {
   customer: null,
   billingKeyId: 'bk-1',
+  existingActiveCards: [],
   existingSubId: null,
   existingSubStatus: 'pending',
   bkInsertError: null,
   subInsertError: null,
   capturedSubUpdates: [],
+  capturedBkInserts: [],
 }
 
 function makeAdmin() {
@@ -32,17 +36,34 @@ function makeAdmin() {
         }
       }
       if (table === 'billing_keys') {
+        // select 에 { count, head } 옵션 주면 Promise<{count, data:null}> 반환 (head mode).
+        //   아니면 data 반환. 두 경로 모두 지원.
         return {
+          select: (_cols?: string, opts?: { count?: string; head?: boolean }) => {
+            const head = opts?.head === true
+            const promise = head
+              ? Promise.resolve({ count: state.existingActiveCards.length, data: null, error: null })
+              : Promise.resolve({ data: state.existingActiveCards, count: null, error: null })
+            return {
+              eq: () => ({
+                eq: () => promise,
+                then: (fn: (v: unknown) => unknown) => promise.then(fn),
+              }),
+            }
+          },
           update: () => ({
             eq: () => ({ eq: async () => ({ error: null }) }),
           }),
-          insert: () => ({
-            select: () => ({
-              single: async () => state.bkInsertError
-                ? { data: null, error: state.bkInsertError }
-                : { data: { id: state.billingKeyId }, error: null },
-            }),
-          }),
+          insert: (payload: Record<string, unknown>) => {
+            state.capturedBkInserts.push(payload)
+            return {
+              select: () => ({
+                single: async () => state.bkInsertError
+                  ? { data: null, error: state.bkInsertError }
+                  : { data: { id: state.billingKeyId }, error: null },
+              }),
+            }
+          },
         }
       }
       if (table === 'subscriptions') {
@@ -102,6 +123,8 @@ beforeEach(() => {
   state.bkInsertError = null
   state.subInsertError = null
   state.capturedSubUpdates = []
+  state.capturedBkInserts = []
+  state.existingActiveCards = []
   mockIssue.mockReset().mockResolvedValue({
     success: true,
     billingKey: 'bkey-xyz', method: '카드', cardCompany: 'SHINHAN',
@@ -200,6 +223,30 @@ describe('issueBillingKeyAction', () => {
     expect(lastUpdate.status).toBe('pending_cancellation')
   })
 
+  // T-223.5 — 다중 카드 + primary
+  it('T-223.5: 첫 카드는 is_primary=true 로 insert', async () => {
+    state.existingActiveCards = []
+    const { issueBillingKeyAction } = await import('@/lib/actions/owner-billing')
+    const r = await issueBillingKeyAction({ authKey: 'a', customerKey: 'c-1' })
+    expect(r.success).toBe(true)
+    const ins = state.capturedBkInserts[0]
+    expect(ins.is_primary).toBe(true)
+  })
+
+  it('T-223.5: 2번째 카드는 is_primary=false, 기존 카드 revoke 안 함', async () => {
+    state.existingActiveCards = [{ id: 'bk-existing', is_primary: true }]
+    state.existingSubId = 'sub-1'
+    state.existingSubStatus = 'active'
+    const { issueBillingKeyAction } = await import('@/lib/actions/owner-billing')
+    const r = await issueBillingKeyAction({ authKey: 'a', customerKey: 'c-1' })
+    expect(r.success).toBe(true)
+    const ins = state.capturedBkInserts[0]
+    expect(ins.is_primary).toBe(false)
+    // subscription.billing_key_id 는 기존 primary 유지 — update payload 에 billing_key_id 없어야 함
+    const lastUpdate = state.capturedSubUpdates[state.capturedSubUpdates.length - 1]
+    expect(lastUpdate).not.toHaveProperty('billing_key_id')
+  })
+
   it('trial_ends_at 이 미래 → next_charge_at=trial_ends_at (타임스탬프 로직 검증)', async () => {
     state.customer = {
       id: 'c-1', user_id: 'user-1', email: 'o@test.com', name: null,
@@ -240,5 +287,33 @@ describe('revokeBillingKeyAction', () => {
     const { revokeBillingKeyAction } = await import('@/lib/actions/owner-billing')
     const r = await revokeBillingKeyAction()
     expect(r.success).toBe(true)
+  })
+})
+
+// T-223.5 — 카드 선등록 게이트 헬퍼.
+describe('hasActiveBillingKey', () => {
+  it('customer 없음 → false', async () => {
+    state.customer = null
+    const { hasActiveBillingKey } = await import('@/lib/actions/owner-billing')
+    expect(await hasActiveBillingKey('user-1')).toBe(false)
+  })
+
+  it('admin null → false (안전하게 차단)', async () => {
+    const { getAdminClient } = await import('@/lib/supabase/admin-client')
+    vi.mocked(getAdminClient).mockReturnValueOnce(null as never)
+    const { hasActiveBillingKey } = await import('@/lib/actions/owner-billing')
+    expect(await hasActiveBillingKey('user-1')).toBe(false)
+  })
+
+  it('active 카드 1장 이상 → true', async () => {
+    state.existingActiveCards = [{ id: 'bk-1', is_primary: true }]
+    const { hasActiveBillingKey } = await import('@/lib/actions/owner-billing')
+    expect(await hasActiveBillingKey('user-1')).toBe(true)
+  })
+
+  it('active 카드 0장 → false', async () => {
+    state.existingActiveCards = []
+    const { hasActiveBillingKey } = await import('@/lib/actions/owner-billing')
+    expect(await hasActiveBillingKey('user-1')).toBe(false)
   })
 })

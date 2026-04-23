@@ -34,6 +34,12 @@ function mockDbOk(opts: { customerId?: string; existing?: Array<{ id: string; na
       })),
       update: vi.fn(() => ({ eq: () => Promise.resolve({ error: null }) })),
     }
+    // T-223.5: 카드 선등록 게이트 — 테스트는 기본적으로 "카드 있음" 가정.
+    if (table === 'billing_keys') return {
+      select: () => ({
+        eq: () => ({ eq: () => Promise.resolve({ count: 1, data: null, error: null }) }),
+      }),
+    }
     if (table === 'places') {
       // googlePlaceId 유니크 조회, slug 중복 조회 — 둘 다 .eq().maybeSingle() 체인.
       // 좌표 근접 조회 — .gte().lte().gte().lte() 체인으로 배열 반환.
@@ -80,21 +86,37 @@ describe('registerOwnerPlaceAction', () => {
     if (!r.success) expect(r.error).toMatch(/slug/)
   })
 
-  it('customer 없음 + 자동 생성 실패 → 실패', async () => {
-    // email 로도 조회 안 됨 → 자동 생성 시도 → insert 에러 → 에러 반환.
+  it('T-223.5: customer row 없음 → 카드 등록 먼저 요구 (pre-check 차단)', async () => {
+    // 카드 선등록 모델에서는 customer row 가 없다는 건 카드도 없다는 의미 —
+    // 기존 "customer 자동 생성" 이 아니라 명시적으로 "카드 먼저 등록" 에러 반환.
     mockFrom.mockImplementation((table: string) => {
       if (table === 'customers') return {
         select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) }),
-        insert: vi.fn(() => ({
-          select: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'insert failed' } }) }),
-        })),
       }
       return {}
     })
     const { registerOwnerPlaceAction } = await import('@/lib/actions/owner-register-place')
     const r = await registerOwnerPlaceAction({ name: 'X', city: 'cheonan', category: 'medical', address: 'y' })
     expect(r.success).toBe(false)
-    if (!r.success) expect(r.error).toMatch(/customer/)
+    if (!r.success) expect(r.error).toMatch(/카드/)
+  })
+
+  it('T-223.5: customer 있지만 active 카드 0 → 카드 등록 먼저 요구', async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'customers') return {
+        select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: { id: 'c1' } }) }) }),
+      }
+      if (table === 'billing_keys') return {
+        select: () => ({
+          eq: () => ({ eq: () => Promise.resolve({ count: 0, data: null, error: null }) }),
+        }),
+      }
+      return {}
+    })
+    const { registerOwnerPlaceAction } = await import('@/lib/actions/owner-register-place')
+    const r = await registerOwnerPlaceAction({ name: 'X', city: 'cheonan', category: 'medical', address: 'y' })
+    expect(r.success).toBe(false)
+    if (!r.success) expect(r.error).toMatch(/카드/)
   })
 
   it('수동 등록 (Naver/Google 매칭 없음) → pending', async () => {
