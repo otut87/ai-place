@@ -1,15 +1,16 @@
-// T-141 — Owner 포털 업체 대시보드.
-// 기술 진단 + 30일 봇 방문 + 최근 AI 인용 테스트 결과 + AI 테스트 실행 버튼.
+// T-141/T-214 — Owner 포털 업체 대시보드.
+// T-214: scanSite(HTML 품질) → scorePlaceAeo(DB 완성도) 로 통일.
+//   오너 페르소나 기준 — 사장님이 직접 고칠 수 있는 "데이터 완성도" 를 헤드라인으로.
+//   /owner/citations AEO 카드와 완전히 동일한 점수·룰 사용 → 화면 간 점수 불일치 제거.
+//   scanSite 는 개발팀 QA 전용(/admin)으로 강등.
 
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { requireOwnerUser } from '@/lib/owner/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
-import { scanSite } from '@/lib/diagnostic/scan-site'
-import { scoreBucket, getBenchmark } from '@/lib/diagnostic/benchmark'
-import { checkCitationTestRateLimit, hasActiveSubscription } from '@/lib/diagnostic/citation-test'
-import { listRecentRuns, saveDiagnosticRun } from '@/lib/diagnostic/history'
-import { ScoreTrendChart } from '@/components/diagnostic/score-trend-chart'
+import { hasActiveSubscription } from '@/lib/diagnostic/citation-test'
+import { checkCitationTestRateLimit } from '@/lib/diagnostic/citation-test'
+import { loadAeoSnapshotsForPlaces } from '@/lib/owner/aeo-snapshot'
 import { CitationTestButton } from './citation-test-button'
 
 export const dynamic = 'force-dynamic'
@@ -17,6 +18,20 @@ export const runtime = 'nodejs'
 
 interface Props {
   params: Promise<{ id: string }>
+}
+
+function gradeColor(grade: 'A' | 'B' | 'C' | 'D'): string {
+  if (grade === 'A') return 'text-emerald-600'
+  if (grade === 'B') return 'text-sky-600'
+  if (grade === 'C') return 'text-amber-600'
+  return 'text-red-600'
+}
+
+function gradeLabel(grade: 'A' | 'B' | 'C' | 'D'): string {
+  if (grade === 'A') return '완성도 높음'
+  if (grade === 'B') return '완성도 양호'
+  if (grade === 'C') return '보완 필요'
+  return '시작 단계'
 }
 
 export default async function OwnerPlaceDashboardPage({ params }: Props) {
@@ -50,17 +65,13 @@ export default async function OwnerPlaceDashboardPage({ params }: Props) {
     }
   }
 
-  // 병렬 로드
   const path = `/${place.city}/${place.category}/${place.slug}`
-  // 환경별 스캔 대상 URL — dev 에선 localhost, prod 에선 aiplace.kr.
-  // 프로덕션 고정이면 방금 등록한 업체가 아직 배포 전이라 404 → 0점이 나옴.
-  const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL
-    ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
-    ?? (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://aiplace.kr')
-  const internalUrl = `${siteOrigin}${path}`
+  const now = new Date()
+  const since30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  const [scan, subActive, rateLimit, recentTest, botVisits] = await Promise.all([
-    scanSite(internalUrl),
+  // T-214: scorePlaceAeo 기반 snapshot 로드 (/owner/citations 와 동일 산식).
+  const [aeoSnapshots, subActive, rateLimit, recentTest, botVisits] = await Promise.all([
+    loadAeoSnapshotsForPlaces([place.id]),
     hasActiveSubscription(place.customer_id),
     checkCitationTestRateLimit(place.id),
     admin.from('citation_tests')
@@ -72,11 +83,10 @@ export default async function OwnerPlaceDashboardPage({ params }: Props) {
     admin.from('bot_visits')
       .select('bot_id, status')
       .eq('path', path)
-      .gte('visited_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+      .gte('visited_at', since30d),
   ])
 
-  const bucket = scoreBucket(scan.score)
-  const bench = getBenchmark()
+  const snap = aeoSnapshots[0]
   const test = recentTest.data as { id: string; started_at: string; results_count: number; cited_count: number; citation_rate: number } | null
   const botRows = (botVisits.data ?? []) as Array<{ bot_id: string; status: number | null }>
   const botStats = {
@@ -85,60 +95,59 @@ export default async function OwnerPlaceDashboardPage({ params }: Props) {
     uniqueBots: new Set(botRows.map(r => r.bot_id)).size,
   }
 
-  // T-162: 점수 추이 — 최근 10개 + 오늘 실행 결과 저장
-  if (!scan.error) {
-    await saveDiagnosticRun({ result: scan, triggeredBy: 'owner', customerId: place.customer_id })
-  }
-  const historyRows = await listRecentRuns(`https://aiplace.kr`, 30)
-  const placeHistory = historyRows
-    .filter(r => r.url.includes(`/${place.city}/${place.category}/${place.slug}`))
-    .slice(0, 15)
-
   return (
     <div className="mx-auto max-w-4xl p-6">
       <header className="mb-6">
         <p className="text-xs text-[#6a6a6a]">
-          <Link href="/owner" className="hover:underline">내 업체</Link> › 대시보드
+          <Link href="/owner/places" className="hover:underline">내 업체</Link> › 대시보드
         </p>
         <h1 className="mt-1 text-xl font-semibold">{place.name}</h1>
         <p className="mt-0.5 font-mono text-xs text-[#6a6a6a]">{path}</p>
       </header>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {/* 기술 진단 카드 */}
+        {/* AEO 정보 완성도 카드 — scorePlaceAeo 기반 (citations AEO 와 동일) */}
         <section className="rounded-xl border border-[#e5e7eb] bg-white p-5">
-          <p className="text-xs text-[#6a6a6a]">AI 가독성 점수</p>
-          <p className={`mt-1 text-4xl font-bold leading-none ${
-            bucket.tone === 'great' ? 'text-emerald-600' :
-            bucket.tone === 'ok' ? 'text-sky-600' :
-            bucket.tone === 'warn' ? 'text-amber-600' : 'text-red-600'
-          }`}>
-            {scan.score}<span className="text-sm text-[#9a9a9a]">/100</span>
-          </p>
-          <p className="mt-1 text-xs text-[#6a6a6a]">{bucket.label} · 등록 평균 {bench.registered}점</p>
-          {placeHistory.length > 0 && (
-            <div className="mt-3">
-              <ScoreTrendChart
-                points={placeHistory.map(h => ({ score: h.score, date: h.created_at }))}
-                benchmarkScore={bench.registered}
-                height={100}
-              />
-            </div>
+          <p className="text-xs text-[#6a6a6a]">정보 완성도</p>
+          {snap ? (
+            <>
+              <p className={`mt-1 text-4xl font-bold leading-none ${gradeColor(snap.grade)}`}>
+                {snap.score}<span className="text-sm text-[#9a9a9a]">/100</span>
+              </p>
+              <p className="mt-1 text-xs text-[#6a6a6a]">
+                {gradeLabel(snap.grade)} · {snap.passedCount}/{snap.totalCount} 룰 통과
+              </p>
+              <p className="mt-2 text-[11px] text-[#9a9a9a] leading-relaxed">
+                사장님이 입력한 업체 정보(이름·연락처·FAQ·사진·서비스 등) 완성도 점수입니다.
+              </p>
+              <details className="mt-3">
+                <summary className="cursor-pointer text-xs text-[#008060]">세부 항목 보기</summary>
+                <ul className="mt-2 space-y-1 text-[11px]">
+                  {snap.topPassedRules.map((r, idx) => (
+                    <li key={`p-${idx}`} className="flex items-start justify-between gap-2">
+                      <span className="min-w-0 flex-1">
+                        <span className="mr-1">✅</span>
+                        {r.label}
+                      </span>
+                    </li>
+                  ))}
+                  {snap.topIssues.map((r, idx) => (
+                    <li key={`f-${idx}`} className="flex items-start justify-between gap-2">
+                      <span className="min-w-0 flex-1 text-[#6a6a6a]">
+                        <span className="mr-1">⚠</span>
+                        {r.label}{r.detail ? ` — ${r.detail}` : ''}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[10px] text-[#9a9a9a]">
+                  전체 {snap.totalCount}개 룰 중 상위 3개씩 표시. 전체 보기는 /owner/citations 에서 확인하세요.
+                </p>
+              </details>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-[#6a6a6a]">점수 계산 데이터 불러오는 중…</p>
           )}
-          <details className="mt-3">
-            <summary className="cursor-pointer text-xs text-[#008060]">세부 항목 보기</summary>
-            <ul className="mt-2 space-y-1 text-[11px]">
-              {scan.checks.map(c => (
-                <li key={c.id} className="flex items-start justify-between gap-2">
-                  <span className="min-w-0 flex-1">
-                    <span className="mr-1">{c.status === 'pass' ? '✅' : c.status === 'warn' ? '⚠' : '❌'}</span>
-                    {c.label}
-                  </span>
-                  <span className="text-[#6a6a6a]">{c.points}/{c.maxPoints}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
         </section>
 
         {/* AI 봇 방문 카드 */}
@@ -184,25 +193,27 @@ export default async function OwnerPlaceDashboardPage({ params }: Props) {
         </section>
       </div>
 
-      {/* 개선 제안 */}
-      {scan.score < 85 && (
+      {/* 개선 제안 — AEO 룰 실패 목록 기반 */}
+      {snap && snap.topIssues.length > 0 && (
         <section className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
           <h2 className="text-sm font-semibold text-amber-900">개선 제안</h2>
           <ul className="mt-2 space-y-1 text-xs text-amber-900">
-            {scan.checks.filter(c => c.status !== 'pass').slice(0, 5).map(c => (
-              <li key={c.id}>
-                <strong>{c.label}</strong> — {c.detail}
+            {snap.topIssues.map((r, idx) => (
+              <li key={idx}>
+                <strong>{r.label}</strong>
+                {r.detail ? ` — ${r.detail}` : ''}
               </li>
             ))}
           </ul>
           <p className="mt-3 text-xs text-amber-900">
-            AI Place 에 등록하면 위 항목들이 자동 처리됩니다.
+            업체 편집 페이지에서 해당 항목을 채우면 점수가 바로 반영됩니다.
           </p>
         </section>
       )}
 
       <p className="mt-8 text-[11px] text-[#9a9a9a]">
-        진단은 페이지 방문 시점마다 실시간 수행됩니다. AI 인용 테스트는 주 1회 제한·활성 구독 필요.
+        정보 완성도는 입력된 업체 데이터(FAQ·사진·영업시간·서비스 등) 기반으로 계산됩니다.
+        AI 인용 테스트는 주 1회 제한·활성 구독 필요.
       </p>
     </div>
   )
