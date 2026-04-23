@@ -28,9 +28,9 @@ export async function updatePlaceStatus(placeId: string, status: 'active' | 'rej
   const supabase = getAdminClient()
   if (!supabase) return { success: false, error: 'Admin 클라이언트 초기화 실패' }
 
-  // 업체 정보 먼저 조회 (revalidate 경로 생성용)
+  // 업체 정보 먼저 조회 (revalidate 경로 생성용 + customer_id for subscription sync)
   const { data: place } = await supabase.from('places')
-    .select('city, category, slug')
+    .select('city, category, slug, customer_id')
     .eq('id', placeId)
     .single()
 
@@ -43,10 +43,20 @@ export async function updatePlaceStatus(placeId: string, status: 'active' | 'rej
     return { success: false, error: '상태 변경에 실패했습니다.' }
   }
 
+  // T-210: status 전환이 활성 업체 수를 바꾸므로 subscription amount 동기화.
+  const p = place as { city: string; category: string; slug: string; customer_id: string | null } | null
+  if (p?.customer_id) {
+    try {
+      const { syncSubscriptionAmount } = await import('@/lib/billing/sync-subscription-amount')
+      await syncSubscriptionAmount(p.customer_id)
+    } catch (e) {
+      console.error('[manage-place] subscription amount sync 실패:', e)
+    }
+  }
+
   revalidatePath('/admin/places')
   // 공개 페이지도 갱신
-  if (place) {
-    const p = place as { city: string; category: string; slug: string }
+  if (p) {
     revalidatePath(`/${p.city}/${p.category}`)
     revalidatePath(`/${p.city}/${p.category}/${p.slug}`)
     revalidatePath('/')

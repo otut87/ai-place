@@ -309,7 +309,20 @@ export async function registerOwnerPlaceAction(draft: OwnerPlaceDraft): Promise<
     }
   }
 
+  // T-210: 활성 업체가 된 경우 subscription 금액 자동 증액 (업체당 ₩14,900).
+  if (status === 'active' && customerId) {
+    try {
+      const { syncSubscriptionAmount } = await import('@/lib/billing/sync-subscription-amount')
+      await syncSubscriptionAmount(customerId)
+    } catch (e) {
+      // 동기화 실패해도 등록 자체는 성공 처리 — 다음 관리자 트리거로 복구 가능.
+      console.error('[registerOwnerPlaceAction] subscription amount sync 실패:', e)
+    }
+  }
+
   revalidatePath('/owner')
+  revalidatePath('/owner/places')
+  revalidatePath('/owner/billing')
   if (status === 'active') {
     revalidatePath(`/${draft.city}/${draft.category}`)
     revalidatePath(`/${draft.city}/${draft.category}/${slug}`)

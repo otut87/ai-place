@@ -27,7 +27,8 @@ const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
       { href: '/owner',            label: '개요',        icon: 'overview',  match: (p) => p === '/owner' },
       { href: '/owner/citations',  label: 'AI 인용',     icon: 'citation',  match: (p) => p.startsWith('/owner/citations') },
       { href: '/owner/content',    label: '콘텐츠',      icon: 'content',   match: (p) => p.startsWith('/owner/content') },
-      { href: '/owner/places/new', label: '업체 추가',   icon: 'places',    match: (p) => p.startsWith('/owner/places') },
+      // T-210: "업체 추가" → "업체 관리" — 목록 + CRUD 가 본 화면, 추가는 CTA 로 분리.
+      { href: '/owner/places',     label: '업체 관리',   icon: 'places',    match: (p) => p.startsWith('/owner/places') },
     ],
   },
   {

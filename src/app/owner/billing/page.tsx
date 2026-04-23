@@ -9,7 +9,7 @@ import type { Metadata } from 'next'
 import { requireOwnerUser } from '@/lib/owner/auth'
 import { loadOwnerBillingState, type OwnerBillingState } from '@/lib/owner/billing-state'
 import { getTossClientKey, isUsingTossTestKey } from '@/lib/billing/toss'
-import { STANDARD_PLAN_AMOUNT } from '@/lib/billing/types'
+import { PLAN_AMOUNT_PER_PLACE, calculatePlanAmount } from '@/lib/billing/types'
 import { composePageTitle } from '@/lib/seo/compose-title'
 import { PageHeader } from '../_components/page-header'
 import { BillingAuthButton } from './_components/billing-auth-button'
@@ -126,12 +126,17 @@ function PilotCard({ state }: { state: OwnerBillingState }) {
 // ── 구독 KPI ──────────────────────────────────────────────────
 function SubscriptionCard({ state }: { state: OwnerBillingState }) {
   const s = state.subscription
+  const activeCount = state.activePlaceCount
+  const expectedAmount = calculatePlanAmount(activeCount)
   if (!s) {
     return (
       <article className="kpi">
         <span className="k">구독</span>
         <div className="v">미시작</div>
-        <div className="sub">카드 등록 시 월 {formatAmount(STANDARD_PLAN_AMOUNT)} 자동 결제가 준비됩니다.</div>
+        <div className="sub">
+          업체당 월 {formatAmount(PLAN_AMOUNT_PER_PLACE)} · 현재 활성 <b>{activeCount}곳</b>
+          {activeCount > 0 && <> → 예상 월 <b>{formatAmount(expectedAmount)}</b></>}
+        </div>
       </article>
     )
   }
@@ -145,6 +150,12 @@ function SubscriptionCard({ state }: { state: OwnerBillingState }) {
   }
   const sl = statusLabel[s.status] ?? { label: s.status, tone: 'muted' }
 
+  // T-210: amount 브레이크다운 — "N곳 × ₩14,900 = ₩X"
+  const breakdownLine = activeCount > 0
+    ? `${activeCount}곳 × ${formatAmount(PLAN_AMOUNT_PER_PLACE)} = ${formatAmount(expectedAmount)}`
+    : `활성 업체 0곳 · 결제 대상 없음`
+  const amountMismatch = s.amount !== expectedAmount && activeCount > 0
+
   return (
     <article className="kpi">
       <span className="k">구독 · {s.plan}</span>
@@ -153,9 +164,17 @@ function SubscriptionCard({ state }: { state: OwnerBillingState }) {
         <span className="u">/ 월</span>
       </div>
       <div className="sub">
+        {breakdownLine}
+      </div>
+      <div className="sub" style={{ marginTop: 4 }}>
         상태: <b style={{ color: 'var(--ink)' }}>{sl.label}</b>
         {s.nextChargeAt && ` · 다음 결제 ${formatDate(s.nextChargeAt)}`}
       </div>
+      {amountMismatch && (
+        <div className="info-note" style={{ color: 'var(--warn, #b45309)' }}>
+          ⚠ 현재 등록 금액({formatAmount(s.amount)}) 이 예상치와 다릅니다. 다음 결제일에 자동 조정됩니다.
+        </div>
+      )}
       {s.failedRetryCount > 0 && (
         <div className="info-note">재시도 {s.failedRetryCount}회</div>
       )}
@@ -213,7 +232,7 @@ function CardPanel({ state, clientKey }: { state: OwnerBillingState; clientKey: 
             <b style={{ color: 'var(--ink)' }}>파일럿 기간 중에도 카드를 미리 등록할 수 있습니다.</b>
             <div style={{ marginTop: 6, fontSize: 12 }}>
               카드 등록 시점엔 결제가 일어나지 않으며, 파일럿 종료({formatDate(customer.trialEndsAt)}) 에
-              첫 월 {formatAmount(STANDARD_PLAN_AMOUNT)} 이 자동 결제됩니다.
+              첫 월 {formatAmount(PLAN_AMOUNT_PER_PLACE)} × 활성 업체 수 가 자동 결제됩니다.
             </div>
           </div>
           <BillingAuthButton

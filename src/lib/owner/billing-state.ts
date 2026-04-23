@@ -53,6 +53,8 @@ export interface OwnerBillingState {
   subscription: SubscriptionRow | null // 활성 또는 해지 예정 1건
   recentPayments: PaymentRow[]         // 최근 5건
   pilotRemainingDays: number
+  /** T-210: 활성 업체 수 — 요금 브레이크다운 "N곳 × ₩14,900" 에 사용. */
+  activePlaceCount: number
 }
 
 function daysUntilIso(iso: string | null, now: Date): number | null {
@@ -69,6 +71,7 @@ export async function loadOwnerBillingState(userId: string, now: Date = new Date
     subscription: null,
     recentPayments: [],
     pilotRemainingDays: 30,
+    activePlaceCount: 0,
   }
 
   const admin = getAdminClient()
@@ -176,5 +179,15 @@ export async function loadOwnerBillingState(userId: string, now: Date = new Date
     }))
   }
 
-  return { customer, billingKey, subscription, recentPayments, pilotRemainingDays }
+  // T-210: 현재 활성 업체 수 (요금 브레이크다운용)
+  const { count: activePlaceCount } = await admin
+    .from('places')
+    .select('id', { count: 'exact', head: true })
+    .eq('customer_id', c.id)
+    .eq('status', 'active')
+
+  return {
+    customer, billingKey, subscription, recentPayments, pilotRemainingDays,
+    activePlaceCount: activePlaceCount ?? 0,
+  }
 }

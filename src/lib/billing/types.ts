@@ -15,11 +15,23 @@ export type BillingKeyStatus = 'active' | 'revoked' | 'expired'
 export type PaymentStatus = 'succeeded' | 'failed' | 'canceled'
 
 // T-206 — 단일 요금제 14,900원 (2026-04-22 확정, 9,900원 → 14,900원 상향).
-// 월 블로그 5편/업체 · 월간 리포트 · AEO 점검 · AI 인용 대시보드 포함.
+// T-210 — 업체당 요금제로 변경 (2026-04-23). 월 14,900원 × 활성 업체 수.
+// 월 블로그 5편/업체 · 월간 이메일 알림 · AEO 점검 · AI 인용 대시보드 포함.
 // 가격 책정 근거: 수수료 포함 변동 마진율 92% · BEP 5.5명 · 소상공인 심리 안전 구간.
+export const PLAN_AMOUNT_PER_PLACE = 14900 as const
+/** @deprecated T-210 이전의 고정 단가. 신규 코드는 PLAN_AMOUNT_PER_PLACE · calculatePlanAmount 사용. */
 export const STANDARD_PLAN_AMOUNT = 14900 as const
 export const STANDARD_PLAN_NAME = 'standard' as const
 export const MONTHLY_BLOG_QUOTA_PER_PLACE = 5 as const
+
+/**
+ * T-210: 활성 업체 수 기반 월 청구액.
+ * 파일럿(trial) 중이거나 활성 업체 0곳이면 0 — 구독 있어도 과금 대상 아님.
+ */
+export function calculatePlanAmount(activePlaceCount: number): number {
+  if (!Number.isFinite(activePlaceCount) || activePlaceCount <= 0) return 0
+  return Math.floor(activePlaceCount) * PLAN_AMOUNT_PER_PLACE
+}
 
 export interface DbCustomer {
   id: string

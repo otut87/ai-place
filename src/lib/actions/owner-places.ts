@@ -130,3 +130,83 @@ export async function updateOwnerPlace(placeId: string, patchInput: Record<strin
 
   return { success: true, fieldsChanged: recorded }
 }
+
+// ── T-210: 업체 보관/복원 + subscription amount 자동 동기화 ─────────────
+export interface ArchiveOwnerPlaceResponse {
+  success: boolean
+  error?: string
+  newSubscriptionAmount?: number | null
+  activePlaceCount?: number
+}
+
+async function transitionOwnerPlaceStatus(
+  placeId: string,
+  nextStatus: 'active' | 'archived',
+): Promise<ArchiveOwnerPlaceResponse> {
+  const user = await requireOwnerForAction()
+  const supabase = getAdminClient()
+  if (!supabase) return { success: false, error: 'Admin 클라이언트 초기화 실패' }
+
+  const { data: row, error: fetchErr } = await supabase
+    .from('places')
+    .select('id, city, category, slug, status, customer_id, owner_id, owner_email')
+    .eq('id', placeId)
+    .single()
+  if (fetchErr || !row) return { success: false, error: '업체를 찾을 수 없습니다.' }
+
+  const typed = row as {
+    city: string; category: string; slug: string
+    status: string; customer_id: string | null
+    owner_id: string | null; owner_email: string | null
+  }
+
+  if (!canOwnerEdit(typed, { userId: user.id, email: user.email })) {
+    return { success: false, error: '본인 소유 업체만 조작할 수 있습니다.' }
+  }
+  if (typed.status === nextStatus) {
+    return { success: false, error: `이미 ${nextStatus} 상태입니다.` }
+  }
+
+  const { error: updateErr } = await supabase
+    .from('places')
+    .update({ status: nextStatus })
+    .eq('id', placeId)
+  if (updateErr) {
+    console.error('[owner-places] 상태 전환 실패:', updateErr)
+    return { success: false, error: '상태 전환에 실패했습니다.' }
+  }
+
+  // 감사 로그
+  const action = nextStatus === 'archived' ? 'owner archive' : 'owner restore'
+  const beforeSnap: Record<string, unknown> = { status: typed.status }
+  const afterSnap: Record<string, unknown> = { status: nextStatus }
+  await recordUpdateDiffs(placeId, user.id, beforeSnap, afterSnap, action)
+
+  // Subscription amount 동기화 (customer_id 있을 때만)
+  let newSubscriptionAmount: number | null = null
+  let activePlaceCount = 0
+  if (typed.customer_id) {
+    const { syncSubscriptionAmount } = await import('@/lib/billing/sync-subscription-amount')
+    const sync = await syncSubscriptionAmount(typed.customer_id)
+    activePlaceCount = sync.activePlaceCount
+    newSubscriptionAmount = sync.ok ? sync.newAmount : null
+  }
+
+  revalidatePath('/owner')
+  revalidatePath('/owner/places')
+  revalidatePath('/owner/billing')
+  revalidatePath(`/${typed.city}/${typed.category}`)
+  revalidatePath(`/${typed.city}/${typed.category}/${typed.slug}`)
+
+  return { success: true, newSubscriptionAmount, activePlaceCount }
+}
+
+/** 업체를 보관 처리 (soft-delete). 공개 페이지 비노출 + subscription 재계산. */
+export async function archiveOwnerPlace(placeId: string): Promise<ArchiveOwnerPlaceResponse> {
+  return transitionOwnerPlaceStatus(placeId, 'archived')
+}
+
+/** 보관된 업체를 복원. 공개 페이지 재노출 + subscription 재계산. */
+export async function restoreOwnerPlace(placeId: string): Promise<ArchiveOwnerPlaceResponse> {
+  return transitionOwnerPlaceStatus(placeId, 'active')
+}

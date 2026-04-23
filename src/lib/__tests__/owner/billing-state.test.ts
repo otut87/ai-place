@@ -6,6 +6,7 @@ interface State {
   billingKey: Record<string, unknown> | null
   subscription: Record<string, unknown> | null
   payments: Array<Record<string, unknown>>
+  activePlaceCount: number   // T-210
 }
 
 const state: State = {
@@ -13,6 +14,7 @@ const state: State = {
   billingKey: null,
   subscription: null,
   payments: [],
+  activePlaceCount: 0,
 }
 
 function makeAdmin() {
@@ -64,6 +66,16 @@ function makeAdmin() {
               order: () => ({
                 limit: async () => ({ data: state.payments, error: null }),
               }),
+            }),
+          }),
+        }
+      }
+      if (table === 'places') {
+        // T-210: activePlaceCount 조회 (head + count)
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: async () => ({ count: state.activePlaceCount, error: null }),
             }),
           }),
         }

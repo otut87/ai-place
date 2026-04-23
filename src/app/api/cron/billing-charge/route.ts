@@ -24,7 +24,7 @@ export async function GET(req: Request) {
   const { data, error } = await admin
     .from('subscriptions')
     .select(`
-      id, customer_id, billing_key_id, failed_retry_count, status,
+      id, customer_id, billing_key_id, failed_retry_count, status, amount,
       billing_keys:billing_key_id ( billing_key, status ),
       customers:customer_id ( name, email )
     `)
@@ -41,16 +41,24 @@ export async function GET(req: Request) {
   let succeeded = 0
   let failed = 0
 
+  let skippedZero = 0
   for (const row of data as unknown as Array<{
     id: string
     customer_id: string
     billing_key_id: string | null
     failed_retry_count: number
     status: string
+    amount: number
     billing_keys: { billing_key: string; status: string } | null
     customers: { name: string | null; email: string | null } | null
   }>) {
     if (!row.billing_keys || row.billing_keys.status !== 'active') continue
+
+    // T-210: amount=0 이면 활성 업체가 없어 청구 대상이 아님 — skip.
+    if (!row.amount || row.amount <= 0) {
+      skippedZero += 1
+      continue
+    }
 
     const outcome = await chargeSubscriptionOnce(adapter, {
       subscriptionId: row.id,
@@ -58,6 +66,7 @@ export async function GET(req: Request) {
       customerKey: row.customer_id,
       customerName: row.customers?.name ?? '(이름 없음)',
       customerEmail: row.customers?.email ?? undefined,
+      amount: row.amount,           // T-210: DB 에 저장된 동적 금액 명시 전달
       retriedCount: row.failed_retry_count,
     })
 
@@ -92,5 +101,5 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, scanned: data.length, succeeded, failed })
+  return NextResponse.json({ ok: true, scanned: data.length, succeeded, failed, skippedZero })
 }
