@@ -32,10 +32,51 @@ export interface OwnerBotBucket {
 
 export interface OwnerBotSummary {
   periodDays: number
-  since: string                     // ISO
+  since: string                     // ISO (from)
+  until: string                     // ISO (to) — T-209: 명시적 상한
   placeIds: string[]
   aiSearch: OwnerBotBucket          // AiSearchEngine keys
   aiTraining: OwnerBotBucket        // AiTrainingEngine keys
+}
+
+/**
+ * T-209 — 통계 조회 기간 입력. number(일수) 또는 명시적 {from, to} 범위.
+ * 호환성: 기존 `days: number` 시그니처 유지, 신규 호출자는 객체 전달 가능.
+ */
+export type StatsPeriodInput = number | { from: Date; to: Date }
+
+export interface ResolvedPeriod {
+  fromIso: string
+  toIso: string
+  fromDate: Date
+  toDate: Date
+  days: number                      // 반올림한 일수 (차트 버킷/표시용)
+}
+
+export function resolveStatsPeriod(
+  input: StatsPeriodInput | undefined,
+  now: Date = new Date(),
+  defaultDays = 30,
+): ResolvedPeriod {
+  if (typeof input === 'number' || input === undefined) {
+    const days = input ?? defaultDays
+    const fromDate = new Date(now.getTime() - days * 86_400_000)
+    return {
+      fromIso: fromDate.toISOString(),
+      toIso: now.toISOString(),
+      fromDate,
+      toDate: now,
+      days,
+    }
+  }
+  const days = Math.max(1, Math.ceil((input.to.getTime() - input.from.getTime()) / 86_400_000))
+  return {
+    fromIso: input.from.toISOString(),
+    toIso: input.to.toISOString(),
+    fromDate: input.from,
+    toDate: input.to,
+    days,
+  }
 }
 
 export interface OwnerBotVisit {
@@ -105,6 +146,7 @@ export function aggregateOwnerBotSummary(
   placeIds: string[],
   periodDays: number,
   since: string,
+  until: string = new Date().toISOString(),
 ): OwnerBotSummary {
   const aiSearch = emptyBucket(AI_SEARCH_ENGINE_KEYS)
   const aiTraining = emptyBucket(AI_TRAINING_ENGINE_KEYS)
@@ -127,7 +169,7 @@ export function aggregateOwnerBotSummary(
     }
   }
 
-  return { periodDays, since, placeIds, aiSearch, aiTraining }
+  return { periodDays, since, until, placeIds, aiSearch, aiTraining }
 }
 
 // ── Supabase 조회 래퍼 ────────────────────────────────────────────────────
@@ -166,56 +208,35 @@ async function fetchPathMap(placeIds: string[]): Promise<Map<string, { pageType:
 
 export async function getOwnerBotSummary(
   placeIds: string[],
-  days = 30,
+  period: StatsPeriodInput = 30,
   now: Date = new Date(),
 ): Promise<OwnerBotSummary> {
-  const since = new Date(now.getTime() - days * 86_400_000).toISOString()
+  const { fromIso, toIso, days } = resolveStatsPeriod(period, now)
+  const empty = (): OwnerBotSummary => ({
+    periodDays: days,
+    since: fromIso,
+    until: toIso,
+    placeIds,
+    aiSearch: emptyBucket(AI_SEARCH_ENGINE_KEYS),
+    aiTraining: emptyBucket(AI_TRAINING_ENGINE_KEYS),
+  })
 
-  if (placeIds.length === 0) {
-    return {
-      periodDays: days,
-      since,
-      placeIds,
-      aiSearch: emptyBucket(AI_SEARCH_ENGINE_KEYS),
-      aiTraining: emptyBucket(AI_TRAINING_ENGINE_KEYS),
-    }
-  }
-
+  if (placeIds.length === 0) return empty()
   const pathMap = await fetchPathMap(placeIds)
-  if (pathMap.size === 0) {
-    return {
-      periodDays: days,
-      since,
-      placeIds,
-      aiSearch: emptyBucket(AI_SEARCH_ENGINE_KEYS),
-      aiTraining: emptyBucket(AI_TRAINING_ENGINE_KEYS),
-    }
-  }
-
+  if (pathMap.size === 0) return empty()
   const admin = getAdminClient()
-  if (!admin) {
-    return {
-      periodDays: days,
-      since,
-      placeIds,
-      aiSearch: emptyBucket(AI_SEARCH_ENGINE_KEYS),
-      aiTraining: emptyBucket(AI_TRAINING_ENGINE_KEYS),
-    }
-  }
+  if (!admin) return empty()
 
   const paths = Array.from(pathMap.keys())
   const { data, error } = await admin
     .from('bot_visits')
     .select('bot_id, path, visited_at')
     .in('path', paths)
-    .gte('visited_at', since)
+    .gte('visited_at', fromIso)
+    .lt('visited_at', toIso)
   if (error) {
     console.error('[bot-stats] bot_visits 조회 실패:', error.message)
-    return {
-      periodDays: days, since, placeIds,
-      aiSearch: emptyBucket(AI_SEARCH_ENGINE_KEYS),
-      aiTraining: emptyBucket(AI_TRAINING_ENGINE_KEYS),
-    }
+    return empty()
   }
 
   const annotated: AnnotatedVisit[] = []
@@ -225,7 +246,7 @@ export async function getOwnerBotSummary(
     annotated.push({ botId: row.bot_id, pageType: info.pageType, visitedAt: row.visited_at })
   }
 
-  return aggregateOwnerBotSummary(annotated, placeIds, days, since)
+  return aggregateOwnerBotSummary(annotated, placeIds, days, fromIso, toIso)
 }
 
 // ── 일자별 추이 집계 (Sprint D-2 차트) ────────────────────────────
@@ -253,22 +274,47 @@ function emptyEngineMap<T extends string>(keys: readonly T[]): Record<T, number>
   return out
 }
 
-/** 주어진 N일 윈도우의 날짜 키 버킷을 먼저 채우고, 방문을 bucket 에 누적. */
+function makeEmptyTrendRow(date: string): OwnerDailyTrendRow {
+  return {
+    date,
+    aiSearch: emptyEngineMap(AI_SEARCH_ENGINE_KEYS),
+    aiTraining: emptyEngineMap(AI_TRAINING_ENGINE_KEYS),
+    total: 0,
+  }
+}
+
+/**
+ * 주어진 기간 윈도우의 날짜 키 버킷을 먼저 채우고, 방문을 bucket 에 누적.
+ * T-209: `daysOrPeriod` 가 number 면 now 기준 역산(기존 동작), 객체면 {from, to} KST 일자 전체.
+ */
 export function aggregateOwnerDailyTrend(
   rows: ReadonlyArray<AnnotatedVisit>,
-  days: number,
+  daysOrPeriod: StatsPeriodInput,
   now: Date = new Date(),
 ): OwnerDailyTrendRow[] {
   const buckets = new Map<string, OwnerDailyTrendRow>()
-  for (let i = days - 1; i >= 0; i -= 1) {
-    const d = new Date(now.getTime() - i * 86_400_000)
-    const key = toKstDateKey(d.toISOString())
-    buckets.set(key, {
-      date: key,
-      aiSearch: emptyEngineMap(AI_SEARCH_ENGINE_KEYS),
-      aiTraining: emptyEngineMap(AI_TRAINING_ENGINE_KEYS),
-      total: 0,
-    })
+  const isNumber = typeof daysOrPeriod === 'number' || daysOrPeriod === undefined
+
+  if (isNumber) {
+    // 기존 동작: [now - (days-1)일, ..., now] = days 개의 KST 일자 버킷.
+    const days = (typeof daysOrPeriod === 'number' ? daysOrPeriod : 30)
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const d = new Date(now.getTime() - i * 86_400_000)
+      const key = toKstDateKey(d.toISOString())
+      if (!buckets.has(key)) buckets.set(key, makeEmptyTrendRow(key))
+    }
+  } else {
+    // 범위 모드: from~to 사이 모든 KST 일자를 포함.
+    const { fromDate, toDate } = resolveStatsPeriod(daysOrPeriod, now)
+    const toKey = toKstDateKey(toDate.toISOString())
+    let cursor = new Date(fromDate.getTime())
+    let guard = 400                         // 안전 상한 — 1년 이상 방어.
+    while (guard-- > 0) {
+      const key = toKstDateKey(cursor.toISOString())
+      if (!buckets.has(key)) buckets.set(key, makeEmptyTrendRow(key))
+      if (key >= toKey) break
+      cursor = new Date(cursor.getTime() + 86_400_000)
+    }
   }
 
   for (const r of rows) {
@@ -286,33 +332,35 @@ export function aggregateOwnerDailyTrend(
     bucket.total += 1
   }
 
-  return Array.from(buckets.values())
+  // date 오름차순 정렬 반환 (차트는 오래된 → 최신 순).
+  return Array.from(buckets.values()).sort((a, b) => a.date.localeCompare(b.date))
 }
 
 export async function getOwnerDailyTrend(
   placeIds: string[],
-  days = 30,
+  period: StatsPeriodInput = 30,
   now: Date = new Date(),
 ): Promise<OwnerDailyTrendRow[]> {
-  if (placeIds.length === 0) return aggregateOwnerDailyTrend([], days, now)
+  if (placeIds.length === 0) return aggregateOwnerDailyTrend([], period, now)
 
   const pathMap = await fetchPathMap(placeIds)
-  if (pathMap.size === 0) return aggregateOwnerDailyTrend([], days, now)
+  if (pathMap.size === 0) return aggregateOwnerDailyTrend([], period, now)
 
   const admin = getAdminClient()
-  if (!admin) return aggregateOwnerDailyTrend([], days, now)
+  if (!admin) return aggregateOwnerDailyTrend([], period, now)
 
-  const since = new Date(now.getTime() - days * 86_400_000).toISOString()
+  const { fromIso, toIso } = resolveStatsPeriod(period, now)
   const paths = Array.from(pathMap.keys())
 
   const { data, error } = await admin
     .from('bot_visits')
     .select('bot_id, path, visited_at')
     .in('path', paths)
-    .gte('visited_at', since)
+    .gte('visited_at', fromIso)
+    .lt('visited_at', toIso)
   if (error) {
     console.error('[bot-stats] getOwnerDailyTrend 실패:', error.message)
-    return aggregateOwnerDailyTrend([], days, now)
+    return aggregateOwnerDailyTrend([], period, now)
   }
 
   const annotated: AnnotatedVisit[] = []
@@ -322,7 +370,7 @@ export async function getOwnerDailyTrend(
     annotated.push({ botId: row.bot_id, pageType: info.pageType, visitedAt: row.visited_at })
   }
 
-  return aggregateOwnerDailyTrend(annotated, days, now)
+  return aggregateOwnerDailyTrend(annotated, period, now)
 }
 
 // ── 페이지(path)별 집계 — /owner/citations 페이지용 ────────────────
@@ -343,7 +391,7 @@ export interface OwnerPathSummaryRow {
  */
 export async function getOwnerByPathSummary(
   placeIds: string[],
-  days = 90,
+  period: StatsPeriodInput = 90,
   now: Date = new Date(),
 ): Promise<OwnerPathSummaryRow[]> {
   if (placeIds.length === 0) return []
@@ -353,14 +401,15 @@ export async function getOwnerByPathSummary(
   const admin = getAdminClient()
   if (!admin) return []
 
-  const since = new Date(now.getTime() - days * 86_400_000).toISOString()
+  const { fromIso, toIso } = resolveStatsPeriod(period, now)
   const paths = Array.from(pathMap.keys())
 
   const { data, error } = await admin
     .from('bot_visits')
     .select('bot_id, path, visited_at')
     .in('path', paths)
-    .gte('visited_at', since)
+    .gte('visited_at', fromIso)
+    .lt('visited_at', toIso)
   if (error) {
     console.error('[bot-stats] getOwnerByPathSummary 실패:', error.message)
     return []
@@ -407,7 +456,7 @@ export async function getOwnerByPathSummary(
 export async function listOwnerBotVisits(
   placeIds: string[],
   limit = 10,
-  days = 30,
+  period: StatsPeriodInput = 30,
   now: Date = new Date(),
 ): Promise<OwnerBotVisit[]> {
   if (placeIds.length === 0) return []
@@ -417,14 +466,15 @@ export async function listOwnerBotVisits(
   const admin = getAdminClient()
   if (!admin) return []
 
-  const since = new Date(now.getTime() - days * 86_400_000).toISOString()
+  const { fromIso, toIso } = resolveStatsPeriod(period, now)
   const paths = Array.from(pathMap.keys())
 
   const { data } = await admin
     .from('bot_visits')
     .select('id, bot_id, path, visited_at')
     .in('path', paths)
-    .gte('visited_at', since)
+    .gte('visited_at', fromIso)
+    .lt('visited_at', toIso)
     .order('visited_at', { ascending: false })
     .limit(limit * 3)  // AI 그룹 필터링 후 limit 확보 위해 여유 조회
 

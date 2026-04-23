@@ -13,7 +13,7 @@ interface Props {
   dailyTrend: OwnerDailyTrendRow[]
   /** 주요 CTA href — "+ 새 업체 추가" */
   primaryCtaHref: string
-  /** 보조 CTA href — "월간 리포트 PDF" */
+  /** T-209: 보조 CTA href — AI 인용 현황 (기존 "월간 리포트 PDF" → 실시간 뷰로 전환) */
   secondaryCtaHref?: string
 }
 
@@ -89,7 +89,7 @@ export function DashHero({
         <div className="cta-row">
           <a className="btn accent" href={primaryCtaHref}>+ 새 업체 추가</a>
           {secondaryCtaHref && (
-            <a className="btn ghost" href={secondaryCtaHref}>월간 리포트 ↓</a>
+            <a className="btn ghost" href={secondaryCtaHref}>AI 인용 현황 →</a>
           )}
         </div>
       </div>

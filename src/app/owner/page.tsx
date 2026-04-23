@@ -81,7 +81,7 @@ export default async function OwnerHomePage({ searchParams }: Params) {
             placesLinked={placesLinked}
             dailyTrend={data.dailyTrend}
             primaryCtaHref="/owner/places/new"
-            secondaryCtaHref="/owner/reports"
+            secondaryCtaHref="/owner/citations"
           />
 
           <section className="dash-sec">

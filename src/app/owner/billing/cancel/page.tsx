@@ -61,7 +61,7 @@ export default async function CancelPage() {
         <p className="font-medium">해지하시면:</p>
         <ul className="mt-2 space-y-1 text-xs">
           <li>✓ 업체 공개 페이지는 그대로 유지됩니다 (읽기 전용)</li>
-          <li>✗ Owner 대시보드·주 1회 AI 인용 테스트·월간 리포트 중단</li>
+          <li>✗ Owner 대시보드·주 1회 AI 인용 테스트·월간 이메일 알림 중단</li>
           <li>✗ AI 자동 입력 기능 사용 불가</li>
         </ul>
       </div>

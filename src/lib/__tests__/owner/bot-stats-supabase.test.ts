@@ -32,20 +32,22 @@ function makeAdmin() {
         }
       }
       if (table === 'bot_visits') {
+        const leaf = state.visitsError
+          ? chainReturn(null, state.visitsError)
+          : {
+              // getOwnerByPathSummary / getOwnerDailyTrend / getOwnerBotSummary 는 .in().gte().lt() 까지만
+              then: (onFulfilled: (v: { data: unknown; error: unknown }) => unknown) =>
+                onFulfilled({ data: state.visits, error: null }),
+              // listOwnerBotVisits 는 .order().limit()
+              order: () => ({
+                limit: () => chainReturn(state.visits),
+              }),
+            }
         return {
           select: () => ({
             in: () => ({
-              gte: () => state.visitsError
-                ? chainReturn(null, state.visitsError)
-                : {
-                    // getOwnerByPathSummary / getOwnerDailyTrend / getOwnerBotSummary 는 .in().gte() 까지만
-                    then: (onFulfilled: (v: { data: unknown; error: unknown }) => unknown) =>
-                      onFulfilled({ data: state.visits, error: null }),
-                    // listOwnerBotVisits 는 .order().limit()
-                    order: () => ({
-                      limit: () => chainReturn(state.visits),
-                    }),
-                  },
+              // T-209: .gte().lt() 체인 추가 (period 명시적 from/to)
+              gte: () => ({ lt: () => leaf }),
             }),
           }),
         }

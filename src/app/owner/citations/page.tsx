@@ -1,4 +1,5 @@
 // /owner/citations — AI 인용 현황 (Remix 디자인 ai-citations.html 구현).
+// T-209: 월 프리셋 · 사용자 지정 날짜 범위 + AEO/이슈 패널 통합 (기존 /owner/reports 흡수).
 // 허수 금지: 실데이터만 표시. 0 이면 "아직 없음" 으로 설명.
 
 import type { Metadata } from 'next'
@@ -8,6 +9,7 @@ import { listOwnerPlaces } from '@/lib/actions/owner-places'
 import {
   getOwnerBotSummary, getOwnerDailyTrend, getOwnerByPathSummary, listOwnerBotVisits,
 } from '@/lib/owner/bot-stats'
+import { resolveOwnerPagePeriod } from '@/lib/owner/period-parser'
 import { composePageTitle } from '@/lib/seo/compose-title'
 import { DashCharts } from '../_components/dash-charts'
 import { EmptyState } from '../_components/empty-state'
@@ -15,6 +17,8 @@ import { CitationsHero } from './_components/citations-hero'
 import { CitationsKpiRow } from './_components/citations-kpi-row'
 import { TopPathsTable } from './_components/top-paths-table'
 import { CitationsFeed } from './_components/citations-feed'
+import { CitationsAeoPanel } from './_components/citations-aeo-panel'
+import { loadAeoSnapshotsForPlaces } from '@/lib/owner/aeo-snapshot'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,22 +29,15 @@ export const metadata: Metadata = {
 }
 
 interface Params {
-  searchParams: Promise<{ days?: string; place?: string }>
-}
-
-function parseDays(raw: string | undefined): 7 | 30 | 90 {
-  if (raw === '7') return 7
-  if (raw === '90') return 90
-  return 30
+  searchParams: Promise<{ days?: string; place?: string; from?: string; to?: string }>
 }
 
 export default async function OwnerCitationsPage({ searchParams }: Params) {
   const user = await requireOwnerUser()
-  const { days: daysRaw, place: placeRaw } = await searchParams
-  const days = parseDays(daysRaw)
+  const sp = await searchParams
 
   const ownerPlaces = await listOwnerPlaces()
-  const selectedPlaceId = placeRaw && ownerPlaces.some((p) => p.id === placeRaw) ? placeRaw : null
+  const selectedPlaceId = sp.place && ownerPlaces.some((p) => p.id === sp.place) ? sp.place : null
   const placeIds = selectedPlaceId ? [selectedPlaceId] : ownerPlaces.map((p) => p.id)
   const placeNameById = new Map(ownerPlaces.map((p) => [p.id, p.name]))
 
@@ -59,14 +56,20 @@ export default async function OwnerCitationsPage({ searchParams }: Params) {
   }
 
   const now = new Date()
-  const [summary, dailyTrend, byPath, recent] = await Promise.all([
-    getOwnerBotSummary(placeIds, days, now),
-    getOwnerDailyTrend(placeIds, days, now),
-    getOwnerByPathSummary(placeIds, days, now),
-    listOwnerBotVisits(placeIds, 30, days, now),
+  const period = resolveOwnerPagePeriod(sp, now)
+  // 통계 입력: 'days' 모드는 number 로, month/custom 은 {from,to} 로 넘긴다.
+  const statsInput = period.mode === 'days'
+    ? period.days
+    : { from: period.from, to: period.to }
+
+  const [summary, dailyTrend, byPath, recent, aeoSnapshots] = await Promise.all([
+    getOwnerBotSummary(placeIds, statsInput, now),
+    getOwnerDailyTrend(placeIds, statsInput, now),
+    getOwnerByPathSummary(placeIds, statsInput, now),
+    listOwnerBotVisits(placeIds, 30, statsInput, now),
+    loadAeoSnapshotsForPlaces(placeIds),
   ])
 
-  // 최신 방문 1건 — hero 의 "마지막 발생" 및 KPI1 의 last time.
   const lastVisit = recent[0] ?? null
   const lastVisitSub = lastVisit
     ? `${lastVisit.botLabel} · ${lastVisit.placeIds[0] ? placeNameById.get(lastVisit.placeIds[0]) ?? '업체' : '업체'}`
@@ -76,8 +79,9 @@ export default async function OwnerCitationsPage({ searchParams }: Params) {
     ?? summary.aiTraining.lastVisitAt
     ?? null
 
-  // 운영/테스트 계정 표식 — user.email 로 구분할 뿐 UI 변경 없음.
   void user
+
+  const periodDays = summary.periodDays
 
   return (
     <div className="cit-page">
@@ -88,7 +92,13 @@ export default async function OwnerCitationsPage({ searchParams }: Params) {
       </div>
 
       <CitationsHero
-        days={days}
+        periodMode={period.mode}
+        periodLabel={period.label}
+        periodDays={periodDays}
+        days={period.mode === 'days' ? period.days : null}
+        monthKey={period.mode === 'month' ? period.monthKey : null}
+        from={period.from}
+        to={period.to}
         selectedPlaceId={selectedPlaceId}
         places={ownerPlaces.map((p) => ({ id: p.id, name: p.name }))}
         botSummary={summary}
@@ -99,7 +109,7 @@ export default async function OwnerCitationsPage({ searchParams }: Params) {
 
       <section className="dash-sec">
         <div>
-          <div className="k">Summary · {days}일</div>
+          <div className="k">Summary · {period.label}</div>
           <h2>접촉 <span className="it">유형별</span> 분해</h2>
         </div>
       </section>
@@ -115,12 +125,24 @@ export default async function OwnerCitationsPage({ searchParams }: Params) {
         rows={dailyTrend}
         searchTotal={summary.aiSearch.total}
         trainingTotal={summary.aiTraining.total}
-        rangeDays={days}
+        rangeDays={periodDays}
       />
 
       <section className="dash-sec">
         <div>
-          <div className="k">Top Pages · {days}일</div>
+          <div className="k">AEO · {period.label}</div>
+          <h2>AI가 읽기 쉬운 <span className="it">정보 완성도</span></h2>
+        </div>
+      </section>
+
+      <CitationsAeoPanel
+        snapshots={aeoSnapshots}
+        placeNameById={placeNameById}
+      />
+
+      <section className="dash-sec">
+        <div>
+          <div className="k">Top Pages · {period.label}</div>
           <h2>AI가 가장 많이 <span className="it">방문한</span> 페이지</h2>
         </div>
       </section>
@@ -134,7 +156,7 @@ export default async function OwnerCitationsPage({ searchParams }: Params) {
         </div>
       </section>
 
-      <CitationsFeed visits={recent} placeNameById={placeNameById} totalDays={days} />
+      <CitationsFeed visits={recent} placeNameById={placeNameById} totalDays={periodDays} />
 
       <div className="footnote">
         <div className="ic">!</div>
@@ -146,7 +168,7 @@ export default async function OwnerCitationsPage({ searchParams }: Params) {
       </div>
 
       <div className="foot-meta">
-        <span>계정 ID #{user.id.slice(0, 8)} · 기간 최근 {days}일</span>
+        <span>계정 ID #{user.id.slice(0, 8)} · 기간 {period.label}</span>
         <span>실시간 집계 · 최근 동기화 방금</span>
       </div>
     </div>

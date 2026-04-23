@@ -58,7 +58,7 @@ interface ChartProps {
   rows: OwnerDailyTrendRow[]
   engines: ReadonlyArray<{ key: string; label: string; color: string }>
   group: 'aiSearch' | 'aiTraining'
-  rangeDays: 7 | 30 | 90
+  rangeDays: number
   /** current path — Link 로 기간 스위치 생성. */
   basePath: string
   total: number
@@ -209,7 +209,7 @@ interface Props {
   rows: OwnerDailyTrendRow[]
   searchTotal: number
   trainingTotal: number
-  rangeDays: 7 | 30 | 90
+  rangeDays: number
 }
 
 export function DashCharts({ rows, searchTotal, trainingTotal, rangeDays }: Props) {

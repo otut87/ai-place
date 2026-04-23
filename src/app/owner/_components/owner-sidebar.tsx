@@ -15,10 +15,11 @@ interface Props {
 interface NavItem {
   href: string
   label: string
-  icon: 'overview' | 'citation' | 'places' | 'content' | 'reports' | 'billing'
+  icon: 'overview' | 'citation' | 'places' | 'content' | 'billing'
   match: (p: string) => boolean
 }
 
+// T-209: 월간 리포트 메뉴 제거 — AI 인용 페이지가 월 프리셋/사용자 지정 기간으로 흡수함.
 const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
   {
     title: '둘러보기',
@@ -26,7 +27,6 @@ const SECTIONS: Array<{ title: string; items: NavItem[] }> = [
       { href: '/owner',            label: '개요',        icon: 'overview',  match: (p) => p === '/owner' },
       { href: '/owner/citations',  label: 'AI 인용',     icon: 'citation',  match: (p) => p.startsWith('/owner/citations') },
       { href: '/owner/content',    label: '콘텐츠',      icon: 'content',   match: (p) => p.startsWith('/owner/content') },
-      { href: '/owner/reports',    label: '월간 리포트', icon: 'reports',   match: (p) => p.startsWith('/owner/reports') },
       { href: '/owner/places/new', label: '업체 추가',   icon: 'places',    match: (p) => p.startsWith('/owner/places') },
     ],
   },
@@ -62,12 +62,6 @@ const ICONS: Record<NavItem['icon'], React.ReactElement> = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <polyline points="14 2 14 8 20 8" />
-    </svg>
-  ),
-  reports: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-      <path d="M3 3v18h18" />
-      <path d="M7 14l4-4 4 4 5-5" />
     </svg>
   ),
   billing: (
