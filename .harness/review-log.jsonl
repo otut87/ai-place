@@ -181,3 +181,8 @@
 {"commit":"3e90783f7bdb551c7f20bcf5ce02598d2d78971e","timestamp":"2026-04-23T10:23:39.018Z","reviewer":"self","taskId":"T-229","files":["src/lib/__tests__/actions/admin-coupon.test.ts"],"notes":"T-229 어드민 쿠폰 액션 테스트"}
 {"commit":"3e90783f7bdb551c7f20bcf5ce02598d2d78971e","timestamp":"2026-04-23T10:23:40.220Z","reviewer":"self","taskId":"T-218","files":["src/lib/__tests__/actions/owner-ai-quota.test.ts"],"notes":"T-218 AI quota 조회 액션 테스트"}
 {"commit":"3e90783f7bdb551c7f20bcf5ce02598d2d78971e","timestamp":"2026-04-23T10:23:41.469Z","reviewer":"self","taskId":"T-224","files":["src/lib/__tests__/actions/owner-billing-retry.test.ts"],"notes":"T-224 오너 결제 재시도 액션 테스트"}
+{"commit":"1bc17a730a629d828ab34fc9d1c3aa13eada2c0a","timestamp":"2026-04-27T09:13:05.866Z","reviewer":"self","taskId":"T-195","files":["src/lib/__tests__/ai/agents/normalize-markdown-headings.test.ts"]}
+{"commit":"1bc17a730a629d828ab34fc9d1c3aa13eada2c0a","timestamp":"2026-04-27T09:13:13.244Z","reviewer":"self","taskId":"T-233","files":["src/lib/__tests__/listing/sources.test.ts"]}
+{"commit":"1bc17a730a629d828ab34fc9d1c3aa13eada2c0a","timestamp":"2026-04-27T09:13:13.888Z","reviewer":"self","taskId":"T-234","files":["src/lib/pricing.ts"]}
+{"commit":"1bc17a730a629d828ab34fc9d1c3aa13eada2c0a","timestamp":"2026-04-27T09:13:14.524Z","reviewer":"self","taskId":"T-235","files":["src/lib/sparkline.ts"]}
+{"commit":"1bc17a730a629d828ab34fc9d1c3aa13eada2c0a","timestamp":"2026-04-27T09:13:36.928Z","reviewer":"self","taskId":"T-233","files":["src/lib/listing/sources.ts"]}
