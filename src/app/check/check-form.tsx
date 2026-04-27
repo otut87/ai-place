@@ -3,19 +3,22 @@
 // /check 진단 URL 입력 폼 (T-245 paper/orange aip 리믹스).
 // 제출 시 /check?url=... 로 이동해 서버가 진단 후 렌더.
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 
 export function CheckForm({ initialUrl }: { initialUrl: string }) {
   const router = useRouter()
   const [url, setUrl] = useState(initialUrl)
-  const [loading, setLoading] = useState(false)
+  // useTransition: router.push 의 서버 렌더가 끝나면 isPending 자동 false.
+  // (useState + setLoading 패턴은 push 후 컴포넌트가 unmount 되지 않아 리셋 안 됨)
+  const [loading, startTransition] = useTransition()
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!url.trim()) return
-    setLoading(true)
-    router.push(`/check?url=${encodeURIComponent(url.trim())}`)
+    startTransition(() => {
+      router.push(`/check?url=${encodeURIComponent(url.trim())}`)
+    })
   }
 
   return (

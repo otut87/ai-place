@@ -18,8 +18,8 @@ import {
   getAllActiveBlogPosts,
   getBlogPostsBySector,
 } from '@/lib/blog/data.supabase'
-import { extractTocFromMarkdown } from '@/lib/blog/markdown'
-import { getCities, getSectors, getCategories, getPlaceBySlug } from '@/lib/data.supabase'
+import { extractTocFromMarkdown, stripPostBoilerplate } from '@/lib/blog/markdown'
+import { getCities, getSectors, getCategories, getAllPlaces } from '@/lib/data.supabase'
 import { generateArticle, generateFAQPage, generateItemList } from '@/lib/jsonld'
 import { generateBreadcrumbList, buildBlogBreadcrumb } from '@/lib/seo'
 import { composePageTitle } from '@/lib/seo/compose-title'
@@ -81,30 +81,39 @@ export default async function BlogPostPage({ params }: Props) {
   const post = await getBlogPost(city, sector, slug)
   if (!post) notFound()
 
-  const [cities, sectors, categories] = await Promise.all([
+  // T-253 — 단일 getAllPlaces() 호출 + in-memory 필터로 N+1 제거.
+  // 기존: relatedPlaceSlugs 1개당 1번 getPlaceBySlug → 글당 4번 순차 DB 호출.
+  // 또한 category=null 인 경우에도 관련 업체를 찾을 수 있도록 city + slug 매칭.
+  const [cities, sectors, categories, allPlaces] = await Promise.all([
     getCities(),
     getSectors(),
     getCategories(),
+    getAllPlaces(),
   ])
   const cityObj = cities.find(c => c.slug === city)
   const sectorObj = sectors.find(s => s.slug === sector)
   const categoryObj = post.category ? categories.find(c => c.slug === post.category) : null
 
-  // 관련 업체 (related_place_slugs 기반)
-  const relatedPlaces: Place[] = []
-  if (post.relatedPlaceSlugs.length > 0 && post.category) {
-    for (const placeSlug of post.relatedPlaceSlugs) {
-      const place = await getPlaceBySlug(city, post.category, placeSlug)
-      if (place) relatedPlaces.push(place)
-    }
-  }
+  const relatedSlugSet = new Set(post.relatedPlaceSlugs)
+  const relatedPlaces: Place[] =
+    relatedSlugSet.size === 0
+      ? []
+      : allPlaces.filter(p => p.city === city && relatedSlugSet.has(p.slug))
 
   // 같은 sector 의 다른 글 (자기 자신 제외, 최대 3개)
   const sameSector = await getBlogPostsBySector(city, sector)
   const relatedPosts: BlogPostSummary[] = sameSector.filter(p => p.slug !== post.slug).slice(0, 3)
 
-  // TOC 추출 (markdown 의 h2/h3 → server-side ID 와 1:1 매칭)
-  const toc = extractTocFromMarkdown(post.content)
+  // T-253 — 본문 boilerplate strip. 파이프라인이 박은 ## 자주 묻는 질문 / ## 핵심 통계 /
+  // ## 관련 업체 / **타깃 검색어** 줄을 제거 — page detail 의 별도 컴포넌트가 같은 정보를
+  // canonical UI 로 이미 그리므로, 본문에 또 있으면 사용자는 같은 내용을 두 번 본다.
+  const cleanedContent = stripPostBoilerplate(post.content, {
+    hasFaqs: post.faqs.length > 0,
+    hasStatistics: post.statistics.length > 0,
+  })
+
+  // TOC 추출 (markdown 의 h2/h3 → server-side ID 와 1:1 매칭) — strip 후 본문 기준.
+  const toc = extractTocFromMarkdown(cleanedContent)
 
   const pageUrl = `${BASE_URL}/blog/${city}/${sector}/${slug}`
   const docId = `aip-blog-${post.slug}`
@@ -164,17 +173,26 @@ export default async function BlogPostPage({ params }: Props) {
 
           {/* CENTER: ARTICLE */}
           <article className="bp-post">
+            {/* T-253 — breadcrumb 계층 수정: city hub + sector hub 단계 추가.
+                기존엔 sector 가 /blog?sector=X 쿼리 필터로 빠지고 city hub 도 누락 →
+                홈 / 블로그 / 천안 / 의료 / 글 정상 계층으로 복원. */}
             <nav className="crumbs" aria-label="Breadcrumb">
               <Link href="/">홈</Link>
               <span className="sep">/</span>
               <Link href="/blog">블로그</Link>
-              <span className="sep">/</span>
-              {sectorObj && (
+              {cityObj && (
                 <>
-                  <Link href={`/blog?sector=${sector}`}>{sectorObj.name}</Link>
                   <span className="sep">/</span>
+                  <Link href={`/blog/${city}`}>{cityObj.name}</Link>
                 </>
               )}
+              {sectorObj && (
+                <>
+                  <span className="sep">/</span>
+                  <Link href={`/blog/${city}/${sector}`}>{sectorObj.name}</Link>
+                </>
+              )}
+              <span className="sep">/</span>
               <span className="cur">{categoryObj?.name ?? post.title}</span>
             </nav>
 
@@ -211,12 +229,7 @@ export default async function BlogPostPage({ params }: Props) {
               </div>
             </div>
 
-            {/* TL;DR */}
-            {post.summary && (
-              <div className="bp-tldr">
-                <p>{post.summary}</p>
-              </div>
-            )}
+            {/* T-253 — bp-lede(line 206)와 같은 summary 를 두 번 렌더하던 중복 제거. */}
 
             {/* Statistics box (있을 때만) */}
             {post.statistics.length > 0 && (
@@ -229,9 +242,9 @@ export default async function BlogPostPage({ params }: Props) {
               </div>
             )}
 
-            {/* Markdown 본문 */}
+            {/* Markdown 본문 — boilerplate strip 후 본문 사용 (T-253). */}
             <div className="prose">
-              <BlogMarkdown content={post.content} />
+              <BlogMarkdown content={cleanedContent} />
             </div>
 
             {/* FAQ */}
@@ -271,14 +284,22 @@ export default async function BlogPostPage({ params }: Props) {
 
             <Disclaimer sector={sector} />
 
-            {/* POST FOOT */}
+            {/* POST FOOT — T-253: sources 0개일 때 가짜 fallback 제거.
+                "업체 직접 제공 + Google·카카오 공식 데이터" 문구가 출처 없는 글에도
+                자동으로 들어가 출처가 있는 척 위장하던 버그 수정 (거짓 정보 생성 금지). */}
             <div className="bp-foot">
               <div className="src">
-                <b>출처 ·</b>{' '}
-                {post.sources.length > 0
-                  ? post.sources.map(s => s.name).join(' / ')
-                  : '업체 직접 제공 + Google·카카오 공식 데이터.'}
-                <br />
+                {post.sources.length > 0 ? (
+                  <>
+                    <b>출처 ·</b> {post.sources.map(s => s.name).join(' / ')}
+                    <br />
+                  </>
+                ) : (
+                  <>
+                    <b>출처 ·</b> 명시된 외부 출처 없음 — 본문은 등록된 업체 정보 기반.
+                    <br />
+                  </>
+                )}
                 <b>다음 갱신 ·</b> 14일 주기로 재검토합니다.
               </div>
             </div>

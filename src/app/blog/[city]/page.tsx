@@ -33,24 +33,37 @@ interface Props {
   params: Promise<{ city: string }>
 }
 
+// T-253 — 글이 1편 이상 있는 도시만 정적 생성. 빈 city hub (예: 아산 0편) 가
+// 인덱싱되어 thin content 로 잡히던 회귀 방지. dynamic = 'auto' 라 신규 도시는
+// on-demand 렌더 후 ISR 캐시.
 export async function generateStaticParams() {
-  const cities = await getCities()
-  return cities.map(c => ({ city: c.slug }))
+  const [cities, allPosts] = await Promise.all([
+    getCities(),
+    getRecentBlogPosts(500),
+  ])
+  const activeCitySet = new Set(allPosts.map(p => p.city))
+  return cities.filter(c => activeCitySet.has(c.slug)).map(c => ({ city: c.slug }))
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { city } = await params
-  const cities = await getCities()
+  const [cities, posts] = await Promise.all([
+    getCities(),
+    getBlogPostsByCity(city),
+  ])
   const cityObj = cities.find(c => c.slug === city)
   if (!cityObj) return {}
   const title = composePageTitle(`${cityObj.name} 업체 블로그`)
   const url = `/blog/${city}`
   const description = `${cityObj.name}의 업종별 가이드·비교·추천 글 모음. AI 검색에 최적화된 로컬 비즈니스 콘텐츠.`
+  // T-253 — 글이 0편이면 noindex. 빈 페이지가 색인되어 thin content 로 잡히지 않도록.
+  const robots = posts.length === 0 ? { index: false, follow: true } : undefined
   return {
     title,
     description,
     alternates: { canonical: url },
     openGraph: { title, description, url, type: 'website' },
+    ...(robots ? { robots } : {}),
   }
 }
 
@@ -72,7 +85,9 @@ export default async function BlogCityHubPage({ params }: Props) {
   for (const p of allRecent) countByCity.set(p.city, (countByCity.get(p.city) ?? 0) + 1)
 
   const sectorGroups = groupBlogPostsBySector(posts)
-  const lastUpdated = posts[0]?.publishedAt?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)
+  // T-253 — 글이 0편일 때 "오늘" 으로 가짜 신선도 신호 보내지 않음.
+  const lastUpdated = posts[0]?.publishedAt?.slice(0, 10) ?? null
+  const lastUpdatedDisplay = lastUpdated ?? '발행 대기'
 
   const pageUrl = `${BASE_URL}/blog/${city}`
   const breadcrumbItems = [
@@ -81,9 +96,17 @@ export default async function BlogCityHubPage({ params }: Props) {
     { name: cityObj.name, url: pageUrl },
   ]
 
-  const dab = clampDirectAnswer(
-    `${cityObj.name}에 공개된 업종 가이드 ${posts.length}편입니다. 피부과·미용·음식·인테리어 등 섹터별 추천·비교 정리.`,
-  )
+  // T-253 — 하드코드 "피부과·미용·음식·인테리어" 제거. 실제 발행된 sector 만 나열.
+  // posts 가 0편이거나 활성 sector 가 없으면 thin fallback.
+  const activeSectorNames = sectorGroups
+    .map(g => sectors.find(s => s.slug === g.sector)?.name ?? g.sector)
+    .filter(Boolean)
+  const dab =
+    posts.length === 0
+      ? clampDirectAnswer(`${cityObj.name} 업종 블로그는 발행 준비 중입니다.`)
+      : clampDirectAnswer(
+          `${cityObj.name}에 공개된 업종 가이드 ${posts.length}편입니다. ${activeSectorNames.join('·')} 섹터별 추천·비교 정리.`,
+        )
 
   return (
     <div className="aip-root">
@@ -128,7 +151,7 @@ export default async function BlogCityHubPage({ params }: Props) {
               <span className="pill">City Blog · Live</span>
               <span>doc-id <b>aip-blog-{city}</b></span>
               <span>·</span>
-              <span>updated <b>{lastUpdated}</b></span>
+              <span>updated <b>{lastUpdatedDisplay}</b></span>
               <span>·</span>
               <span>posts <b>{posts.length}</b></span>
               <span>·</span>
@@ -154,8 +177,10 @@ export default async function BlogCityHubPage({ params }: Props) {
               </div>
               <div className="s">
                 <dt>마지막 발행</dt>
-                <dd className="accent">{lastUpdated.slice(5, 10).replace('-', '/')}</dd>
-                <span className="sub">{lastUpdated}</span>
+                <dd className={lastUpdated ? 'accent' : ''}>
+                  {lastUpdated ? lastUpdated.slice(5, 10).replace('-', '/') : '—'}
+                </dd>
+                <span className="sub">{lastUpdated ?? '발행 대기'}</span>
               </div>
               <div className="s">
                 <dt>갱신 주기</dt>

@@ -41,9 +41,27 @@ type QueueRow = {
   retry_count: number
 }
 
+// T-253 — 시맨틱 슬러그 우선. targetQuery 가 있으면 그것을 ASCII slug 로 변환하고,
+// 없으면 [city]-[category]-[postType]-[rand4] 패턴으로 폴백 (충돌 방지 random).
+// 기존: 모든 새 글이 [city]-[cat]-[type]-[4chars] 형태라 LLM/검색엔진에 키워드 신호 0.
+function slugifyAsciiKo(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60)
+}
+
 function generateSlug(row: QueueRow): string {
   const rand = Math.random().toString(36).slice(2, 6).padEnd(4, 'x')
-  const parts = [row.city, row.category ?? row.sector, row.post_type, rand]
+  const cat = row.category ?? row.sector
+  if (row.target_query && row.target_query.trim().length > 0) {
+    const tail = slugifyAsciiKo(row.target_query)
+    if (tail.length >= 3) return [row.city, cat, tail].join('-').replace(/[^a-z0-9가-힣-]/g, '')
+  }
+  const parts = [row.city, cat, row.post_type, rand]
   return parts.join('-').replace(/[^a-z0-9-]/g, '')
 }
 
@@ -177,6 +195,12 @@ export async function GET(req: Request) {
     const placesMentioned = verifiedPlaces
       .map((p) => (p as Place & { id?: string }).id)
       .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    // T-253 — statistics / sources 는 의도적으로 비워둔다 (DB DEFAULT '[]').
+    // 이전 마이그레이션 데이터(seed-thin-category-guides 등)는 LLM 환각 위험이 있는
+    // 외부 출처(예: "건강보험심사평가원 1~3만원")를 포함했으나, 신규 파이프라인은
+    // verifiedPlaces 외 데이터를 만들어내지 않음. grounded 출처 라이브러리가 도입되면
+    // 그 시점에 다시 채울 것 (페이지 detail 의 StatisticsBox / SourceList 는 이미
+    // empty array 를 안전하게 처리).
 
     const { data: inserted, error: insErr } = await (admin
       .from('blog_posts') as ReturnType<typeof admin.from>)

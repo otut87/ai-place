@@ -134,6 +134,24 @@ nav .links a[aria-current="page"]{color:var(--ink); font-weight:600}
 nav .links a[aria-current="page"]::after{
   content:""; position:absolute; left:0; right:0; bottom:-22px; height:2px; background:var(--aip-accent);
 }
+nav .links a.nav-accent{
+  color:var(--aip-accent); font-weight:600;
+  display:inline-flex; align-items:center; gap:7px;
+}
+nav .links a.nav-accent::before{
+  content:""; width:6px; height:6px; border-radius:50%;
+  background:var(--aip-accent);
+  box-shadow:0 0 0 0 color-mix(in oklab, var(--aip-accent) 60%, transparent);
+  animation: nav-pulse 2.4s infinite;
+}
+nav .links a.nav-accent:hover{ color:var(--ink) }
+nav .links a.nav-accent:hover::before{ background:var(--ink) }
+@keyframes nav-pulse{
+  0%{box-shadow:0 0 0 0 color-mix(in oklab, var(--aip-accent) 55%, transparent)}
+  70%{box-shadow:0 0 0 8px rgba(0,0,0,0)}
+  100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}
+}
+.mobile-menu a.nav-accent{ color:var(--aip-accent) }
 nav .right{margin-left:auto; display:flex; gap:10px; align-items:center}
 .nav-toggle{display:none; background:transparent; border:1px solid var(--line-2); width:40px; height:40px; border-radius:10px; cursor:pointer; align-items:center; justify-content:center}
 .nav-toggle svg{width:20px; height:20px}
@@ -387,7 +405,7 @@ footer .meta .ai-mini .d{width:8px; height:8px; border-radius:2px}
 
   /* hero tune */
   .hero{padding: 28px 0 32px !important}
-  .hero .grid{gap:24px !important}
+  .hero .aip-grid{gap:24px !important}
   h1.hero-title{font-size: clamp(34px, 9vw, 48px) !important; line-height:1.02}
   .hero .lede{font-size:15px !important; margin-bottom:20px !important}
   .hero .cta-row{width:100%}

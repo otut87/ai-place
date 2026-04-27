@@ -7,9 +7,10 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { CityPicker } from './city-picker'
 
-const LINKS = [
+const LINKS: Array<{ href: string; label: string; accent?: boolean }> = [
   { href: '/directory', label: '디렉토리' },
   { href: '/blog', label: '블로그' },
+  { href: '/check', label: '무료 진단', accent: true },
   { href: '/pricing', label: '가격' },
   { href: '/about', label: '소개' },
 ]
@@ -50,7 +51,11 @@ export function HomeNav() {
           <CityPicker />
           <div className="links">
             {LINKS.map((l) => (
-              <Link key={l.href} href={l.href}>
+              <Link
+                key={l.href}
+                href={l.href}
+                className={l.accent ? 'nav-accent' : undefined}
+              >
                 {l.label}
               </Link>
             ))}
@@ -95,7 +100,12 @@ export function HomeNav() {
 
       <div className={`mobile-menu${open ? ' open' : ''}`} role="dialog" aria-hidden={!open}>
         {LINKS.map((l) => (
-          <Link key={l.href} href={l.href} onClick={() => setOpen(false)}>
+          <Link
+            key={l.href}
+            href={l.href}
+            onClick={() => setOpen(false)}
+            className={l.accent ? 'nav-accent' : undefined}
+          >
             {l.label}
           </Link>
         ))}

@@ -81,7 +81,7 @@ export default async function DirectoryPage() {
     getSectors(),
     getCategories(),
     getAllPlaces(),
-    getRecentBlogPosts(8),
+    getRecentBlogPosts(5),
     getSiteStats(),
     readCityCookieServer(),
   ])
@@ -388,7 +388,7 @@ export default async function DirectoryPage() {
                     누적 <b>{stats.totalBlogPosts.toLocaleString()}</b>편
                   </span>
                   <span>
-                    최근 <b>{Math.min(8, blogs.length)}</b>건 표시
+                    최근 <b>{Math.min(5, blogs.length)}</b>건 표시
                   </span>
                   <span>업데이트 <b>방금 전</b></span>
                 </div>

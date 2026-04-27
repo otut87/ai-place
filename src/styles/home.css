@@ -20,7 +20,9 @@
   pointer-events: none;
   z-index: 0;
 }
-.hero .grid {
+/* T-253 — T-252 의 .grid → .aip-grid 리네임 후 home hero 의 2단 컬럼 셀렉터가
+   .grid 그대로 남아있어 1단으로 폴백되던 회귀 수정. */
+.hero .aip-grid {
   display: grid;
   grid-template-columns: 1.05fr .95fr;
   gap: clamp(32px, 5vw, 64px);
@@ -28,7 +30,7 @@
   position: relative;
   z-index: 1;
 }
-@media (max-width: 980px) { .hero .grid { grid-template-columns: 1fr } }
+@media (max-width: 980px) { .hero .aip-grid { grid-template-columns: 1fr } }
 
 h1.hero-title {
   font-size: var(--h1);
@@ -427,8 +429,9 @@ h1.hero-title {
   .cta-card .cta-row .btn { flex: 1; justify-content: center }
   .cta-card .fine { gap: 14px; flex-direction: column }
 
-  /* 등록 업체 미리보기 sec-head: 제목과 "전체 보기" 버튼 자연 줄바꿈 */
-  .biz-grid + * , section .sec-head.flex.between .btn { align-self: flex-start }
+  /* 등록 업체 미리보기 sec-head: 제목과 "전체 보기" 버튼 자연 줄바꿈
+     T-253 — T-252 의 .between → .aip-between 리네임 회귀 수정 */
+  .biz-grid + * , section .sec-head.flex.aip-between .btn { align-self: flex-start }
 }
 
 @media (max-width: 460px) {

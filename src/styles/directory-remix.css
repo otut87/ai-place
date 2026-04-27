@@ -21,7 +21,8 @@
     radial-gradient(560px 320px at 92% 10%, color-mix(in oklab, var(--aip-accent) 14%, transparent), transparent 65%),
     radial-gradient(640px 380px at 5% 110%, color-mix(in oklab, var(--aip-accent) 6%, transparent), transparent 70%);
 }
-.dh-hero .grid {
+/* T-253 — T-252 의 .grid → .aip-grid 리네임 회귀 수정 */
+.dh-hero .aip-grid {
   position: relative;
   z-index: 1;
   display: grid;
@@ -30,7 +31,7 @@
   align-items: stretch;
 }
 @media (max-width: 980px) {
-  .dh-hero .grid { grid-template-columns: 1fr; }
+  .dh-hero .aip-grid { grid-template-columns: 1fr; }
 }
 
 .dh-hero h1 {
@@ -387,7 +388,7 @@
   font-style: italic;
 }
 .dh-stats .delta { font-family: var(--mono); font-size: 11.5px; color: var(--good); margin-top: 2px; }
-.dh-stats .delta.muted { color: var(--aip-muted); }
+.dh-stats .delta.aip-muted { color: var(--aip-muted); }
 
 /* ---------- SECTION SHELL ---------- */
 section.dh { padding: clamp(48px, 6vw, 80px) 0; border-top: 1px solid var(--line); position: relative; }

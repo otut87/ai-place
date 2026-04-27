@@ -235,10 +235,11 @@
   font-family: var(--mono); font-size: 11px; color: var(--aip-muted); letter-spacing: .04em;
   margin-bottom: 14px;
 }
-.au-empty-preview .grid {
+/* T-253 — T-252 의 .grid → .aip-grid 리네임 회귀 수정 */
+.au-empty-preview .aip-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
 }
-@media (max-width: 700px) { .au-empty-preview .grid { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .au-empty-preview .aip-grid { grid-template-columns: 1fr; } }
 .au-empty-preview .col {
   background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-md);
   padding: 14px 16px;

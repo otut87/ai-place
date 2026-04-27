@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SiteFooter } from '@/components/site/site-footer'
 import { getAllPlaces, getCities, getCategories } from '@/lib/data.supabase'
-import { aggregateBotVisits, aggregateBotVisitsByDay } from '@/lib/admin/bot-visits'
+import { aggregateAiBotSummary } from '@/lib/admin/bot-visits'
 import { buildSparkline } from '@/lib/sparkline'
 import {
   generateWebSite,
@@ -14,6 +14,7 @@ import {
   generateItemList,
   generateFAQPage,
 } from '@/lib/jsonld'
+import { formatCompactNumber } from '@/lib/format/compact-number'
 import { safeJsonLd } from '@/lib/utils'
 import type { FAQ } from '@/lib/types'
 import { HomeNav } from './_components/home/home-nav'
@@ -98,20 +99,22 @@ const FAQS: FAQ[] = [
 ]
 
 // 실측 집계 — 허수 금지 (환각 방지 원칙).
+// T-253: 홈 metric 은 AI 봇 + 정규 검색 엔진(Googlebot/Bingbot)만 합산.
+// googleother(Google R&D 일회성 batch) 는 "AI 검색 인용" 신호와 무관해 제외.
 async function loadStats() {
-  const [places, cities, categories, botAgg, botByDay] = await Promise.all([
+  const [places, cities, categories, botSummary] = await Promise.all([
     getAllPlaces(),
     getCities(),
     getCategories(),
-    aggregateBotVisits(30),
-    aggregateBotVisitsByDay(30),
+    aggregateAiBotSummary(30),
   ])
   const activePlaces = places.filter(p => p.rating != null)
   const avgRating =
     activePlaces.length > 0
       ? activePlaces.reduce((s, p) => s + (p.rating ?? 0), 0) / activePlaces.length
       : 0
-  const totalAiVisits = botAgg.reduce((s, r) => s + r.visits, 0)
+  const totalAiVisits = botSummary.totalVisits
+  const botByDay = botSummary.byDay
   const featured = [...places]
     .sort((a, b) => (b.reviewCount ?? 0) - (a.reviewCount ?? 0))
     .slice(0, 3)
@@ -343,7 +346,7 @@ export default async function HomePage() {
                 <div>
                   <div className="proof-q">최근 30일 AI 봇 방문 (실측)</div>
                   <div className="metric-big">
-                    {s.totalAiVisits.toLocaleString()}
+                    {formatCompactNumber(s.totalAiVisits)}
                     <sup>건</sup>
                   </div>
                   <div className="metric-sub">
@@ -597,7 +600,7 @@ export default async function HomePage() {
               <div className="lbl">등록 업체</div>
             </div>
             <div className="stat">
-              <div className="num">{s.totalAiVisits}<span className="unit">건</span></div>
+              <div className="num">{formatCompactNumber(s.totalAiVisits)}<span className="unit">건</span></div>
               <div className="lbl">30일 AI 방문</div>
             </div>
             <div className="stat">

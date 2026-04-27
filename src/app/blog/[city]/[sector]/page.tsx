@@ -6,7 +6,11 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { HomeNav } from '@/app/_components/home/home-nav'
 import { SiteFooter } from '@/components/site/site-footer'
-import { getBlogPostsBySector, getBlogPostsByCity } from '@/lib/blog/data.supabase'
+import {
+  getBlogPostsBySector,
+  getBlogPostsByCity,
+  getRecentBlogPosts,
+} from '@/lib/blog/data.supabase'
 import { getCities, getSectors, getCategories } from '@/lib/data.supabase'
 import { groupBlogPostsByCategory } from '@/lib/blog/hub'
 import { generateCollectionPage, generateBlogItemList } from '@/lib/jsonld'
@@ -33,25 +37,43 @@ interface Props {
   params: Promise<{ city: string; sector: string }>
 }
 
+// T-253 — 글이 1편 이상 있는 (city, sector) 조합만 정적 생성. 2 cities × 10 sectors
+// 모두 발행하면 빈 sector hub ~10개가 thin content 로 인덱싱되던 문제 해소.
 export async function generateStaticParams() {
-  const [cities, sectors] = await Promise.all([getCities(), getSectors()])
-  return cities.flatMap(c => sectors.map(s => ({ city: c.slug, sector: s.slug })))
+  const [cities, sectors, allPosts] = await Promise.all([
+    getCities(),
+    getSectors(),
+    getRecentBlogPosts(500),
+  ])
+  const activePairs = new Set(allPosts.map(p => `${p.city}/${p.sector}`))
+  return cities.flatMap(c =>
+    sectors
+      .filter(s => activePairs.has(`${c.slug}/${s.slug}`))
+      .map(s => ({ city: c.slug, sector: s.slug })),
+  )
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { city, sector } = await params
-  const [cities, sectors] = await Promise.all([getCities(), getSectors()])
+  const [cities, sectors, posts] = await Promise.all([
+    getCities(),
+    getSectors(),
+    getBlogPostsBySector(city, sector),
+  ])
   const cityObj = cities.find(c => c.slug === city)
   const sectorObj = sectors.find(s => s.slug === sector)
   if (!cityObj || !sectorObj) return {}
   const title = composePageTitle(`${cityObj.name} ${sectorObj.name} 블로그`)
   const url = `/blog/${city}/${sector}`
   const description = `${cityObj.name} ${sectorObj.name} 업종 가이드·비교·추천 글 모음. AI 검색 최적화.`
+  // T-253 — 글이 0편이면 noindex.
+  const robots = posts.length === 0 ? { index: false, follow: true } : undefined
   return {
     title,
     description,
     alternates: { canonical: url },
     openGraph: { title, description, url, type: 'website' },
+    ...(robots ? { robots } : {}),
   }
 }
 
@@ -77,7 +99,9 @@ export default async function BlogSectorHubPage({ params }: Props) {
   for (const p of cityPosts) sectorCounts.set(p.sector, (sectorCounts.get(p.sector) ?? 0) + 1)
   const activeSectorsForCity = sectors.filter(s => sectorCounts.has(s.slug))
 
-  const lastUpdated = posts[0]?.publishedAt?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)
+  // T-253 — 빈 페이지에서 "오늘" 으로 가짜 신선도 신호 보내지 않음.
+  const lastUpdated = posts[0]?.publishedAt?.slice(0, 10) ?? null
+  const lastUpdatedDisplay = lastUpdated ?? '발행 대기'
 
   const pageUrl = `${BASE_URL}/blog/${city}/${sector}`
   const breadcrumbItems = [
@@ -138,7 +162,7 @@ export default async function BlogSectorHubPage({ params }: Props) {
               <span className="pill">Sector Blog · Live</span>
               <span>doc-id <b>aip-blog-{city}-{sector}</b></span>
               <span>·</span>
-              <span>updated <b>{lastUpdated}</b></span>
+              <span>updated <b>{lastUpdatedDisplay}</b></span>
               <span>·</span>
               <span>posts <b>{posts.length}</b></span>
               <span>·</span>
@@ -164,8 +188,10 @@ export default async function BlogSectorHubPage({ params }: Props) {
               </div>
               <div className="s">
                 <dt>마지막 발행</dt>
-                <dd className="accent">{lastUpdated.slice(5, 10).replace('-', '/')}</dd>
-                <span className="sub">{lastUpdated}</span>
+                <dd className={lastUpdated ? 'accent' : ''}>
+                  {lastUpdated ? lastUpdated.slice(5, 10).replace('-', '/') : '—'}
+                </dd>
+                <span className="sub">{lastUpdated ?? '발행 대기'}</span>
               </div>
               <div className="s">
                 <dt>디렉토리</dt>
