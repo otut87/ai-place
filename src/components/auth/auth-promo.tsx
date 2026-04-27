@@ -1,6 +1,7 @@
 // /login · /signup 좌측 공유 promo — login.html 디자인 기준.
 // sticky 고정, 통계는 하드코딩 (TODO: aggregateBotVisits 등으로 실측 주입)
 import Link from 'next/link'
+import { SITE_BRAND } from '@/components/site/site-footer'
 
 export function AuthPromo() {
   return (
@@ -36,7 +37,10 @@ export function AuthPromo() {
         </div>
       </div>
 
-      <div className="promo-foot">© 2026 AI Place · 기획·제작 디두(dedo) · support@dedo.kr</div>
+      <div className="promo-foot">
+        © {new Date().getFullYear()} {SITE_BRAND.name} · 기획·제작 {SITE_BRAND.publisher} ·{' '}
+        {SITE_BRAND.email}
+      </div>
     </section>
   )
 }

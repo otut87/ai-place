@@ -22,6 +22,9 @@ import { AI_BOT_PATTERNS, BOT_GROUP_LABEL, type BotGroup } from '@/lib/seo/bot-d
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+/** T-233 일자별 추이 윈도우 — 호출과 라벨이 단일 상수에서 파생. */
+const TREND_DAYS = 14
+
 const GROUP_COLORS: Record<BotGroup, string> = {
   'ai-training':   '#10b981',   // emerald — AI 학습
   'ai-search':     '#3b82f6',   // blue — AI 검색
@@ -38,7 +41,7 @@ export default async function AdminSeoPage() {
     topBot404Paths(30, 10),
     topCrawledPaths(30, 10),
     aggregateByGroup(30),
-    dailyVisitTrend(14),
+    dailyVisitTrend(TREND_DAYS),
   ])
 
   const labelById = new Map(AI_BOT_PATTERNS.map((p) => [p.id, p.label]))
@@ -84,7 +87,7 @@ export default async function AdminSeoPage() {
       {/* 3) 일자별 추이 */}
       <section className="mb-6 rounded-xl border border-[#e7e7e7] bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-[#191919]">일자별 방문 추이 (14일)</h2>
+          <h2 className="text-sm font-medium text-[#191919]">일자별 방문 추이 ({TREND_DAYS}일)</h2>
           <div className="flex items-center gap-3 text-xs text-[#6b6b6b]">
             {(['ai-training', 'ai-search', 'search', 'crawler-other'] as const).map((g) => (
               <span key={g} className="flex items-center gap-1">

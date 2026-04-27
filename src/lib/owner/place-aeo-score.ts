@@ -16,6 +16,28 @@ export interface AeoRuleResult {
   detail?: string
 }
 
+/**
+ * T-233 — 8룰 라벨·가중치 카탈로그 (단일 소스).
+ * scorePlaceAeo 내부의 rules.push 와 1:1 매칭.
+ * UI 컴포넌트(aeo-gauge, dash-place-list)는 라벨을 직접 박지 말고 여기서 import.
+ */
+export const AEO_RULES = [
+  { id: 'jsonld-basics',        label: 'JSON-LD 기본 (이름·주소·연락처)', weight: 20 },
+  { id: 'faq-count',            label: 'FAQ 3~10개',                      weight: 20 },
+  { id: 'freshness',            label: '최근 갱신 표시 (180일 이내)',      weight: 10 },
+  { id: 'review-summary',       label: '리뷰 표시/수집',                  weight: 10 },
+  { id: 'photos-3',             label: '대표 사진 3장 이상',               weight: 10 },
+  { id: 'opening-hours',        label: '영업시간 정확',                   weight: 10 },
+  { id: 'services-min',         label: '서비스 1가지 이상',                weight: 10 },
+  { id: 'mentioned-in-content', label: '브랜드·카테고리·지역 언급',        weight: 10 },
+] as const
+
+export type AeoRuleId = (typeof AEO_RULES)[number]['id']
+
+export const AEO_RULE_LABEL: Record<AeoRuleId, string> = Object.fromEntries(
+  AEO_RULES.map(r => [r.id, r.label]),
+) as Record<AeoRuleId, string>
+
 export interface PlaceAeoScore {
   score: number        // 0~100
   grade: AeoGrade

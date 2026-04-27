@@ -2,24 +2,20 @@
 
 import Link from 'next/link'
 import type { OwnerPlaceSummary } from '@/lib/owner/dashboard-data'
-import type { AeoRuleResult } from '@/lib/owner/place-aeo-score'
+import { AEO_RULE_LABEL, type AeoRuleResult } from '@/lib/owner/place-aeo-score'
 
-/** chip 전용 축약 라벨. 통과 시 detail(수치)를 함께 붙이고 실패 시 label + detail 사유. */
+/** chip 전용 축약 라벨. 통과 시 축약형, 실패 시 그대로 룰 라벨. */
+const PASS_CHIP_LABEL: Record<string, string> = {
+  'jsonld-basics':  'JSON-LD 완료',
+  'review-summary': '리뷰 수집',
+  'services-min':   '서비스 등록',
+  'freshness':      '최근 갱신',
+  'mentioned-in-content': '콘텐츠 언급',
+}
+
 function chipLabel(r: AeoRuleResult): string {
-  // 실패면 label 기준으로 간단히 요약.
-  if (!r.passed) return r.detail ? `${r.label}` : r.label
-  // 통과면 수치/요약을 괄호 없이 붙임.
-  switch (r.id) {
-    case 'photos-3':       return '대표 사진 3장 이상'
-    case 'faq-count':      return 'FAQ 3~10개'
-    case 'opening-hours':  return '영업시간 정확'
-    case 'jsonld-basics':  return 'JSON-LD 완료'
-    case 'review-summary': return '리뷰 수집'
-    case 'services-min':   return '서비스 등록'
-    case 'freshness':      return '최근 갱신'
-    case 'mentioned-in-content': return '콘텐츠 언급'
-    default:               return r.label
-  }
+  if (!r.passed) return r.label
+  return PASS_CHIP_LABEL[r.id] ?? AEO_RULE_LABEL[r.id as keyof typeof AEO_RULE_LABEL] ?? r.label
 }
 
 interface Props {

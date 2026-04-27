@@ -8,13 +8,14 @@ import { getOwnerUser } from '@/lib/owner/auth'
 import { SignupForm } from './signup-form'
 import { AuthPromo } from '@/components/auth/auth-promo'
 import { composePageTitle } from '@/lib/seo/compose-title'
+import { MONTHLY_PRICE_LABEL } from '@/lib/pricing'
 import '@/styles/aip.css'
 import '@/styles/signup.css'
 
 export const dynamic = 'force-dynamic'
 
 const TITLE = composePageTitle('회원가입 — AI Place 오너 포털')
-const DESC = '내 업체를 AI Place 에 직접 등록하고 AI 검색 노출을 시작하세요. 파일럿 30일 무료 · 이후 월 14,900원.'
+const DESC = `내 업체를 AI Place 에 직접 등록하고 AI 검색 노출을 시작하세요. 파일럿 30일 무료 · 이후 ${MONTHLY_PRICE_LABEL}.`
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -46,7 +47,7 @@ export default async function SignupPage() {
             </h1>
             <p className="subtitle">
               계정을 만들고 업체를 등록하면 AI 검색 노출을 시작합니다.{' '}
-              <b>파일럿 30일 무료</b> · 이후 월 14,900원.
+              <b>파일럿 30일 무료</b> · 이후 {MONTHLY_PRICE_LABEL}.
             </p>
 
             <SignupForm />

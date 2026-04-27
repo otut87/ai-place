@@ -7,6 +7,7 @@ import { requireOwnerUser } from '@/lib/owner/auth'
 import { getCities, getCategories } from '@/lib/data.supabase'
 import { hasActiveBillingKey } from '@/lib/actions/owner-billing'
 import { OwnerRegisterForm } from './owner-register-form'
+import { MONTHLY_PRICE_LABEL } from '@/lib/pricing'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,7 +83,7 @@ export default async function NewPlacePage() {
             </div>
           </div>
           <div className="foot">
-            ※ 등록 후 30일 파일럿 무료 · 이후 업체당 월 14,900원 자동 결제.
+            ※ 등록 후 30일 파일럿 무료 · 이후 업체당 {MONTHLY_PRICE_LABEL} 자동 결제.
           </div>
         </div>
       </aside>

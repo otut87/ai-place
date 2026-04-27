@@ -1,6 +1,8 @@
 // T-057 — 알림 이벤트 → 이메일/슬랙 페이로드 빌더.
 // 순수 함수. 실제 전송은 notify/email.ts · notify/slack.ts 가 담당.
 
+import { MONTHLY_PRICE_TEXT } from '../pricing'
+
 export type NotifyEvent =
   | {
       type: 'place.registered'
@@ -209,7 +211,7 @@ export function buildEmailPayload(ev: NotifyEvent): EmailPayload | null {
           `${ev.customerName}님, AI Place 30일 파일럿 기간이 곧 종료됩니다.`,
           '',
           headline,
-          `결제 금액: ₩${ev.amount.toLocaleString('ko-KR')} (활성 업체 ${ev.activePlaceCount}개 × ₩14,900)`,
+          `결제 금액: ₩${ev.amount.toLocaleString('ko-KR')} (활성 업체 ${ev.activePlaceCount}개 × ${MONTHLY_PRICE_TEXT})`,
           '',
           '변경 · 확인: https://aiplace.kr/owner/billing',
           '해지: https://aiplace.kr/owner/billing/cancel',

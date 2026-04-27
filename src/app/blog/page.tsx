@@ -11,6 +11,7 @@ import {
   getPopularBlogPosts,
 } from '@/lib/blog/data.supabase'
 import { getCities, getSectors } from '@/lib/data.supabase'
+import { getSiteStats } from '@/lib/site-stats'
 import {
   generateCollectionPage,
   generateBlogItemList,
@@ -21,19 +22,31 @@ import type { BlogPostSummary } from '@/lib/types'
 
 const BASE_URL = 'https://aiplace.kr'
 
-const BLOG_INDEX_TITLE = 'AI Place 블로그 — 천안 지역 업체 가이드·비교·추천'
-const BLOG_INDEX_OG_TITLE = 'AI Place 블로그 — 천안 업체 가이드'
+/** 활성 도시 이름 결합 ("천안" / "천안·아산") — getSiteStats 기반 동적 카피용 */
+async function activeCityLabel(): Promise<string> {
+  const [stats, cities] = await Promise.all([getSiteStats(), getCities()])
+  const names = stats.activeCities
+    .map(slug => cities.find(c => c.slug === slug)?.name ?? slug)
+    .filter(Boolean)
+  return names.length > 0 ? names.join('·') : '전국'
+}
 
-export const metadata: Metadata = {
-  title: BLOG_INDEX_TITLE,
-  description: 'AI Place 블로그는 천안 지역 로컬 업체의 비교, 가이드, 추천 키워드 글을 제공합니다. ChatGPT, Claude, Gemini 검색에 최적화된 콘텐츠.',
-  alternates: { canonical: '/blog' },
-  openGraph: {
-    title: BLOG_INDEX_OG_TITLE,
-    description: '천안 지역 업체 비교·가이드·추천 글 모음. AI 검색 최적화 콘텐츠.',
-    url: '/blog',
-    type: 'website',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const cityLabel = await activeCityLabel()
+  const title = `AI Place 블로그 — ${cityLabel} 지역 업체 가이드·비교·추천`
+  const ogTitle = `AI Place 블로그 — ${cityLabel} 업체 가이드`
+  const description = `AI Place 블로그는 ${cityLabel} 지역 로컬 업체의 비교, 가이드, 추천 키워드 글을 제공합니다. ChatGPT, Claude, Gemini 검색에 최적화된 콘텐츠.`
+  return {
+    title,
+    description,
+    alternates: { canonical: '/blog' },
+    openGraph: {
+      title: ogTitle,
+      description: `${cityLabel} 지역 업체 비교·가이드·추천 글 모음. AI 검색 최적화 콘텐츠.`,
+      url: '/blog',
+      type: 'website',
+    },
+  }
 }
 
 interface CitySectorGroup {
@@ -141,8 +154,9 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
     ? []
     : groupByCityAndSector(merged, cities, sectors)
 
-  // Direct Answer Block (40-60자)
-  const dab = `AI Place 블로그는 천안 지역 ${recent.length}개 글로 업체 비교·가이드·추천을 제공합니다.`
+  // Direct Answer Block (40-60자) — 활성 도시 동적
+  const cityLabel = await activeCityLabel()
+  const dab = `AI Place 블로그는 ${cityLabel} 지역 ${recent.length}개 글로 업체 비교·가이드·추천을 제공합니다.`
 
   const breadcrumbItems = [
     { name: '홈', url: BASE_URL },

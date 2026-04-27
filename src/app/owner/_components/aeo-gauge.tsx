@@ -4,6 +4,7 @@
 
 import Link from 'next/link'
 import type { OwnerPlaceSummary } from '@/lib/owner/dashboard-data'
+import { AEO_RULES } from '@/lib/owner/place-aeo-score'
 
 interface Props {
   places: OwnerPlaceSummary[]
@@ -113,19 +114,9 @@ export function AeoGauge({ places, averageScore }: Props) {
 }
 
 /**
- * 8룰의 라벨·가중치 skeleton. place-aeo-score.ts 와 동기화 (label 문자열 일치).
+ * 8룰의 라벨·가중치 skeleton — place-aeo-score.ts AEO_RULES 단일 소스 재노출.
  */
 function allRulesSkeleton() {
-  // scorePlaceAeo 와 1:1 매칭. label 이 dashboard-data.aeoDeficiencies 와 비교되는 키.
-  return [
-    { id: 'jsonld-basics',        label: 'JSON-LD 기본 (이름·주소·연락처)', weight: 20 },
-    { id: 'faq-count',            label: 'FAQ 3~10개',                      weight: 20 },
-    { id: 'freshness',            label: '최근 갱신 표시 (180일 이내)',      weight: 10 },
-    { id: 'review-summary',       label: '리뷰 표시/수집',                  weight: 10 },
-    { id: 'photos-3',             label: '대표 사진 3장 이상',               weight: 10 },
-    { id: 'opening-hours',        label: '영업시간 정확',                   weight: 10 },
-    { id: 'services-min',         label: '서비스 1가지 이상',                weight: 10 },
-    { id: 'mentioned-in-content', label: '브랜드·카테고리·지역 언급',        weight: 10 },
-  ]
+  return AEO_RULES.map(r => ({ ...r }))
 }
 
