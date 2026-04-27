@@ -72,6 +72,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "husky": "^9.1.7",
+    "playwright": "^1.59.1",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",

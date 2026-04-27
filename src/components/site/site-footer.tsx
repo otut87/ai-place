@@ -84,7 +84,7 @@ export async function SiteFooter({
           </div>
 
           <div>
-            <h5>서비스</h5>
+            <h3>서비스</h3>
             <ul>
               <li><Link href="/owner/places/new">업체 등록</Link></li>
               <li><Link href="/pricing">가격·플랜</Link></li>
@@ -94,7 +94,7 @@ export async function SiteFooter({
           </div>
 
           <div>
-            <h5>디렉토리</h5>
+            <h3>디렉토리</h3>
             <ul>
               <li><Link href="/directory">전체 디렉토리</Link></li>
               {directoryLinks.length > 0 ? (
@@ -123,7 +123,7 @@ export async function SiteFooter({
           </div>
 
           <div>
-            <h5>콘텐츠</h5>
+            <h3>콘텐츠</h3>
             <ul>
               <li><Link href="/blog">가이드 전체</Link></li>
               <li><Link href="/about/methodology">조사 방법론</Link></li>
@@ -132,7 +132,7 @@ export async function SiteFooter({
           </div>
 
           <div>
-            <h5>회사</h5>
+            <h3>회사</h3>
             <ul>
               <li><Link href="/about">소개</Link></li>
               <li><Link href="/privacy">개인정보처리방침</Link></li>

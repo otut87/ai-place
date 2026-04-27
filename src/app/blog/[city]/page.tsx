@@ -55,7 +55,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!cityObj) return {}
   const title = composePageTitle(`${cityObj.name} 업체 블로그`)
   const url = `/blog/${city}`
-  const description = `${cityObj.name}의 업종별 가이드·비교·추천 글 모음. AI 검색에 최적화된 로컬 비즈니스 콘텐츠.`
+  // T-253 / QA ISSUE-002 — meta description 50자 미달이라 검색 snippet 자동 축약되던 것 수정.
+  // 발행 글 수 + 갱신일 같은 동적 정보로 자연스럽게 50~140자 범위 충족.
+  const lastDate = posts[0]?.publishedAt?.slice(0, 10)
+  const description = posts.length > 0
+    ? `${cityObj.name}의 업종별 가이드·비교·추천 글 ${posts.length}편 모음${lastDate ? ` (최근 ${lastDate} 갱신)` : ''}. ChatGPT·Claude·Gemini 같은 AI 검색에 인용되도록 출처와 날짜를 명시한 로컬 비즈니스 콘텐츠.`
+    : `${cityObj.name} 업체 블로그는 발행 준비 중입니다. ChatGPT·Claude·Gemini 인용 가능한 로컬 비즈니스 가이드를 곧 게시 예정.`
   // T-253 — 글이 0편이면 noindex. 빈 페이지가 색인되어 thin content 로 잡히지 않도록.
   const robots = posts.length === 0 ? { index: false, follow: true } : undefined
   return {
@@ -265,7 +270,7 @@ export default async function BlogCityHubPage({ params }: Props) {
                             <span className="when">{p.publishedAt?.slice(0, 10)}</span>
                           </div>
                           <div className="body">
-                            <h4>{p.title}</h4>
+                            <h3>{p.title}</h3>
                             <p>{p.summary}</p>
                           </div>
                           <div className="meta-side">

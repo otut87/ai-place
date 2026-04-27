@@ -596,7 +596,7 @@ export default async function ListingPage({ params }: Props) {
               <div className="qa-grid">
                 {derivedFaqs.map((f, idx) => (
                   <div className="qa" key={idx}>
-                    <h4>{f.question}</h4>
+                    <h3>{f.question}</h3>
                     <p>{f.answer}</p>
                   </div>
                 ))}

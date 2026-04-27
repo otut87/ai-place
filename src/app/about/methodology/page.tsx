@@ -119,9 +119,10 @@ export default function MethodologyPage() {
         {/* CTA strip → /check */}
         <section className="au-form-wrap">
           <div className="wrap-sm">
+            {/* CTA strip — 헤더성 강조라 h2 (h1 다음 첫 섹션) 로 처리해 점프 회피. */}
             <div className="au-cta-strip">
               <div>
-                <h3>내 페이지가 AI에게 잘 읽히는지 <span className="it">바로 진단</span></h3>
+                <h2>내 페이지가 AI에게 잘 읽히는지 <span className="it">바로 진단</span></h2>
                 <p>
                   같은 방법론을 적용한 무료 진단 도구. URL 1개만 넣으면 30초 내에 16개 항목 점수와 PDF 리포트를 받을 수 있습니다.
                 </p>

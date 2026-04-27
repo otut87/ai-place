@@ -102,11 +102,11 @@ export default function AboutPage() {
               AI 검색 시대에 <mark>추천되는 로컬 업체</mark>를 만드는 디렉토리 서비스입니다.
             </p>
 
-            {/* author intro */}
+            {/* author intro — name 은 byline 이라 heading 이 아닌 styled <p> 로 (heading 점프 회피). */}
             <div className="ab-author-card">
               <div className="ava">이</div>
               <div>
-                <h3>이지수</h3>
+                <p className="author-name">이지수</p>
                 <div className="role">
                   AI Place(에이아이 플레이스) 큐레이터 ·{' '}
                   <a href="https://dedo.kr" target="_blank" rel="noopener noreferrer">

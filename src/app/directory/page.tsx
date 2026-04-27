@@ -615,7 +615,7 @@ export default async function DirectoryPage() {
                           {avChar}
                         </div>
                         <div className="info">
-                          <h4>{p.name}</h4>
+                          <h3>{p.name}</h3>
                           <div className="meta">
                             {p.rating != null && <span className="stars">{stars}</span>}
                             {p.rating != null && (

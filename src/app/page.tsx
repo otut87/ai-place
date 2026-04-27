@@ -458,28 +458,28 @@ export default async function HomePage() {
               <div className="step">
                 <div className="idx">01</div>
                 <div>
-                  <h4>업체 정보 카드 (기본)</h4>
+                  <h3>업체 정보 카드 (기본)</h3>
                   <p>이름·주소·평점·서비스 등 핵심 정보를 AI 가 바로 인용할 수 있는 형태로 정리합니다. 광고 문구가 아닌 &ldquo;사실&rdquo;만.</p>
                 </div>
               </div>
               <div className="step">
                 <div className="idx">02</div>
                 <div>
-                  <h4>자주 묻는 질문 20~30개</h4>
+                  <h3>자주 묻는 질문 20~30개</h3>
                   <p>업종별 자주 묻는 질문을 AI 가 초안 작성 → 사장님 승인 후 게시. AI 가 인용할 &lsquo;답변 문장&rsquo;을 미리 준비해 둡니다.</p>
                 </div>
               </div>
               <div className="step">
                 <div className="idx">03</div>
                 <div>
-                  <h4>비교표 · 선택 가이드</h4>
+                  <h3>비교표 · 선택 가이드</h3>
                   <p>시술·서비스별 비교표와 업종 선택 가이드도 함께 발행되어 &ldquo;근거 있는 추천&rdquo;의 재료가 됩니다.</p>
                 </div>
               </div>
               <div className="step">
                 <div className="idx">04</div>
                 <div>
-                  <h4>매월 AI 추천 리포트</h4>
+                  <h3>매월 AI 추천 리포트</h3>
                   <p>어떤 질문에 · 어떤 AI 가 · 어떤 문맥으로 내 업체를 인용했는지 매달 이메일로 정리해 드립니다.</p>
                 </div>
               </div>
@@ -510,7 +510,7 @@ export default async function HomePage() {
                     <span className="cat">{p.category}</span>
                   </div>
                   <div className="body">
-                    <h4>{p.name}</h4>
+                    <h3>{p.name}</h3>
                     <div className="addr">{p.address}</div>
                     {p.rating != null && (
                       <div className="rate">

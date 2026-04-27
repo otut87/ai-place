@@ -65,7 +65,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!cityObj || !sectorObj) return {}
   const title = composePageTitle(`${cityObj.name} ${sectorObj.name} 블로그`)
   const url = `/blog/${city}/${sector}`
-  const description = `${cityObj.name} ${sectorObj.name} 업종 가이드·비교·추천 글 모음. AI 검색 최적화.`
+  // T-253 / QA ISSUE-002 — 50자 미달이라 검색 snippet 자동 축약되던 것 수정.
+  const lastDate = posts[0]?.publishedAt?.slice(0, 10)
+  const description = posts.length > 0
+    ? `${cityObj.name} ${sectorObj.name} 업종 가이드·비교·추천 글 ${posts.length}편${lastDate ? ` (최근 ${lastDate} 갱신)` : ''}. ChatGPT·Claude·Gemini AI 검색 인용을 위해 출처·날짜·표 형식으로 정리한 로컬 비즈니스 콘텐츠.`
+    : `${cityObj.name} ${sectorObj.name} 업종 블로그는 발행 준비 중입니다. AI 검색 인용 가능한 가이드를 곧 게시 예정.`
   // T-253 — 글이 0편이면 noindex.
   const robots = posts.length === 0 ? { index: false, follow: true } : undefined
   return {
@@ -280,7 +284,7 @@ export default async function BlogSectorHubPage({ params }: Props) {
                             <span className="when">{p.publishedAt?.slice(0, 10)}</span>
                           </div>
                           <div className="body">
-                            <h4>{p.title}</h4>
+                            <h3>{p.title}</h3>
                             <p>{p.summary}</p>
                           </div>
                           <div className="meta-side">

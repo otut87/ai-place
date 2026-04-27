@@ -6,6 +6,7 @@
 import { requireOwnerForAction } from '@/lib/owner/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { revalidatePath } from 'next/cache'
+import { romanizeKorean } from '@/lib/format/hangul-romanize'
 
 export interface OwnerPlaceDraft {
   name: string
@@ -72,19 +73,23 @@ function similarity(a: string, b: string): number {
   return 1 - dp[an.length][bn.length] / maxLen
 }
 
+// T-253 / QA ISSUE-003 — 시맨틱 슬러그.
+// 기존 동작: 한글 → ASCII 부분 + random hash (예: "단비" → "restaurant-6kty").
+// 신규 동작: 한글 → romanizeKorean (Revised Romanization) 으로 자/모/받침 매핑.
+// 결과: "단비" → "danbi", "디두" → "didu", "브이아이피모터스" → "beuiaipimoteoseu".
+// 검색/AI 인식에 충분히 시맨틱하며 URL 도 사람이 읽을 수 있는 수준.
 function generateSlug(name: string): string {
-  const base = name.toLowerCase()
-    .replace(/[^a-z0-9가-힣\s-]/g, '')
+  // 1) 한글 음절은 로마자 변환, ASCII/숫자/공백은 보존.
+  const transliterated = romanizeKorean(name)
+  // 2) lowercase + 영문/숫자/하이픈/공백만 남기고 정리.
+  const base = transliterated.toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-{2,}/g, '-')
     .replace(/^-|-$/g, '')
-  // ASCII 강제 (한글 포함 시 랜덤 suffix)
-  if (/[가-힣]/.test(base)) {
-    const ascii = base.replace(/[가-힣]/g, '')
-    const suffix = Math.random().toString(36).slice(2, 6)
-    return (ascii || 'place') + '-' + suffix
-  }
-  return base || `place-${Math.random().toString(36).slice(2, 6)}`
+  if (base.length >= 2) return base
+  // 3) 변환 실패 (이모지·기호만 등) — 안전한 폴백.
+  return `place-${Math.random().toString(36).slice(2, 6)}`
 }
 
 function normalizePhone(raw: string): string {

@@ -161,6 +161,6 @@ h1.au-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
   padding: 28px 32px; box-shadow: 4px 4px 0 var(--ink);
   display: flex; gap: 24px; justify-content: space-between; align-items: center; flex-wrap: wrap;
 }
-.au-cta-strip h3 { margin: 0; font-size: clamp(18px, 1.8vw, 22px); font-weight: 700; letter-spacing: -.014em; }
-.au-cta-strip h3 .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
+.au-cta-strip h2 { margin: 0; font-size: clamp(18px, 1.8vw, 22px); font-weight: 700; letter-spacing: -.014em; }
+.au-cta-strip h2 .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
 .au-cta-strip p { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-2); max-width: 50ch; }

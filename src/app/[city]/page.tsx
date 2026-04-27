@@ -274,7 +274,7 @@ export default async function CityHubPage({ params }: Props) {
                         <span className="when">{p.publishedAt?.slice(0, 10)}</span>
                       </div>
                       <div className="body">
-                        <h4>{p.title}</h4>
+                        <h3>{p.title}</h3>
                         <p>{p.summary}</p>
                       </div>
                       <div className="meta-side">

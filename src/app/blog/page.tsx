@@ -502,7 +502,7 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
                   </div>
                 </div>
                 <div className="bi-feat-side">
-                  <h5>같은 분야의 다른 글</h5>
+                  <h3>같은 분야의 다른 글</h3>
                   {all
                     .filter(p => p.sector === featured.sector && p.slug !== featured.slug)
                     .slice(0, 2)
@@ -772,7 +772,7 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
                           <span className={`bi-type-tag ${p.postType}`}>
                             {POST_TYPE_LABEL[p.postType]}
                           </span>
-                          <h4>{p.title}</h4>
+                          <h3>{p.title}</h3>
                           <span className="when">{p.publishedAt?.slice(5, 10) ?? '—'}</span>
                         </Link>
                       ))}

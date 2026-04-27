@@ -57,13 +57,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return {}
   const url = `/blog/${city}/${sector}/${slug}`
   const pageTitle = composePageTitle(post.title)
+  // T-253 / QA ISSUE-002 — summary 가 50자 미만이면 발행일/유형 정보로 보강해 검색 snippet 정상화.
+  // post.summary 자체는 본문 lede 로 그대로 노출하되 메타에는 약간 더 정보 밀도.
+  const POST_TYPE_KO: Record<string, string> = {
+    keyword: '키워드 답변형',
+    compare: '비교 분석형',
+    guide: '선택 가이드',
+    detail: '심층 분석',
+    general: '일반 글',
+  }
+  const typeLabel = POST_TYPE_KO[post.postType] ?? '글'
+  const datePart = post.publishedAt ? ` (${post.publishedAt.slice(0, 10)} 발행)` : ''
+  const description = post.summary.length >= 80
+    ? post.summary
+    : `${post.summary} ${typeLabel}${datePart}, AI 검색 인용 가능 형태로 정리.`
   return {
     title: pageTitle,
-    description: post.summary,
+    description,
     alternates: { canonical: url },
     openGraph: {
       title: pageTitle,
-      description: post.summary,
+      description,
       url,
       type: 'article',
       publishedTime: post.publishedAt ?? undefined,
@@ -323,7 +337,7 @@ export default async function BlogPostPage({ params }: Props) {
 
             {relatedPlaces.length > 0 && (
               <div className="aside-card">
-                <h5>이 글에서 언급된 업체</h5>
+                <h3>이 글에서 언급된 업체</h3>
                 {relatedPlaces.slice(0, 4).map(p => (
                   <Link
                     key={p.slug}

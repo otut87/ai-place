@@ -621,7 +621,7 @@ section.dh { padding: clamp(48px, 6vw, 80px) 0; border-top: 1px solid var(--line
   border: 1px solid var(--line);
 }
 .ans-card .biz .info { flex: 1; min-width: 0; }
-.ans-card .biz h4 {
+.ans-card .biz h3 {
   margin: 0;
   font-size: 15px;
   font-weight: 600;

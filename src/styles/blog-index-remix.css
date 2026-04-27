@@ -687,7 +687,7 @@ section.bi-section.no-border { border-top: none; }
 .bi-sp-row:last-child { border-bottom: none; }
 .bi-sp-row:hover h4 { color: var(--aip-accent); }
 @media (max-width: 540px) { .bi-sp-row { grid-template-columns: 1fr; } }
-.bi-sp-row h4 {
+.bi-sp-row h3 {
   margin: 0;
   font-size: 14.5px;
   font-weight: 600;

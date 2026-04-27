@@ -49,7 +49,7 @@ h1.ab-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
   font: 700 24px var(--font); letter-spacing: -.02em;
 }
 @media (max-width: 640px) { .ab-author-card .ava { width: 48px; height: 48px; font-size: 18px; } }
-.ab-author-card h3 { margin: 0 0 4px; font-size: 17px; font-weight: 700; letter-spacing: -.014em; }
+.ab-author-card .author-name { margin: 0 0 4px; font-size: 17px; font-weight: 700; letter-spacing: -.014em; color: var(--ink); }
 .ab-author-card .role {
   font-family: var(--mono); font-size: 11px; color: var(--aip-muted);
   text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px;
