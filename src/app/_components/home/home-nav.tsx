@@ -10,7 +10,7 @@ const LINKS = [
   { href: '/directory', label: '디렉토리' },
   { href: '/blog', label: '블로그' },
   { href: '/pricing', label: '가격' },
-  { href: '/about/methodology', label: '소개' },
+  { href: '/about', label: '소개' },
 ]
 
 export function HomeNav() {

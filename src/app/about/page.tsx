@@ -1,45 +1,53 @@
-import Link from "next/link"
-import type { Metadata } from "next"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { InquiryButton } from "@/components/inquiry-modal"
-import { safeJsonLd } from "@/lib/utils"
-import { generatePerson, generateProfilePage, generateFAQPage } from "@/lib/jsonld"
-import { generateBreadcrumbList } from "@/lib/seo"
-import { composePageTitle } from "@/lib/seo/compose-title"
-import type { FAQ } from "@/lib/types"
+// /about — paper/orange aip 리믹스 (T-241).
+// 디자인 핸드오프: claude.ai/design 5iiO6wqqEv1y_j9wmup70Q, about.html
+
+import Link from 'next/link'
+import type { Metadata } from 'next'
+import { HomeNav } from '@/app/_components/home/home-nav'
+import { SiteFooter } from '@/components/site/site-footer'
+import { safeJsonLd } from '@/lib/utils'
+import { generatePerson, generateProfilePage, generateFAQPage } from '@/lib/jsonld'
+import { generateBreadcrumbList } from '@/lib/seo'
+import { composePageTitle } from '@/lib/seo/compose-title'
+import type { FAQ } from '@/lib/types'
+import '@/styles/aip.css'
+import '@/styles/home-wrap.css'
+import '@/styles/about-remix.css'
+import '@/styles/pricing-remix.css'
 
 const BASE_URL = 'https://aiplace.kr'
-const ABOUT_TITLE = composePageTitle('AI Place 소개 — 이지수 큐레이터')
-const ABOUT_DESCRIPTION = 'AI Place는 ChatGPT, Claude, Gemini에서 추천되는 로컬 업체 디렉토리입니다. 큐레이터 이지수가 천안 지역 업체의 AI 검색 노출을 돕고 있습니다.'
+const TITLE = composePageTitle('AI Place 소개 — AI 검색 시대의 로컬 디렉토리')
+const DESCRIPTION =
+  'AI Place는 AI 검색 시대에 추천되는 로컬 업체를 만드는 디렉토리 서비스입니다. ChatGPT·Claude·Gemini 등 AI가 인용하는 구조화된 페이지를 자동 발행합니다.'
+const LAST_UPDATED = new Date().toISOString().slice(0, 10)
 
 export const metadata: Metadata = {
-  title: ABOUT_TITLE,
-  description: ABOUT_DESCRIPTION,
+  title: TITLE,
+  description: DESCRIPTION,
   alternates: { canonical: '/about' },
-  openGraph: {
-    title: ABOUT_TITLE,
-    description: ABOUT_DESCRIPTION,
-    url: '/about',
-  },
+  openGraph: { title: TITLE, description: DESCRIPTION, url: '/about' },
 }
 
 const aboutFaqs: FAQ[] = [
   {
     question: 'AI Place는 무료인가요?',
-    answer: '기본 업체 등록은 무료입니다. AI 검색 최적화 프리미엄 서비스는 별도 문의가 필요합니다.',
+    answer:
+      '첫 30일은 무료로 사용 가능합니다. 그 이후에는 월 14,900원의 입점 플랜이 자동 청구됩니다. 자세한 내용은 요금 안내 페이지를 참고하세요.',
   },
   {
-    question: '어떤 AI에서 업체가 추천되나요?',
-    answer: 'ChatGPT, Claude, Gemini 등 주요 AI 검색 엔진을 대상으로 합니다. AI가 업체 정보를 정확히 읽을 수 있도록 국제 표준 데이터 포맷으로 프로필을 구축합니다.',
+    question: '천안 외에 다른 지역도 가능한가요?',
+    answer:
+      '현재는 천안·아산을 중심으로 운영 중이며, 단계적으로 충청권 → 수도권 → 전국으로 확장할 계획입니다. 다른 지역의 사장님도 지금 등록 가능하지만 가이드 콘텐츠 발행은 도시별 일정에 따라 진행됩니다.',
   },
   {
-    question: '천안 외 다른 지역도 등록할 수 있나요?',
-    answer: '현재 천안 지역을 중심으로 서비스하고 있으며, 아산·세종·대전 등으로 점차 확대할 예정입니다.',
+    question: '현장에서 직접 시연을 볼 수 있나요?',
+    answer:
+      '천안 지역 한정으로 디두 사무실에서 1:1 시연이 가능합니다. 사전 예약 후 방문해주세요. support@dedo.kr 로 문의하시면 일정을 안내해드립니다.',
   },
   {
-    question: '업체 등록은 어떻게 하나요?',
-    answer: '업체 등록 페이지에서 기본 정보(업체명, 주소, 전화번호, 서비스)를 입력하시면, AI가 읽을 수 있는 최적화 프로필을 자동으로 생성해 드립니다.',
+    question: '업체 등록은 어떻게 해요?',
+    answer:
+      '상단의 "업체 등록" 버튼을 누르거나 /signup 페이지에서 신청 양식을 작성하시면 영업일 기준 1일 이내 회신드립니다.',
   },
 ]
 
@@ -47,12 +55,12 @@ export default function AboutPage() {
   const personJsonLd = generatePerson()
   const profilePageJsonLd = generateProfilePage()
   const orgJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "@id": `${BASE_URL}/#organization`,
-    name: "AI Place",
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': `${BASE_URL}/#organization`,
+    name: 'AI Place',
     url: BASE_URL,
-    description: "AI가 추천하는 로컬 업체 디렉토리",
+    description: 'AI가 추천하는 로컬 업체 디렉토리',
   }
   const breadcrumbJsonLd = generateBreadcrumbList([
     { name: '홈', url: BASE_URL },
@@ -61,159 +69,173 @@ export default function AboutPage() {
   const faqJsonLd = generateFAQPage(aboutFaqs)
 
   return (
-    <>
-      <Header />
-
-      <main className="flex-1">
-        <section className="py-20 px-6">
-          <div className="mx-auto max-w-[800px]">
-            {/* Breadcrumb */}
-            <nav className="mb-8 text-sm text-[#6a6a6a]">
-              <Link href="/" className="hover:text-[#008f6b]">홈</Link>
-              <span className="mx-2">›</span>
-              <span className="text-[#222222] font-medium">AI Place 소개</span>
-            </nav>
-
-            {/* H1 + DAB */}
-            <h1 className="text-[28px] font-bold text-[#222222] leading-[1.43]">
-              AI Place 소개
-            </h1>
-            <p className="mt-3 text-base text-[#222222] font-medium">
-              AI Place는 AI 검색 엔진에서 추천되는 로컬 업체를 만드는 디렉토리 서비스입니다.
-            </p>
-
-            {/* 저자 프로필 */}
-            <div className="mt-12 p-6 bg-[#f2f2f2] rounded-[20px] flex items-start gap-5">
-              <div className="w-20 h-20 rounded-full bg-[#008f6b] flex items-center justify-center text-white text-2xl font-bold shrink-0">
-                이
-              </div>
-              <div>
-                <h2 className="text-[22px] font-semibold text-[#222222] leading-tight tracking-[-0.44px]">
-                  이지수
-                </h2>
-                <p className="text-sm text-[#6a6a6a] mt-1">AI Place 큐레이터 · <a href="https://dedo.kr" target="_blank" rel="noopener noreferrer" className="hover:text-[#008f6b]">디두(dedo)</a> 대표</p>
-                <p className="text-sm text-[#222222] mt-3 leading-relaxed">
-                  천안 웹디자인 에이전시 <a href="https://dedo.kr" target="_blank" rel="noopener noreferrer" className="text-[#008060] hover:text-[#006b4f]">디두(dedo)</a>의 대표로,
-                  AI 시대의 로컬 비즈니스 마케팅을 연구하고 있습니다.
-                  ChatGPT, Claude, Gemini 같은 AI에게 &ldquo;천안 피부과 추천해줘&rdquo;라고 물으면
-                  당신의 업체가 답변에 나올 수 있도록, 업체 정보를 정리하고 최적화합니다.
-                </p>
-              </div>
-            </div>
-
-            {/* AI Place란? */}
-            <section className="mt-16">
-              <h2 className="text-[22px] font-semibold text-[#222222] leading-tight tracking-[-0.44px]">
-                AI Place란?
-              </h2>
-              <div className="mt-4 space-y-4 text-sm text-[#222222] leading-relaxed">
-                <p>
-                  요즘 사람들은 검색 엔진 대신 AI에게 직접 물어봅니다.
-                  &ldquo;천안에서 피부과 어디가 좋아?&rdquo;, &ldquo;인테리어 업체 추천해줘&rdquo; — 이런 질문에
-                  AI가 당신의 업체를 추천하려면, AI가 읽을 수 있는 형태로 업체 정보가 정리되어 있어야 합니다.
-                </p>
-                <p>
-                  AI Place는 업체 정보를 <strong>국제 표준 데이터 포맷(Schema.org)</strong>으로 구조화합니다.
-                  쉽게 말해, AI가 이해할 수 있는 언어로 업체의 이름, 위치, 전문 분야, 영업시간, 리뷰를 정리하는 것입니다.
-                  마치 전화번호부의 AI 버전이라고 생각하시면 됩니다.
-                </p>
-                <p>
-                  또한 각 업체에 대해 <strong>자주 묻는 질문(FAQ)</strong>, <strong>시술 비교 콘텐츠</strong>,
-                  <strong>선택 가이드</strong>를 자동으로 생성합니다. AI는 이런 구조화된 콘텐츠를 특히 잘 읽고 인용합니다.
-                </p>
-                <p>
-                  Google이 중시하는 <strong>전문성·신뢰도 기준(E-E-A-T)</strong>에 맞춰 프로필을 관리하여,
-                  AI 검색에서 업체가 신뢰할 수 있는 정보로 인식되도록 합니다.
-                </p>
-              </div>
-            </section>
-
-            {/* 이런 분들을 위해 */}
-            <section className="mt-16">
-              <h2 className="text-[22px] font-semibold text-[#222222] leading-tight tracking-[-0.44px]">
-                이런 분들을 위해 만들었습니다
-              </h2>
-              <ul className="mt-4 space-y-3 text-sm text-[#222222]">
-                <li className="flex items-start gap-2">
-                  <span className="text-[#008f6b] font-bold mt-0.5">•</span>
-                  AI에게 추천받고 싶은 로컬 업체 사장님
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#008f6b] font-bold mt-0.5">•</span>
-                  온라인 마케팅에 시간을 쓰기 어려운 소상공인
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#008f6b] font-bold mt-0.5">•</span>
-                  블로그, SNS 외의 새로운 노출 채널이 필요한 분
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-[#008f6b] font-bold mt-0.5">•</span>
-                  AI 검색 시대에 미리 준비하고 싶은 분
-                </li>
-              </ul>
-            </section>
-
-            {/* 3단계 프로세스 */}
-            <section className="mt-16">
-              <h2 className="text-[22px] font-semibold text-[#222222] leading-tight tracking-[-0.44px]">
-                어떻게 작동하나요?
-              </h2>
-              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="bg-white rounded-[20px] p-6" style={{ boxShadow: 'var(--shadow-card)' }}>
-                  <div className="text-2xl font-bold text-[#00a67c] mb-3">1</div>
-                  <h3 className="text-lg font-semibold text-[#222222] mb-2">업체 등록</h3>
-                  <p className="text-sm text-[#6a6a6a]">기본 정보만 입력하세요. 5분이면 충분합니다.</p>
-                </div>
-                <div className="bg-white rounded-[20px] p-6" style={{ boxShadow: 'var(--shadow-card)' }}>
-                  <div className="text-2xl font-bold text-[#00a67c] mb-3">2</div>
-                  <h3 className="text-lg font-semibold text-[#222222] mb-2">AI 최적화 프로필 생성</h3>
-                  <p className="text-sm text-[#6a6a6a]">국제 표준 포맷의 구조화 데이터, FAQ, 비교 콘텐츠를 자동으로 만들어드립니다.</p>
-                </div>
-                <div className="bg-white rounded-[20px] p-6" style={{ boxShadow: 'var(--shadow-card)' }}>
-                  <div className="text-2xl font-bold text-[#00a67c] mb-3">3</div>
-                  <h3 className="text-lg font-semibold text-[#222222] mb-2">AI에서 추천 시작</h3>
-                  <p className="text-sm text-[#6a6a6a]">ChatGPT, Claude, Gemini가 당신의 업체를 추천합니다.</p>
-                </div>
-              </div>
-            </section>
-
-            {/* CTA */}
-            <div className="mt-12 text-center">
-              <InquiryButton className="inline-flex h-12 px-6 items-center rounded-lg bg-[#008060] text-white font-medium hover:bg-[#006b4f] transition-colors">
-                업체 등록 문의
-              </InquiryButton>
-            </div>
-
-            {/* FAQ */}
-            <section className="mt-16">
-              <h2 className="text-[22px] font-semibold text-[#222222] leading-tight tracking-[-0.44px]">
-                자주 묻는 질문
-              </h2>
-              <div className="mt-6 divide-y divide-[#c1c1c1]/50">
-                {aboutFaqs.map(faq => (
-                  <details key={faq.question} className="group py-4">
-                    <summary className="flex items-center justify-between cursor-pointer list-none text-base font-medium text-[#222222]">
-                      {faq.question}
-                      <svg className="w-5 h-5 text-[#6a6a6a] shrink-0 ml-4 group-open:rotate-180 transition-transform" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    </summary>
-                    <p className="mt-2 text-sm text-[#6a6a6a] leading-relaxed">{faq.answer}</p>
-                  </details>
-                ))}
-              </div>
-            </section>
-          </div>
-        </section>
-      </main>
-
-      <Footer />
+    <div className="aip-root">
+      <HomeNav />
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(personJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(profilePageJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(orgJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }} />
-    </>
+
+      <main>
+        {/* HEAD */}
+        <header className="ab-head">
+          <div className="wrap-sm">
+            <nav className="crumbs" aria-label="Breadcrumb">
+              <Link href="/">홈</Link>
+              <span className="sep">/</span>
+              <span className="cur">AI Place 소개</span>
+            </nav>
+
+            <div className="ab-meta-line" style={{ marginTop: 14 }}>
+              <span className="pill">About</span>
+              <span>doc-id <b>aip-about</b></span>
+              <span>·</span>
+              <span>updated <b>{LAST_UPDATED}</b></span>
+              <span>·</span>
+              <span>founded <b>2026</b></span>
+            </div>
+
+            <h1 className="ab-title">AI Place <span className="it">소개</span></h1>
+            <p className="ab-lede">
+              AI 검색 시대에 <mark>추천되는 로컬 업체</mark>를 만드는 디렉토리 서비스입니다.
+            </p>
+
+            {/* author intro */}
+            <div className="ab-author-card">
+              <div className="ava">이</div>
+              <div>
+                <h3>이지수</h3>
+                <div className="role">
+                  AI Place(에이아이 플레이스) 큐레이터 ·{' '}
+                  <a href="https://dedo.kr" target="_blank" rel="noopener noreferrer">
+                    디두(dedo)
+                  </a>{' '}
+                  대표
+                </div>
+                <p>
+                  전남 광주에서 태어나 <b>IT업계</b>에 적을 두고, AI 시대의 로컬 사업자가 겪는 어려움을 풀고자 합니다.
+                  <b> ChatGPT · Claude · Gemini</b>가 보편이 된 지금, 작고 좋은 가게가 거대 플랫폼에 밀려나지 않고{' '}
+                  AI에게 정확하게 인용되는 사회를 만들기 위해 디두(dedo)를 시작했습니다.
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* AI Place란? */}
+        <section className="ab-section">
+          <div className="wrap-sm">
+            <div className="doc-h">
+              <div><h2>AI Place란?</h2></div>
+              <div className="anchor">about</div>
+            </div>
+            <div className="ab-prose">
+              <p>
+                많은 사람들이 검색 대신 매일 수십~수백 개의 질문을 AI에게 던지는 시대입니다.{' '}
+                <b>&ldquo;천안에서 저녁 먹기 좋은 곳&rdquo;</b>, <b>&ldquo;천안에서 잘하는 피부과&rdquo;</b> — 이런 일상의 추천이
+                이제는 사람의 입이 아니라 <mark>AI 답변</mark>을 통해 결정되고 있습니다.
+              </p>
+              <p>
+                AI Place는 입점 업체와 <b>새로운 발견의 사이클</b>을 함께 만듭니다.
+                지역에 정착한 가게가 <b>AI가 인용하기 좋은 형태</b>로 정리되고, 매월 새로운 콘텐츠로 갱신되며,
+                실제로 ChatGPT · Claude · Gemini의 답변에 등장하는지 매주 측정합니다.
+              </p>
+              <p>
+                오로지 인덱싱과 추천을 위한 <b>구조화된 데이터</b>(Schema.org · JSON-LD · llms.txt)로 페이지를 발행하며,
+                AI가 읽을 수 있는{' '}
+                <Link className="link" href="/about/methodology">
+                  조사 방법론
+                </Link>
+                을 따릅니다.
+              </p>
+              <p>
+                Google이 절대적이던 시대에 검색 점유율을 단기간에 추월하지는 못하더라도,{' '}
+                <mark>AI 응답에 인용되는 신뢰</mark>는 작은 가게도 가질 수 있다고 믿습니다.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* 이런 분들을 위해 */}
+        <section
+          className="ab-section"
+          style={{ background: 'var(--bg-2)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}
+        >
+          <div className="wrap-sm">
+            <div className="doc-h">
+              <div><h2>이런 분들을 위해 <span className="it">만들었습니다</span></h2></div>
+              <div className="anchor">audience</div>
+            </div>
+            <ul className="ab-target-list">
+              <li><span className="num">01</span><span><b>지역에 정착한 작고 단단한 사장님</b></span></li>
+              <li><span className="num">02</span><span>이미 검색 광고비가 다 빠져나가는 <b>작은 가게의 사장님</b></span></li>
+              <li><span className="num">03</span><span>리뷰는 좋지만 <b>저녁 시간대 손님이 줄어드는 가게의 사장님</b></span></li>
+              <li><span className="num">04</span><span>AI 시대 사업의 신호 변화에 <b>대비하고 싶은 분</b></span></li>
+            </ul>
+          </div>
+        </section>
+
+        {/* 어떻게 작동? */}
+        <section className="ab-section">
+          <div className="wrap-sm">
+            <div className="doc-h">
+              <div><h2>어떻게 <span className="it">작동하나요?</span></h2></div>
+              <div className="anchor">how</div>
+            </div>
+            <div className="ab-steps">
+              <div className="ab-step">
+                <span className="n">1</span>
+                <h3>입점 등록</h3>
+                <p>주소·전화·운영시간 기본 정보만 입력해주세요. 나머지는 저희가 정리합니다.</p>
+                <span className="tail">소요 5–10분 · 무료 진단 포함</span>
+              </div>
+              <div className="ab-step">
+                <span className="n">2</span>
+                <h3>AI 친화적 프로필 생성</h3>
+                <p>JSON-LD · FAQ · 비교 콘텐츠가 자동으로 생성되어 <b>AI가 읽기 좋게 구조화</b>됩니다.</p>
+                <span className="tail">AEO 8종 점수 보고서 발행</span>
+              </div>
+              <div className="ab-step">
+                <span className="n">3</span>
+                <h3>AI에 추천 시작</h3>
+                <p>ChatGPT · Claude · Gemini가 추천하는 답변에 등장하기 시작합니다.</p>
+                <span className="tail">월간 PDF 리포트로 인용 측정</span>
+              </div>
+            </div>
+
+            <div className="ab-cta">
+              <Link className="btn primary lg" href="/signup">업체 등록 요청 →</Link>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="faq-section">
+          <div className="wrap-sm">
+            <div className="doc-h">
+              <div><h2>자주 묻는 <span className="it">질문</span></h2></div>
+              <div className="anchor">faq</div>
+            </div>
+            <div className="faq-list">
+              {aboutFaqs.map((f, i) => (
+                <details key={f.question} open={i === 0}>
+                  <summary>
+                    <span>
+                      <span className="q-num">Q{String(i + 1).padStart(2, '0')}</span>
+                      {f.question}
+                    </span>
+                  </summary>
+                  <div className="ans">{f.answer}</div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <SiteFooter />
+    </div>
   )
 }
