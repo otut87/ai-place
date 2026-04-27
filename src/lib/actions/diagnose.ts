@@ -1,11 +1,13 @@
 'use server'
 
 // T-136 / T-137 / T-139 — 공개 진단 서버 액션.
-// 인증 불필요. rate limit 은 외부 (middleware 또는 Vercel Edge) 에서 처리 예정.
+// 인증 불필요. T-256: Upstash 분산 rate limit (분당 5회/IP) 도입 — SSRF 호스트 차단(T-254 #2)
+// 만으로 막지 못하는 DDoS 증폭 / cost amplification 벡터 차단.
 
 import { scanSite, type ScanResult } from '@/lib/diagnostic/scan-site'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { saveDiagnosticRun, getPreviousRun, scoreDelta, computeCheckDiffs } from '@/lib/diagnostic/history'
+import { checkRateLimit, clientIpFromHeaders } from '@/lib/security/rate-limit'
 import { headers } from 'next/headers'
 
 export interface DiagnosticCompare {
@@ -30,6 +32,25 @@ export async function runPublicDiagnosticAction(url: string): Promise<ScanResult
       sitemapPresent: false,
     }
   }
+
+  // T-256 — 분당 5회/IP 제한. scanSite 자체가 8 concurrent × 49 pages = 최대 392
+  // 외부 fetch 를 발생시키므로 무제한 호출은 DDoS 증폭 + LLM 비용 폭주 위험.
+  const rlHeaders = await headers()
+  const rlIp = clientIpFromHeaders(name => rlHeaders.get(name))
+  const rl = await checkRateLimit(rlIp, 'diagnose')
+  if (!rl.success) {
+    const retryInSec = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000))
+    return {
+      url,
+      fetchedAt: new Date().toISOString(),
+      score: 0,
+      checks: [],
+      error: `요청이 너무 많습니다. ${retryInSec}초 후 다시 시도해 주세요. (분당 ${rl.limit}회 제한)`,
+      pagesScanned: 0,
+      sitemapPresent: false,
+    }
+  }
+
   const result = await scanSite(url)
   if (result.error) return result
 
@@ -67,6 +88,15 @@ export async function captureLeadAction(input: LeadCaptureInput): Promise<{ succ
   const email = input.email.trim().toLowerCase()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { success: false, error: '올바른 이메일 주소를 입력해 주세요' }
+  }
+
+  // T-256 — 폼 제출 분당 10회/IP 제한 (이메일 enum + lead spam 방지).
+  const rlHeaders = await headers()
+  const rlIp = clientIpFromHeaders(name => rlHeaders.get(name))
+  const rl = await checkRateLimit(rlIp, 'form')
+  if (!rl.success) {
+    const retryInSec = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000))
+    return { success: false, error: `요청이 너무 많습니다. ${retryInSec}초 후 다시 시도해 주세요.` }
   }
 
   const admin = getAdminClient()
