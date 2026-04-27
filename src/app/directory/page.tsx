@@ -14,6 +14,7 @@ import { getCities, getCategories, getSectors, getAllPlaces } from '@/lib/data.s
 import { getRecentBlogPosts } from '@/lib/blog/data.supabase'
 import { getSiteStats } from '@/lib/site-stats'
 import { HomeNav } from '../_components/home/home-nav'
+import { SiteFooter } from '@/components/site/site-footer'
 import { FeedTabs } from './_components/feed-tabs'
 import { RoadmapFilter } from './_components/roadmap-filter'
 import '@/styles/aip.css'
@@ -660,53 +661,7 @@ export default async function DirectoryPage() {
         </section>
       </main>
 
-      <footer className="site">
-        <div className="wrap">
-          <div className="cols">
-            <div className="brand-col">
-              <Link className="logo" href="/">
-                <span className="mark" /> AI Place
-              </Link>
-              <p>전국 로컬 업체 · AI 검색 최적화 디렉토리.</p>
-            </div>
-            <div>
-              <h5>서비스</h5>
-              <ul>
-                <li><Link href="/owner/places/new">업체 등록</Link></li>
-                <li><Link href="/pricing">가격·플랜</Link></li>
-                <li><Link href="/owner">대시보드</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5>디렉토리</h5>
-              <ul>
-                <li><Link href="/directory">전체 보기</Link></li>
-                <li><Link href="/cheonan/dermatology">천안 피부과</Link></li>
-                <li><Link href="/cheonan/interior">천안 인테리어</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5>콘텐츠</h5>
-              <ul>
-                <li><Link href="/blog">가이드 전체</Link></li>
-                <li><Link href="/about/methodology">조사 방법론</Link></li>
-                <li><Link href="/check">AI 진단</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5>회사</h5>
-              <ul>
-                <li><Link href="/about/methodology">소개</Link></li>
-                <li><a href="mailto:support@dedo.kr">support@dedo.kr</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="meta">
-            <span>© {stats.currentYear} AI Place · 기획·제작 디두(dedo)</span>
-            <span>사업자등록번호 742-21-00642 · 충남 천안시 서북구 쌍용11길 33</span>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

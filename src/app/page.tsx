@@ -4,6 +4,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { SiteFooter } from '@/components/site/site-footer'
 import { getAllPlaces, getCities, getCategories } from '@/lib/data.supabase'
 import { aggregateBotVisits } from '@/lib/admin/bot-visits'
 import {
@@ -679,66 +680,7 @@ export default async function HomePage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="site">
-        <div className="wrap">
-          <div className="cols">
-            <div className="brand-col">
-              <Link className="logo" href="/">
-                <span className="mark" /> AI Place
-              </Link>
-              <p>
-                <b>AI 플레이스</b>(에이아이플레이스) · AI 검색 최적화 디렉토리. 천안 파일럿 운영 중 · {s.totalCategories}개 업종 · {s.totalPlaces}개 업체.
-              </p>
-            </div>
-            <div>
-              <h5>서비스</h5>
-              <ul>
-                <li><Link href="/owner/places/new">업체 등록</Link></li>
-                <li><Link href="/pricing">가격·플랜</Link></li>
-                <li><Link href="/owner">대시보드</Link></li>
-                <li><Link href="/login">로그인</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5>디렉토리</h5>
-              <ul>
-                <li><Link href="/directory">전체 디렉토리</Link></li>
-                <li><Link href="/cheonan/dermatology">천안 피부과</Link></li>
-                <li><Link href="/cheonan/interior">천안 인테리어</Link></li>
-                <li><Link href="/cheonan/webagency">천안 웹에이전시</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5>콘텐츠</h5>
-              <ul>
-                <li><Link href="/blog">가이드 전체</Link></li>
-                <li><Link href="/about/methodology">조사 방법론</Link></li>
-                <li><Link href="/check">AI 진단</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5>회사</h5>
-              <ul>
-                <li><Link href="/about/methodology">소개</Link></li>
-                <li><a href="mailto:support@dedo.kr">support@dedo.kr</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="meta">
-            <span>© 2026 AI Place · 기획·제작 디두(dedo)</span>
-            <span>사업자등록번호 742-21-00642 · 충남 천안시 서북구 쌍용11길 33</span>
-            <span className="ai-mini">
-              Optimized for
-              <span className="d" style={{ background: '#10a37f' }} />
-              <span className="d" style={{ background: '#cc785c' }} />
-              <span
-                className="d"
-                style={{ background: 'conic-gradient(from 180deg,#4285f4,#9b72f2,#d96570,#f2a83b,#4285f4)' }}
-              />
-            </span>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

@@ -30,6 +30,8 @@ import { buildCategoryMetadata } from '@/lib/seo/page-meta'
 import { latestUpdatedAt, toIsoDate } from '@/lib/format/time'
 import { extractReviewTotal } from '@/lib/seo/title-formula'
 import { HomeNav } from '@/app/_components/home/home-nav'
+import { SiteFooter, SITE_BRAND } from '@/components/site/site-footer'
+import { getSourcesForCategory } from '@/lib/listing/sources'
 import '@/styles/aip.css'
 import '@/styles/home-wrap.css'
 import '@/styles/listing-remix.css'
@@ -231,6 +233,7 @@ export default async function ListingPage({ params }: Props) {
 
   const servicesTop = topServices(places)
   const districtLine = places.length > 0 ? deriveDistrictBreakdown(places) : ''
+  const sourcesConfig = getSourcesForCategory({ sectorSlug: sector?.slug })
 
   const lastUpdated =
     latestUpdatedAt(places.map(p => p.lastUpdated ?? null)) ??
@@ -442,7 +445,7 @@ export default async function ListingPage({ params }: Props) {
                           <dd>{p.address || '주소 미공개'}</dd>
                           <dt>주력 서비스</dt>
                           <dd>{services4.length > 0 ? services4.join(' · ') : '집계 중'}</dd>
-                          <dt>가격대</dt>
+                          <dt>{sourcesConfig.priceLabel}</dt>
                           <dd>
                             {priceService?.priceRange ? (
                               <>
@@ -539,7 +542,7 @@ export default async function ListingPage({ params }: Props) {
                   <thead>
                     <tr>
                       <th>서비스</th>
-                      <th>가격대</th>
+                      <th>{sourcesConfig.priceLabel}</th>
                       <th>1순위</th>
                       <th>2순위</th>
                       <th>3순위</th>
@@ -629,37 +632,28 @@ export default async function ListingPage({ params }: Props) {
               <div className="col">
                 <h3>출처</h3>
                 <ol>
-                  <li>
-                    <b>네이버 플레이스</b> — 영업시간·리뷰·주소 (최근 갱신 {lastUpdated})
-                  </li>
-                  <li>
-                    <b>Google Places API</b> — 평점·리뷰·좌표·운영시간
-                  </li>
-                  <li>
-                    <b>업체 직접 제공</b> — 시술 메뉴·가격표 (서면 제출)
-                  </li>
-                  <li>
-                    <b>건강보험심사평가원</b> — 의료기관 인허가 정보 (해당 카테고리)
-                  </li>
+                  {sourcesConfig.sources.map((src, idx) => {
+                    const isFirst = idx === 0
+                    return (
+                      <li key={src.name}>
+                        <b>{src.name}</b> — {src.detail}
+                        {isFirst ? ` (최근 갱신 ${lastUpdated})` : ''}
+                      </li>
+                    )
+                  })}
                 </ol>
               </div>
               <div className="col">
                 <h3>방법론</h3>
                 <ul>
-                  <li>등록 업체는 사업자번호 검증을 통과한 곳만 포함합니다.</li>
-                  <li>
-                    평점·리뷰는 Google·네이버·카카오의 공식 데이터를 결합하며 광고 영향을 받지
-                    않습니다.
-                  </li>
-                  <li>가격대는 업체가 직접 제공한 단가로, 실제 견적은 시술·시기에 따라 다를 수 있습니다.</li>
-                  <li>
-                    추천 순위는 평점·리뷰 수의 단순 정렬이며 알고리즘 가중은 적용하지 않습니다.
-                  </li>
+                  {sourcesConfig.methodology.map((line, idx) => (
+                    <li key={idx}>{line}</li>
+                  ))}
                 </ul>
                 <div className="meta">
                   license: CC BY-NC 4.0 · 인용 시 출처 표기 권장
                   <br />
-                  contact: support@dedo.kr · doc-id: {docId}
+                  contact: {SITE_BRAND.email} · doc-id: {docId}
                   <br />
                   <Link href="/about/methodology" style={{ color: '#fff', textDecoration: 'underline' }}>
                     전체 방법론 보기 →
@@ -708,58 +702,11 @@ export default async function ListingPage({ params }: Props) {
         )}
       </main>
 
-      <footer className="site">
-        <div className="wrap">
-          <div className="cols">
-            <div className="brand-col">
-              <Link className="logo" href="/">
-                <span className="mark" /> AI Place
-              </Link>
-              <p>AI 검색에서 추천되는 로컬 업체 디렉토리.</p>
-            </div>
-            <div>
-              <h5>서비스</h5>
-              <ul>
-                <li><Link href="/owner/places/new">업체 등록</Link></li>
-                <li><Link href="/pricing">가격·플랜</Link></li>
-                <li><Link href="/owner">대시보드</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5>디렉토리</h5>
-              <ul>
-                <li><Link href="/directory">전체 디렉토리</Link></li>
-                <li><Link href={`/${city}/${category}`}>{cityObj.name} {catObj.name}</Link></li>
-                {sectorName && (
-                  <li>
-                    <Link href={`/${city}`}>
-                      {cityObj.name} {sectorName}
-                    </Link>
-                  </li>
-                )}
-              </ul>
-            </div>
-            <div>
-              <h5>콘텐츠</h5>
-              <ul>
-                <li><Link href="/blog">가이드 전체</Link></li>
-                <li><Link href="/about/methodology">방법론</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5>회사</h5>
-              <ul>
-                <li><Link href="/about/methodology">소개</Link></li>
-                <li><a href="mailto:support@dedo.kr">support@dedo.kr</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="meta">
-            <span>© {new Date().getFullYear()} AI Place · 디두(dedo)</span>
-            <span>사업자등록번호 742-21-00642</span>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter
+        currentCity={city}
+        currentCategory={category}
+        currentSectorLabel={sectorName ? `${cityObj.name} ${sectorName}` : undefined}
+      />
 
       {/* JSON-LD */}
       <script
