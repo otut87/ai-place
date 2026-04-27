@@ -26,6 +26,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 일회성 디자인 핸드오프/임시 자료 — 실제 빌드 대상 아님.
+    ".tmp/**",
   ]),
 ]);
 
