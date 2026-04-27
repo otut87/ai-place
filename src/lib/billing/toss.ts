@@ -200,7 +200,13 @@ export const tossAdapter: PgAdapter = {
   async verifyWebhook({ rawBody, signature }: WebhookVerifyInput) {
     const secret = process.env.TOSS_WEBHOOK_SECRET
     if (!secret) {
-      // secret 미설정 — 개발 환경에서는 통과, 프로덕션 배포 전 설정 필요
+      // T-254 — fail-closed in production. 프로덕션에서 secret 누락 시 모든 웹훅
+      // 거부. 개발 환경에서는 keys 없이 작업 가능하도록 fallback 허용.
+      if (process.env.NODE_ENV === 'production') {
+        console.error('[toss.verifyWebhook] TOSS_WEBHOOK_SECRET unset in production — rejecting webhook')
+        return false
+      }
+      console.warn('[toss.verifyWebhook] TOSS_WEBHOOK_SECRET unset — dev fallback (accepting webhook)')
       return true
     }
     try {

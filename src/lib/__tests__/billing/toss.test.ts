@@ -193,20 +193,30 @@ describe('tossAdapter.chargeOnce (fetch mock)', () => {
 })
 
 describe('tossAdapter.verifyWebhook', () => {
-  const ORIGINAL = process.env.TOSS_WEBHOOK_SECRET
+  const ORIGINAL_SECRET = process.env.TOSS_WEBHOOK_SECRET
 
   afterEach(() => {
-    if (ORIGINAL === undefined) delete process.env.TOSS_WEBHOOK_SECRET
-    else process.env.TOSS_WEBHOOK_SECRET = ORIGINAL
+    if (ORIGINAL_SECRET === undefined) delete process.env.TOSS_WEBHOOK_SECRET
+    else process.env.TOSS_WEBHOOK_SECRET = ORIGINAL_SECRET
+    vi.unstubAllEnvs()
   })
 
-  it('secret 미설정 → 통과 (개발 모드)', async () => {
+  it('secret 미설정 + 개발 환경 → 통과 (dev fallback)', async () => {
     delete process.env.TOSS_WEBHOOK_SECRET
+    vi.stubEnv('NODE_ENV', 'development')
     expect(await tossAdapter.verifyWebhook({ rawBody: '{}', signature: 'x' })).toBe(true)
   })
 
-  it('secret 있음 + 올바른 HMAC → 통과', async () => {
+  // T-254 — fail-closed in production (이전 버그: 무조건 fail-open)
+  it('secret 미설정 + 프로덕션 환경 → 거부 (fail-closed)', async () => {
+    delete process.env.TOSS_WEBHOOK_SECRET
+    vi.stubEnv('NODE_ENV', 'production')
+    expect(await tossAdapter.verifyWebhook({ rawBody: '{}', signature: 'x' })).toBe(false)
+  })
+
+  it('secret 있음 + 올바른 HMAC → 통과 (프로덕션)', async () => {
     process.env.TOSS_WEBHOOK_SECRET = 'shhhh'
+    vi.stubEnv('NODE_ENV', 'production')
     const { createHmac } = await import('node:crypto')
     const body = '{"event":"payment.succeeded"}'
     const sig = createHmac('sha256', 'shhhh').update(body).digest('hex')

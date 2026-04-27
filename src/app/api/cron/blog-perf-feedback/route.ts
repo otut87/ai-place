@@ -4,17 +4,15 @@
 
 import { NextResponse } from 'next/server'
 import { syncGSCMetrics } from '@/lib/blog/performance-feedback'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 export async function GET(req: Request) {
-  const secret = process.env.VERCEL_CRON_SECRET
-  const auth = req.headers.get('authorization') ?? ''
-  if (secret && auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
+  const unauthorized = verifyCronAuth(req)
+  if (unauthorized) return unauthorized
 
   const url = new URL(req.url)
   const daysParam = url.searchParams.get('days')

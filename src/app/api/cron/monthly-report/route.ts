@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { monthBounds } from '@/lib/owner/period-parser'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -98,11 +99,8 @@ function escape(s: string): string {
 }
 
 export async function GET(req: Request) {
-  const secret = process.env.VERCEL_CRON_SECRET
-  const auth = req.headers.get('authorization') ?? ''
-  if (secret && auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
+  const unauthorized = verifyCronAuth(req)
+  if (unauthorized) return unauthorized
 
   const admin = getAdminClient()
   if (!admin) return NextResponse.json({ error: 'admin_unavailable' }, { status: 500 })

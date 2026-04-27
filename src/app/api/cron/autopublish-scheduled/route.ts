@@ -8,6 +8,7 @@ import { getAdminClient } from '@/lib/supabase/admin-client'
 import { revalidatePath } from 'next/cache'
 import { canAutopublish, type CategoryPolicy } from '@/lib/admin/autopublish'
 import { fanOutBlogPost, buildBlogPath } from '@/lib/owner/place-mentions'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -44,11 +45,8 @@ const DEFAULT_POLICY: CategoryPolicy = {
 }
 
 export async function GET(req: Request) {
-  const secret = process.env.VERCEL_CRON_SECRET
-  const auth = req.headers.get('authorization') ?? ''
-  if (secret && auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
+  const unauthorized = verifyCronAuth(req)
+  if (unauthorized) return unauthorized
 
   const admin = getAdminClient()
   if (!admin) return NextResponse.json({ error: 'admin_unavailable' }, { status: 500 })

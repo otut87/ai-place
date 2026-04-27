@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { generateKeywordsForSector, ANGLE_KEYS, type AngleKey } from '@/lib/blog/keyword-generator'
 import { insertKeyword } from '@/lib/blog/keyword-bank'
+import { verifyCronAuth } from '@/lib/cron/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,11 +21,8 @@ const REFILL_PER_COMBO = 10       // (sector, angle) 조합당 신규 생성 수
 const MIN_USED_COUNT = 3          // used_count 3 이상만 refill 대상 (갓 seed 된 것 보호)
 
 export async function GET(req: Request) {
-  const secret = process.env.VERCEL_CRON_SECRET
-  const auth = req.headers.get('authorization') ?? ''
-  if (secret && auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
+  const unauthorized = verifyCronAuth(req)
+  if (unauthorized) return unauthorized
 
   const admin = getAdminClient()
   if (!admin) return NextResponse.json({ error: 'admin_unavailable' }, { status: 500 })

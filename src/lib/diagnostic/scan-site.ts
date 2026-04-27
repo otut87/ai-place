@@ -127,10 +127,48 @@ async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response
   }
 }
 
-function normalizeUrl(input: string): URL | null {
+// T-254 — SSRF 방어. 공격자가 normalizeUrl 통해 내부 호스트(localhost, 169.254/16,
+// 10.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12, ::1, .local, .internal) 로 향하는
+// fetch 를 유도하지 못하도록 호스트 제한.
+// IPv4 리터럴은 사설/링크로컬/루프백/예약 대역만 차단하고 나머지 public IP 는
+// 허용 (모니터링 도구 사이트가 IP 직접 가리키는 케이스 호환).
+const PRIVATE_IPV4_PATTERNS: RegExp[] = [
+  /^10\./,
+  /^127\./,
+  /^169\.254\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^0\./,
+]
+function isPrivateOrLoopbackIPv4(host: string): boolean {
+  return PRIVATE_IPV4_PATTERNS.some(re => re.test(host))
+}
+function isBlockedHostname(host: string): boolean {
+  const h = host.toLowerCase()
+  if (!h) return true
+  // IPv6 (brackets 제거된 hostname) — 모두 차단 (운영상 IPv6 직접 진단 불요)
+  if (h.includes(':')) return true
+  // 8진/16진/정수 IPv4 인코딩 — DNS rebinding 우회 방지
+  if (/^0x/i.test(h)) return true
+  if (/^\d+$/.test(h)) return true
+  // IPv4 리터럴 → 사설/루프백/링크로컬만 차단
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) {
+    return isPrivateOrLoopbackIPv4(h)
+  }
+  // 호스트명 — localhost / 내부 TLD 차단
+  if (h === 'localhost' || h === 'localhost.localdomain') return true
+  if (h.endsWith('.local') || h.endsWith('.internal') || h.endsWith('.localhost')) return true
+  return false
+}
+
+// T-254 — 테스트에서 직접 검증하기 위해 export.
+export function normalizeUrl(input: string): URL | null {
   try {
     const withProto = /^https?:\/\//i.test(input) ? input : `https://${input}`
-    return new URL(withProto)
+    const u = new URL(withProto)
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return null
+    if (isBlockedHostname(u.hostname)) return null
+    return u
   } catch {
     return null
   }
@@ -233,7 +271,10 @@ async function sampleSitemapUrls(
   if (urlSet.size === 0) {
     const nested: string[] = []
     for (const m of xml.matchAll(/<sitemap>[\s\S]*?<loc>([^<]+)<\/loc>[\s\S]*?<\/sitemap>/gi)) {
-      nested.push(m[1].trim())
+      const candidate = m[1].trim()
+      // T-254 SSRF 방어: nested sitemap 도 같은 origin 만 follow.
+      // 공격자가 자기 sitemap 안에 internal URL 끼워 우회하는 벡터 차단.
+      if (candidate.startsWith(origin)) nested.push(candidate)
     }
     // 최대 2 nested 만 팔로우 (타임아웃 방지)
     for (const ns of nested.slice(0, 2)) {
