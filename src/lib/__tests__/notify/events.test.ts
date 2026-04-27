@@ -301,4 +301,93 @@ describe('buildEmailPayload — 결제 이벤트', () => {
     }
     expect(buildSlackPayload(ev)).toBeNull()
   })
+
+  // T-258 — 신고/클레임 admin 알림 (UI "검토 후 조치" 약속 충족용 dispatchNotify)
+  describe('place.report_received', () => {
+    it('email — 사유·상세·회신이메일·검토 URL 포함', () => {
+      const ev: NotifyEvent = {
+        type: 'place.report_received',
+        placeName: '닥터에버스',
+        reason: 'wrong_info',
+        detail: '전화번호가 다릅니다',
+        reporterEmail: 'reporter@x.com',
+        adminUrl: 'https://aiplace.kr/admin/reports',
+        adminEmail: 'admin@x.com',
+      }
+      const p = buildEmailPayload(ev)!
+      expect(p.to).toBe('admin@x.com')
+      expect(p.subject).toContain('닥터에버스')
+      expect(p.subject).toContain('wrong_info')
+      expect(p.body).toContain('전화번호가 다릅니다')
+      expect(p.body).toContain('reporter@x.com')
+      expect(p.body).toContain('https://aiplace.kr/admin/reports')
+    })
+
+    it('email — 익명 신고 (reporterEmail 없음) 도 fallback', () => {
+      const ev: NotifyEvent = {
+        type: 'place.report_received',
+        placeName: 'X', reason: 'spam',
+        adminUrl: 'https://x', adminEmail: 'a@x.com',
+      }
+      const p = buildEmailPayload(ev)!
+      expect(p.body).toContain('익명')
+    })
+
+    it('adminEmail 누락 → null', () => {
+      const ev: NotifyEvent = {
+        type: 'place.report_received',
+        placeName: 'X', reason: 'spam', adminUrl: 'https://x',
+      }
+      expect(buildEmailPayload(ev)).toBeNull()
+    })
+
+    it('slack — 깃발 이모지 + 업체명 + 사유', () => {
+      const ev: NotifyEvent = {
+        type: 'place.report_received',
+        placeName: '테스트', reason: 'closed',
+        adminUrl: 'https://x',
+      }
+      const s = buildSlackPayload(ev)!
+      expect(s.text).toContain('테스트')
+      expect(s.text).toContain('closed')
+    })
+  })
+
+  describe('claim_received', () => {
+    it('email — 업체명·요청자·연락처·사유·검토 URL 포함', () => {
+      const ev: NotifyEvent = {
+        type: 'claim_received',
+        placeName: '닥터에버스',
+        claimantEmail: 'claimant@x.com',
+        contactPhone: '010-1234-5678',
+        reason: '대표자 본인',
+        adminUrl: 'https://aiplace.kr/admin/claims',
+        adminEmail: 'admin@x.com',
+      }
+      const p = buildEmailPayload(ev)!
+      expect(p.to).toBe('admin@x.com')
+      expect(p.subject).toContain('닥터에버스')
+      expect(p.body).toContain('claimant@x.com')
+      expect(p.body).toContain('010-1234-5678')
+      expect(p.body).toContain('대표자 본인')
+    })
+
+    it('adminEmail 누락 → null', () => {
+      const ev: NotifyEvent = {
+        type: 'claim_received',
+        placeName: 'X', claimantEmail: 'c@x.com', adminUrl: 'https://x',
+      }
+      expect(buildEmailPayload(ev)).toBeNull()
+    })
+
+    it('slack — 키 이모지 + 업체명 + 요청자 이메일', () => {
+      const ev: NotifyEvent = {
+        type: 'claim_received',
+        placeName: '테스트', claimantEmail: 'c@x.com', adminUrl: 'https://x',
+      }
+      const s = buildSlackPayload(ev)!
+      expect(s.text).toContain('테스트')
+      expect(s.text).toContain('c@x.com')
+    })
+  })
 })

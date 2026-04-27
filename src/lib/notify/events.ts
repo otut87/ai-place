@@ -75,6 +75,26 @@ export type NotifyEvent =
       amount: number                 // 첫 청구 예정 금액
       activePlaceCount: number
     }
+  | {
+      // T-258 — 신고 접수 (UI "검토 후 조치" 약속 충족) — admin 즉시 알림.
+      type: 'place.report_received'
+      placeName: string
+      reason: string                 // ReportReason enum 값
+      detail?: string                // 신고자 상세 설명 (1000자 cap)
+      reporterEmail?: string         // 익명 신고면 null
+      adminUrl: string               // /admin/reports?id=… deep link
+      adminEmail?: string
+    }
+  | {
+      // T-258 — 소유권 이관 문의 접수 — admin 즉시 알림.
+      type: 'claim_received'
+      placeName: string
+      claimantEmail: string
+      contactPhone?: string
+      reason?: string
+      adminUrl: string               // /admin/claims?id=… deep link
+      adminEmail?: string
+    }
 
 export interface EmailPayload {
   to: string
@@ -218,6 +238,40 @@ export function buildEmailPayload(ev: NotifyEvent): EmailPayload | null {
         ].join('\n'),
       }
     }
+    case 'place.report_received': {
+      if (!ev.adminEmail) return null
+      return {
+        to: ev.adminEmail,
+        subject: `[aiplace] 업체 신고 접수 — ${ev.placeName} (${ev.reason})`,
+        body: [
+          `신규 업체 신고가 접수되었습니다.`,
+          ``,
+          `업체: ${ev.placeName}`,
+          `사유: ${ev.reason}`,
+          ev.detail ? `상세: ${ev.detail}` : null,
+          ev.reporterEmail ? `회신 이메일: ${ev.reporterEmail}` : `회신 이메일: (익명)`,
+          ``,
+          `검토 URL: ${ev.adminUrl}`,
+        ].filter(Boolean).join('\n'),
+      }
+    }
+    case 'claim_received': {
+      if (!ev.adminEmail) return null
+      return {
+        to: ev.adminEmail,
+        subject: `[aiplace] 소유권 이관 문의 접수 — ${ev.placeName}`,
+        body: [
+          `소유권 이관 문의가 접수되었습니다.`,
+          ``,
+          `업체: ${ev.placeName}`,
+          `요청자 이메일: ${ev.claimantEmail}`,
+          ev.contactPhone ? `연락처: ${ev.contactPhone}` : null,
+          ev.reason ? `사유: ${ev.reason}` : null,
+          ``,
+          `검토 URL: ${ev.adminUrl}`,
+        ].filter(Boolean).join('\n'),
+      }
+    }
   }
 }
 
@@ -242,6 +296,14 @@ export function buildSlackPayload(ev: NotifyEvent): SlackPayload | null {
       }
     case 'billing.trial_ending':
       return null   // 사장님 전용 (admin 불필요)
+    case 'place.report_received':
+      return {
+        text: `:triangular_flag_on_post: 업체 신고 — *${ev.placeName}* · 사유 \`${ev.reason}\`${ev.reporterEmail ? ` · ${ev.reporterEmail}` : ' · (익명)'} · ${ev.adminUrl}`,
+      }
+    case 'claim_received':
+      return {
+        text: `:key: 소유권 이관 문의 — *${ev.placeName}* · ${ev.claimantEmail}${ev.contactPhone ? ` · ${ev.contactPhone}` : ''} · ${ev.adminUrl}`,
+      }
     case 'place.approved':
     case 'place.rejected':
     case 'billing.expiry_warning':

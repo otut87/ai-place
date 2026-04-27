@@ -7,6 +7,9 @@ import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { getUser } from '@/lib/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
+import { dispatchNotify } from '@/lib/actions/notify'
+
+const SITE_BASE = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 'https://aiplace.kr'
 
 export type ReportReason = 'closed' | 'wrong_info' | 'spam' | 'duplicate' | 'inappropriate' | 'other'
 
@@ -64,7 +67,7 @@ export async function submitReport(input: SubmitReportInput): Promise<ActionResu
   // 업체 존재 확인
   const { data: place } = await admin
     .from('places')
-    .select('id, city, category, slug')
+    .select('id, city, category, slug, name')
     .eq('id', input.placeId)
     .maybeSingle()
   if (!place) return { success: false, error: '존재하지 않는 업체입니다.' }
@@ -96,6 +99,23 @@ export async function submitReport(input: SubmitReportInput): Promise<ActionResu
 
   // admin 목록 갱신
   revalidatePath('/admin/reports')
+
+  // T-258 — admin 알림 (RESEND_API_KEY 미설정 시 console fallback, dead funnel 방지).
+  //   UI 가 "검토 후 조치" 약속하므로 admin 이 수동으로 페이지 안 들어가도 인지 가능해야 함.
+  try {
+    const placeRow = place as { id: string; city: string; category: string; slug: string; name?: string }
+    await dispatchNotify({
+      type: 'place.report_received',
+      placeName: placeRow.name ?? `${placeRow.city}/${placeRow.category}/${placeRow.slug}`,
+      reason: input.reason,
+      detail: input.detail?.trim() || undefined,
+      reporterEmail: input.reporterEmail?.trim() || user?.email || undefined,
+      adminUrl: `${SITE_BASE}/admin/reports`,
+      adminEmail: process.env.ADMIN_NOTIFY_EMAIL,
+    })
+  } catch (e) {
+    console.error('[submitReport] notify dispatch failed:', e)
+  }
 
   return { success: true, data: { id: (inserted as { id: string }).id } }
 }
@@ -168,6 +188,21 @@ export async function submitClaim(input: SubmitClaimInput): Promise<ActionResult
   }
 
   revalidatePath('/admin/claims')
+
+  // T-258 — admin 알림. UI "관리자 검토 후 연락드립니다" 약속의 첫 단계.
+  try {
+    await dispatchNotify({
+      type: 'claim_received',
+      placeName: placeRow.name,
+      claimantEmail: user.email ?? '(이메일 없음)',
+      contactPhone: input.contactPhone?.trim() || undefined,
+      reason: input.reason?.trim() || undefined,
+      adminUrl: `${SITE_BASE}/admin/claims`,
+      adminEmail: process.env.ADMIN_NOTIFY_EMAIL,
+    })
+  } catch (e) {
+    console.error('[submitClaim] notify dispatch failed:', e)
+  }
 
   return { success: true, data: { id: (inserted as { id: string }).id } }
 }
