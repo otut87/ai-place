@@ -6,7 +6,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SiteFooter } from '@/components/site/site-footer'
 import { getAllPlaces, getCities, getCategories } from '@/lib/data.supabase'
-import { aggregateBotVisits } from '@/lib/admin/bot-visits'
+import { aggregateBotVisits, aggregateBotVisitsByDay } from '@/lib/admin/bot-visits'
+import { buildSparkline } from '@/lib/sparkline'
 import {
   generateWebSite,
   generateWebPage,
@@ -98,11 +99,12 @@ const FAQS: FAQ[] = [
 
 // 실측 집계 — 허수 금지 (환각 방지 원칙).
 async function loadStats() {
-  const [places, cities, categories, botAgg] = await Promise.all([
+  const [places, cities, categories, botAgg, botByDay] = await Promise.all([
     getAllPlaces(),
     getCities(),
     getCategories(),
     aggregateBotVisits(30),
+    aggregateBotVisitsByDay(30),
   ])
   const activePlaces = places.filter(p => p.rating != null)
   const avgRating =
@@ -113,6 +115,17 @@ async function loadStats() {
   const featured = [...places]
     .sort((a, b) => (b.reviewCount ?? 0) - (a.reviewCount ?? 0))
     .slice(0, 3)
+
+  // T-233 proof 카드 — 평점·리뷰 상위 3곳을 GPT/Claude/Gemini 순으로 매핑.
+  // 데이터 변동에 따라간다 (메모리 [거짓 정보 생성 금지]).
+  const sortedByQuality = [...places].sort((a, b) => {
+    const ra = a.rating ?? 0
+    const rb = b.rating ?? 0
+    if (rb !== ra) return rb - ra
+    return (b.reviewCount ?? 0) - (a.reviewCount ?? 0)
+  })
+  const proofPicks = sortedByQuality.slice(0, 3)
+
   return {
     totalPlaces: places.length,
     totalCities: cities.length,
@@ -120,6 +133,8 @@ async function loadStats() {
     avgRating,
     totalAiVisits,
     featured,
+    proofPicks,
+    botByDay,
     updatedAt: new Date().toISOString().slice(0, 10),
   }
 }
@@ -273,59 +288,55 @@ export default async function HomePage() {
           </div>
 
           <div className="proof-grid">
-            <div className="proof-card c-gpt col-4">
-              <div className="head">
-                <span className="ai-logo gpt">C</span>
-                <b>ChatGPT</b>
-                <span className="proof-q" style={{ marginLeft: 'auto' }}>
-                  <time dateTime="2026-04-09">2026-04-09</time>
-                </span>
-              </div>
-              <div className="proof-q">“천안 인테리어 추천해줘” (예시 질문)</div>
-              <div className="proof-a">
-                <span className="cite-chip">맘에든인테리어</span> 를 1순위로 제안하며, <b>실내건축면허 보유</b>와 리모델링·시공 이력을 근거로 들었습니다.
-              </div>
-              <div className="proof-foot">
-                <span>위치: 답변 1문단</span>
-                <span className="muted">예시</span>
-              </div>
-            </div>
-
-            <div className="proof-card c-claude col-4">
-              <div className="head">
-                <span className="ai-logo claude">C</span>
-                <b>Claude</b>
-                <span className="proof-q" style={{ marginLeft: 'auto' }}>
-                  <time dateTime="2026-04-11">2026-04-11</time>
-                </span>
-              </div>
-              <div className="proof-q">“천안 피부과 중 야간진료 가능한 곳?” (예시 질문)</div>
-              <div className="proof-a">
-                <span className="cite-chip">닥터에버스의원 천안점</span> 이 야간진료 가능 업체로 인용됨. <b>리뷰 평점 5.0</b>이 근거로 제시.
-              </div>
-              <div className="proof-foot">
-                <span>위치: 리스트 2/3</span>
-                <span className="muted">예시</span>
-              </div>
-            </div>
-
-            <div className="proof-card c-gemini col-4">
-              <div className="head">
-                <span className="ai-logo gemini">G</span>
-                <b>Gemini</b>
-                <span className="proof-q" style={{ marginLeft: 'auto' }}>
-                  <time dateTime="2026-04-12">2026-04-12</time>
-                </span>
-              </div>
-              <div className="proof-q">“천안 동남구 자동차정비 잘하는 곳” (예시 질문)</div>
-              <div className="proof-a">
-                <span className="cite-chip">브이아이피모터스</span> 가 리뷰 평점과 <b>정비 항목 상세 구조화</b>를 근거로 1순위 제시.
-              </div>
-              <div className="proof-foot">
-                <span>위치: 답변 1문단</span>
-                <span className="muted">예시</span>
-              </div>
-            </div>
+            {(['gpt', 'claude', 'gemini'] as const).map((engine, idx) => {
+              const pick = s.proofPicks[idx]
+              const engineName = engine === 'gpt' ? 'ChatGPT' : engine === 'claude' ? 'Claude' : 'Gemini'
+              const cardClass = `proof-card c-${engine} col-4`
+              const logoLetter = engine === 'gpt' ? 'C' : engine === 'claude' ? 'C' : 'G'
+              if (!pick) {
+                return (
+                  <div key={engine} className={cardClass}>
+                    <div className="head">
+                      <span className={`ai-logo ${engine}`}>{logoLetter}</span>
+                      <b>{engineName}</b>
+                    </div>
+                    <div className="proof-q">등록 업체 부족 — 첫 업체 등록 후 자동 채워집니다.</div>
+                    <div className="proof-foot">
+                      <span className="muted">대기 중</span>
+                    </div>
+                  </div>
+                )
+              }
+              const categoryLabel = pick.category
+              const ratingText = pick.rating != null ? `★${pick.rating.toFixed(1)}` : '평점 미수집'
+              const reviewText = pick.reviewCount != null ? ` · 리뷰 ${pick.reviewCount}건` : ''
+              return (
+                <div key={engine} className={cardClass}>
+                  <div className="head">
+                    <span className={`ai-logo ${engine}`}>{logoLetter}</span>
+                    <b>{engineName}</b>
+                    <span className="proof-q" style={{ marginLeft: 'auto' }}>
+                      예시 응답
+                    </span>
+                  </div>
+                  <div className="proof-q">
+                    &ldquo;{pick.city} {categoryLabel} 추천&rdquo; (예시 질문)
+                  </div>
+                  <div className="proof-a">
+                    <span className="cite-chip">{pick.name}</span> 가 1순위로 제안되며,{' '}
+                    <b>
+                      {ratingText}
+                      {reviewText}
+                    </b>{' '}
+                    + 구조화 데이터(서비스·운영시간·주소)를 근거로 제시됩니다.
+                  </div>
+                  <div className="proof-foot">
+                    <span>위치: 답변 1문단</span>
+                    <span className="muted">예시</span>
+                  </div>
+                </div>
+              )
+            })}
 
             <div className="proof-card c-metric col-6">
               <div className="flex between" style={{ alignItems: 'flex-start' }}>
@@ -341,30 +352,33 @@ export default async function HomePage() {
                 </div>
                 <span className="chip">실측 데이터</span>
               </div>
-              {s.totalAiVisits === 0 ? (
-                <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
-                  수집 시작 단계입니다. 누적되는 대로 주간 추이를 표시합니다.
-                </p>
-              ) : (
-                <svg className="spark" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true">
-                  <defs>
-                    <linearGradient id="sg" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0" stopColor="#ff5c2b" stopOpacity=".35" />
-                      <stop offset="1" stopColor="#ff5c2b" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d="M0,50 L30,48 L60,44 L90,42 L120,38 L150,40 L180,30 L210,28 L240,22 L270,20 L300,14 L330,12 L360,8 L400,5 L400,60 L0,60 Z"
-                    fill="url(#sg)"
-                  />
-                  <path
-                    d="M0,50 L30,48 L60,44 L90,42 L120,38 L150,40 L180,30 L210,28 L240,22 L270,20 L300,14 L330,12 L360,8 L400,5"
-                    fill="none"
-                    stroke="#ff5c2b"
-                    strokeWidth={2}
-                  />
-                </svg>
-              )}
+              {(() => {
+                const spark = buildSparkline(s.botByDay)
+                if (spark.empty) {
+                  return (
+                    <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
+                      수집 시작 단계입니다. 누적되는 대로 일별 추이를 표시합니다.
+                    </p>
+                  )
+                }
+                return (
+                  <svg
+                    className="spark"
+                    viewBox="0 0 400 60"
+                    preserveAspectRatio="none"
+                    aria-hidden="true"
+                  >
+                    <defs>
+                      <linearGradient id="sg" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0" stopColor="#ff5c2b" stopOpacity=".35" />
+                        <stop offset="1" stopColor="#ff5c2b" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d={spark.fill} fill="url(#sg)" />
+                    <path d={spark.stroke} fill="none" stroke="#ff5c2b" strokeWidth={2} />
+                  </svg>
+                )
+              })()}
             </div>
 
             <div className="proof-card col-6">

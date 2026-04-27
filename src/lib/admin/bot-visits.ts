@@ -34,6 +34,33 @@ export async function listRecentBotVisits(limit = 50): Promise<BotVisitRow[]> {
   return (data ?? []) as BotVisitRow[]
 }
 
+/**
+ * T-233: 일별 봇 방문 합산 (홈 sparkline 차트용).
+ * 반환: 오래된 → 최신 순 길이 N 의 visits 배열. 데이터 없는 날은 0.
+ */
+export async function aggregateBotVisitsByDay(days = 14): Promise<number[]> {
+  const admin = getAdminClient()
+  if (!admin) return Array(days).fill(0)
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+  const { data } = await admin
+    .from('bot_visits')
+    .select('visited_at')
+    .gte('visited_at', since)
+  if (!data) return Array(days).fill(0)
+  const rows = data as Array<{ visited_at: string }>
+  const counts = new Map<string, number>()
+  for (const r of rows) {
+    const day = r.visited_at.slice(0, 10)
+    counts.set(day, (counts.get(day) ?? 0) + 1)
+  }
+  const result: number[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    result.push(counts.get(d) ?? 0)
+  }
+  return result
+}
+
 export async function aggregateBotVisits(days = 30): Promise<BotAggregate[]> {
   const admin = getAdminClient()
   if (!admin) return []
