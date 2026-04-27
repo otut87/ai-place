@@ -9,20 +9,20 @@ describe('renderMarkdownToHtml — H1 만 H2 로 강등 (T-195)', () => {
   it('본문 첫 줄의 # 는 <h2> 로 렌더된다 (페이지 H1 중복 방지)', async () => {
     const md = '# 본문 제목\n\n본문 문단.'
     const html = await renderMarkdownToHtml(md)
-    expect(html).toContain('<h2>본문 제목</h2>')
+    expect(html).toContain('>본문 제목</h2>')
     expect(html).not.toContain('<h1>')
   })
 
   it('## 는 <h2> 로 그대로 보존된다 (LLM 의 H2 위계 보존)', async () => {
     const md = '## 섹션 제목'
     const html = await renderMarkdownToHtml(md)
-    expect(html).toContain('<h2>섹션 제목</h2>')
+    expect(html).toContain('>섹션 제목</h2>')
   })
 
   it('### 는 <h3> 로 그대로 보존된다', async () => {
     const md = '### 소제목'
     const html = await renderMarkdownToHtml(md)
-    expect(html).toContain('<h3>소제목</h3>')
+    expect(html).toContain('>소제목</h3>')
   })
 
   it('#### / ##### / ###### 도 그대로 유지된다', async () => {
@@ -37,9 +37,9 @@ describe('renderMarkdownToHtml — H1 만 H2 로 강등 (T-195)', () => {
     const md = '# 첫\n\n# 둘\n\n## 셋'
     const html = await renderMarkdownToHtml(md)
     expect(html).not.toContain('<h1>')
-    expect(html).toContain('<h2>첫</h2>')
-    expect(html).toContain('<h2>둘</h2>')
-    expect(html).toContain('<h2>셋</h2>')
+    expect(html).toContain('>첫</h2>')
+    expect(html).toContain('>둘</h2>')
+    expect(html).toContain('>셋</h2>')
   })
 
   it('LLM 7블록 시나리오 — H2 위계가 보존된다 (T-195 회귀 방지)', async () => {
@@ -56,10 +56,10 @@ describe('renderMarkdownToHtml — H1 만 H2 로 강등 (T-195)', () => {
       '- 항목',
     ].join('\n')
     const html = await renderMarkdownToHtml(md)
-    expect(html).toContain('<h2>결론</h2>')
-    expect(html).toContain('<h2>분석 방법</h2>')
-    expect(html).toContain('<h2>업체별 상세</h2>')
-    expect(html).toContain('<h3>업체 A</h3>')
+    expect(html).toContain('>결론</h2>')
+    expect(html).toContain('>분석 방법</h2>')
+    expect(html).toContain('>업체별 상세</h2>')
+    expect(html).toContain('>업체 A</h3>')
   })
 
   it('헤딩이 아닌 p/ul/strong 등은 영향 받지 않는다', async () => {

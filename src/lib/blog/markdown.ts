@@ -32,11 +32,79 @@ function rehypeDemoteH1ToH2() {
 }
 
 /**
+ * 헤딩 텍스트 → URL-friendly slug.
+ * 한글 보존(Unicode letters/numbers), 공백 → 하이픈, 80자 컷.
+ */
+function slugify(text: string): string {
+  const normalized = text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{Letter}\p{Number}\s-]/gu, '')
+    .replace(/\s+/g, '-')
+    .slice(0, 80)
+  return normalized || 'section'
+}
+
+/**
+ * rehype 플러그인 — h2/h3 에 id 속성 부여 (TOC 앵커링용).
+ * 같은 텍스트가 반복되면 -2, -3 식으로 disambiguate.
+ */
+function rehypeAddHeadingIds() {
+  return (tree: Root) => {
+    const seen = new Map<string, number>()
+    visit(tree, 'element', (node: Element) => {
+      if (node.tagName !== 'h2' && node.tagName !== 'h3') return
+      const text = (node.children ?? [])
+        .filter((c): c is { type: 'text'; value: string } => c.type === 'text')
+        .map(c => c.value)
+        .join('')
+      if (!text) return
+      let id = slugify(text)
+      const count = seen.get(id) ?? 0
+      seen.set(id, count + 1)
+      if (count > 0) id = `${id}-${count + 1}`
+      node.properties = { ...(node.properties ?? {}), id }
+    })
+  }
+}
+
+/**
+ * 글 본문 markdown 에서 TOC 항목 추출 — h2/h3 만, rehypeAddHeadingIds 와 동일 규칙으로
+ * id 생성하므로 페이지 헤딩과 1:1 매칭됨.
+ */
+export function extractTocFromMarkdown(
+  content: string,
+): Array<{ depth: 2 | 3; id: string; text: string }> {
+  const result: Array<{ depth: 2 | 3; id: string; text: string }> = []
+  const seen = new Map<string, number>()
+  let inFence = false
+  for (const line of content.split('\n')) {
+    if (line.startsWith('```')) {
+      inFence = !inFence
+      continue
+    }
+    if (inFence) continue
+    const m = line.match(/^(##|###)\s+(.+)$/)
+    if (!m) continue
+    const depth = m[1].length === 2 ? 2 : 3
+    const text = m[2].trim().replace(/\*\*/g, '').replace(/`/g, '')
+    if (!text) continue
+    let id = slugify(text)
+    const count = seen.get(id) ?? 0
+    seen.set(id, count + 1)
+    if (count > 0) id = `${id}-${count + 1}`
+    result.push({ depth, id, text })
+  }
+  return result
+}
+
+/**
  * Markdown → 안전한 HTML 문자열.
  * rehype-sanitize 의 default schema 사용 (script/iframe/on* 핸들러/javascript: 차단).
  * T-195: H1 만 H2 로 변환 (T-099 의 무차별 +1 강등 제거).
  */
 // T-115: rehype-sanitize 가 table 요소를 허용하도록 스키마 확장.
+// T-237: h2/h3 에 id (TOC 앵커링) 허용.
 const tableSchema = {
   ...defaultSchema,
   tagNames: [...(defaultSchema.tagNames ?? []), 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
@@ -44,6 +112,8 @@ const tableSchema = {
     ...defaultSchema.attributes,
     th: [...(defaultSchema.attributes?.th ?? []), 'align'],
     td: [...(defaultSchema.attributes?.td ?? []), 'align'],
+    h2: [...(defaultSchema.attributes?.h2 ?? []), 'id'],
+    h3: [...(defaultSchema.attributes?.h3 ?? []), 'id'],
   },
 }
 
@@ -53,6 +123,7 @@ export async function renderMarkdownToHtml(md: string): Promise<string> {
     .use(remarkGfm) // T-115: Markdown 테이블 → <table> 강제
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeDemoteH1ToH2)
+    .use(rehypeAddHeadingIds)
     .use(rehypeSanitize, tableSchema)
     .use(rehypeStringify)
     .process(md)
