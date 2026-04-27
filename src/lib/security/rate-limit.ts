@@ -4,8 +4,9 @@
 // "DDoS 증폭 / cost amplification" 벡터 차단. 진단 한 번이 8 concurrent × 49
 // sitemap pages = 최대 392 요청을 외부로 발사하므로, 분당 N회로 제한 필요.
 //
-// 환경변수:
-//   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN — Upstash 콘솔에서 발급.
+// 환경변수 (둘 중 하나의 페어 사용):
+//   - UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN (Upstash 콘솔 직접 발급)
+//   - KV_REST_API_URL / KV_REST_API_TOKEN (Vercel Marketplace Upstash KV 통합 — 자동 주입)
 //   미설정 시 graceful no-op (rate limit 없이 통과 — 개발 환경 호환).
 //   프로덕션엔 반드시 설정.
 
@@ -22,8 +23,10 @@ interface RateLimitResult {
 let redis: Redis | null = null
 function getRedis(): Redis | null {
   if (redis) return redis
-  const url = process.env.UPSTASH_REDIS_REST_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  // T-256 — Vercel Marketplace Upstash KV 통합은 KV_REST_API_* 이름으로 주입.
+  // 직접 Upstash 사용은 UPSTASH_REDIS_REST_* 이름. 양쪽 다 지원.
+  const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN
   if (!url || !token) return null
   redis = new Redis({ url, token })
   return redis

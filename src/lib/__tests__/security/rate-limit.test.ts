@@ -19,6 +19,8 @@ afterEach(() => {
 beforeEach(() => {
   delete process.env.UPSTASH_REDIS_REST_URL
   delete process.env.UPSTASH_REDIS_REST_TOKEN
+  delete process.env.KV_REST_API_URL
+  delete process.env.KV_REST_API_TOKEN
   vi.resetModules()
 })
 
@@ -69,6 +71,30 @@ describe('clientIpFromHeaders', () => {
 })
 
 describe('checkRateLimit — Upstash 설정됨 (mocked)', () => {
+  it('Vercel Marketplace KV_REST_API_* 이름으로도 동작', async () => {
+    vi.stubEnv('KV_REST_API_URL', 'https://kv.fake.upstash.io')
+    vi.stubEnv('KV_REST_API_TOKEN', 'fake-kv-token')
+
+    vi.doMock('@upstash/redis', () => ({
+      Redis: class { constructor(_opts: unknown) { void _opts } },
+    }))
+    vi.doMock('@upstash/ratelimit', () => ({
+      Ratelimit: class {
+        static slidingWindow(n: number, _w: string) { void _w; return { limit: n } as unknown }
+        constructor(_opts: unknown) { void _opts }
+        async limit(_key: string) {
+          void _key
+          return { success: true, remaining: 9, reset: Date.now() + 60_000, limit: 10 }
+        }
+      },
+    }))
+
+    const { checkRateLimit } = await import('@/lib/security/rate-limit')
+    const r = await checkRateLimit('203.0.113.20', 'form')
+    expect(r.success).toBe(true)
+    expect(r.limit).toBe(10)
+  })
+
   it('limit 통과 → success=true + remaining/limit/reset 반영', async () => {
     vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://fake.upstash.io')
     vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'fake-token')
