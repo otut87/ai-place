@@ -1,0 +1,275 @@
+/* ============================================================
+   /[city] · /blog/[city] · /blog/[city]/[sector] — paper/orange aip 리믹스 (T-249/T-250/T-251)
+   3개 도시 단위 허브 페이지 공유 스타일.
+   ============================================================ */
+
+/* HEAD — meta-line + title + lede */
+.ch-head {
+  padding: clamp(36px, 5vw, 64px) 0 clamp(20px, 2.6vw, 32px);
+  border-bottom: 1px solid var(--line);
+}
+.ch-meta-line {
+  display: flex; gap: 12px 18px; flex-wrap: wrap; align-items: center;
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em;
+  color: var(--muted); text-transform: uppercase;
+  padding-bottom: 14px; border-bottom: 1px dashed var(--line); margin-bottom: 22px;
+}
+.ch-meta-line b { color: var(--ink); font-weight: 600; }
+.ch-meta-line .pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--card); border: 1px solid var(--line-2); padding: 3px 9px; border-radius: 999px;
+  color: var(--ink-2); font-size: 11px;
+}
+.ch-meta-line .pill::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--good);
+}
+
+h1.ch-title {
+  font-size: clamp(34px, 5vw, 60px); font-weight: 700; letter-spacing: -.034em;
+  line-height: 1.04; margin: 8px 0 14px;
+}
+h1.ch-title .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
+h1.ch-title .num { font-family: var(--serif); font-style: italic; color: var(--accent); font-weight: 400; }
+
+.ch-lede {
+  font-size: clamp(15px, 1.3vw, 17px); line-height: 1.65; color: var(--ink-2); max-width: 64ch;
+  margin: 6px 0 22px;
+}
+.ch-lede mark {
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  color: var(--ink); padding: 0 3px; border-radius: 2px; font-weight: 600;
+}
+
+/* Stat strip (4-cell) */
+.ch-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--card);
+}
+@media (max-width: 880px) { .ch-stat-strip { grid-template-columns: repeat(2, 1fr); } }
+.ch-stat-strip .s {
+  padding: 14px 16px;
+  border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ch-stat-strip .s:last-child { border-right: none; }
+@media (max-width: 880px) {
+  .ch-stat-strip .s { border-bottom: 1px solid var(--line); }
+  .ch-stat-strip .s:nth-child(2n) { border-right: none; }
+  .ch-stat-strip .s:nth-last-child(-n+2) { border-bottom: none; }
+}
+.ch-stat-strip .s dt {
+  font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .1em; margin: 0;
+}
+.ch-stat-strip .s dd {
+  margin: 0; font-family: var(--serif); font-style: italic; font-size: 26px;
+  line-height: 1; color: var(--ink); letter-spacing: -.01em;
+}
+.ch-stat-strip .s .accent { color: var(--accent); }
+.ch-stat-strip .s .sub {
+  font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-top: 2px;
+}
+
+/* Cross-nav chip strip — "다른 도시" / "다른 섹터" */
+.ch-xnav {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding: 14px 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  margin-top: 18px;
+}
+.ch-xnav .lab {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
+  padding-right: 4px;
+}
+.ch-xnav a, .ch-xnav .cur {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: var(--card);
+  font: 500 12.5px var(--font);
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: border-color .15s, color .15s;
+}
+.ch-xnav a:hover { border-color: var(--ink); color: var(--ink); }
+.ch-xnav .cur {
+  background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 600;
+}
+.ch-xnav .ct {
+  font-family: var(--mono); font-size: 10.5px; opacity: .7; margin-left: 4px;
+}
+
+/* Sections (shared with directory-remix's .dh) */
+section.ch-section {
+  padding: clamp(36px, 4.5vw, 56px) 0;
+  border-top: 1px solid var(--line);
+}
+section.ch-section.no-border { border-top: none; }
+section.ch-section.bg-2 { background: var(--bg-2); }
+
+.ch-h {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 18px; flex-wrap: wrap; margin-bottom: 22px;
+}
+.ch-h h2 {
+  font-size: clamp(22px, 2.6vw, 32px); font-weight: 700; letter-spacing: -.025em;
+  line-height: 1.1; margin: 0;
+}
+.ch-h h2 .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
+.ch-h h2 .num { font-family: var(--serif); font-style: italic; color: var(--accent); font-weight: 400; margin-right: 4px; }
+.ch-h .anchor {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--muted);
+}
+.ch-h .anchor::before { content: "§ "; }
+.ch-h .sub {
+  font-size: 14px; color: var(--ink-2); margin-top: 6px; max-width: 60ch; line-height: 1.6;
+}
+
+/* Sector group — sector heading + category cards */
+.ch-sector-group { margin-top: 22px; }
+.ch-sector-group:first-of-type { margin-top: 0; }
+.ch-sector-group h3 {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding-bottom: 10px; margin: 0 0 12px;
+  border-bottom: 1px dashed var(--line);
+  font-size: 17px; font-weight: 700; letter-spacing: -.014em;
+}
+.ch-sector-group h3 .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
+.ch-sector-group h3 .ct {
+  font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .04em;
+}
+.ch-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+.ch-cat-card {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding: 10px 14px;
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: border-color .15s, background .15s;
+}
+.ch-cat-card:hover { border-color: var(--ink); }
+.ch-cat-card.empty {
+  background: var(--bg-2);
+  color: var(--muted);
+  cursor: default;
+  pointer-events: none;
+}
+.ch-cat-card .nm { font-weight: 500; }
+.ch-cat-card .ct {
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  white-space: nowrap;
+}
+.ch-cat-card .ct b { color: var(--accent); font-weight: 600; }
+
+/* Post list (blog hub variant) */
+.ch-post-list {
+  display: flex; flex-direction: column; gap: 0;
+}
+.ch-post-row {
+  display: grid;
+  grid-template-columns: 100px 1fr auto;
+  gap: 14px;
+  align-items: start;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  text-decoration: none;
+  color: inherit;
+  transition: background .15s;
+}
+.ch-post-row:first-child { border-top: none; }
+.ch-post-row:hover { background: var(--bg-2); margin: 0 -16px; padding-left: 16px; padding-right: 16px; border-radius: var(--r-sm); }
+@media (max-width: 700px) {
+  .ch-post-row { grid-template-columns: 1fr; row-gap: 6px; }
+  .ch-post-row .meta-side { order: 2; }
+}
+.ch-post-row .lab-row {
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+}
+.ch-post-row .when {
+  font-family: var(--mono); font-size: 10.5px; color: var(--muted); letter-spacing: .04em;
+}
+.ch-post-row .body h4 {
+  margin: 0 0 4px; font-size: 15px; font-weight: 600; letter-spacing: -.014em;
+  line-height: 1.4;
+  transition: color .15s;
+}
+.ch-post-row:hover .body h4 { color: var(--accent); }
+.ch-post-row .body p {
+  margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.55;
+  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ch-post-row .meta-side {
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-end;
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+}
+.ch-post-row .meta-side .views {
+  font-family: var(--font); color: var(--ink); font-weight: 600; font-size: 13px;
+}
+.ch-post-row .meta-side .views::before {
+  content: "VIEWS";
+  font-family: var(--mono); font-size: 9.5px; color: var(--muted);
+  font-weight: 500; letter-spacing: .12em; margin-right: 6px;
+}
+
+/* Sector-as-section heading + "more →" */
+.ch-sec-h {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.ch-sec-h h3 {
+  font-size: 17px; font-weight: 700; letter-spacing: -.014em; margin: 0;
+}
+.ch-sec-h h3 .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
+.ch-sec-h h3 .ct {
+  font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .04em;
+  margin-left: 6px;
+}
+.ch-sec-h .more {
+  font-family: var(--mono); font-size: 11px; color: var(--accent);
+  text-decoration: none; letter-spacing: .04em; text-transform: uppercase;
+}
+.ch-sec-h .more:hover { text-decoration: underline; }
+
+/* Empty state */
+.ch-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--card);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  margin-top: 16px;
+}
+
+/* Type tag (shared with bi-type-tag from blog-index) — locally scoped fallback */
+.ch-type-tag {
+  font-family: var(--mono); font-size: 10.5px;
+  padding: 3px 9px; border-radius: 999px;
+  text-transform: uppercase; letter-spacing: .1em; font-weight: 600;
+  border: 1px solid var(--line-2);
+  background: var(--card); color: var(--ink-2);
+  display: inline-flex;
+}
+.ch-type-tag.guide { background: color-mix(in oklab, var(--accent) 12%, var(--card)); color: var(--accent); border-color: color-mix(in oklab, var(--accent) 40%, transparent); }
+.ch-type-tag.compare { background: color-mix(in oklab, var(--good) 10%, var(--card)); color: var(--good); border-color: color-mix(in oklab, var(--good) 35%, transparent); }
+.ch-type-tag.keyword { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.ch-type-tag.detail { background: var(--bg-3); color: var(--ink); border-color: var(--line-3); }
+.ch-type-tag.general { background: var(--bg-2); color: var(--ink-2); border-color: var(--line-2); }

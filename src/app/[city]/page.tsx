@@ -1,23 +1,26 @@
-// T-097 — /[city] 도시 허브 (대분류별 카테고리 네비).
-// 업체 상세 브레드크럼의 도시 링크(/cheonan)가 404 로 떨어지던 문제를 해결한다.
+// /[city] — 도시 허브 (T-249 paper/orange aip 리믹스).
+// 통계 strip + cross-nav(다른 도시) + 섹터별 카테고리 그리드 + 도시 블로그 카드.
 
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { Header } from '@/components/header'
-import { Footer } from '@/components/footer'
-import { Breadcrumb } from '@/components/breadcrumb'
+import { HomeNav } from '@/app/_components/home/home-nav'
+import { SiteFooter } from '@/components/site/site-footer'
 import {
   getCities,
   getSectors,
   getCategories,
   getAllPlaces,
 } from '@/lib/data.supabase'
+import { getRecentBlogPosts } from '@/lib/blog/data.supabase'
 import { generateCollectionPage } from '@/lib/jsonld'
 import { generateBreadcrumbList } from '@/lib/seo'
 import { composePageTitle } from '@/lib/seo/compose-title'
 import { clampDirectAnswer } from '@/lib/seo/direct-answer'
 import { safeJsonLd } from '@/lib/utils'
+import '@/styles/aip.css'
+import '@/styles/home-wrap.css'
+import '@/styles/city-hub-remix.css'
 
 const BASE_URL = 'https://aiplace.kr'
 const SLUG_PATTERN = /^[a-z0-9-]+$/
@@ -51,22 +54,30 @@ export default async function CityHubPage({ params }: Props) {
   const { city } = await params
   if (!SLUG_PATTERN.test(city)) notFound()
 
-  const [cities, sectors, categories, places] = await Promise.all([
+  const [cities, sectors, categories, places, blogs] = await Promise.all([
     getCities(),
     getSectors(),
     getCategories(),
     getAllPlaces(),
+    getRecentBlogPosts(50),
   ])
   const cityObj = cities.find(c => c.slug === city)
   if (!cityObj) notFound()
 
-  // 업체가 실제 등록된 카테고리만 활성 표시
   const cityPlaces = places.filter(p => p.city === city)
+  const cityBlogs = blogs.filter(b => b.city === city)
+
   const activeCategoryKeys = new Set(cityPlaces.map(p => p.category))
   const countsByCategory = new Map<string, number>()
   for (const p of cityPlaces) {
     countsByCategory.set(p.category, (countsByCategory.get(p.category) ?? 0) + 1)
   }
+
+  const activeSectors = sectors.filter(s =>
+    categories.some(c => c.sector === s.slug && activeCategoryKeys.has(c.slug)),
+  )
+
+  const lastUpdated = cityBlogs[0]?.publishedAt?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)
 
   const pageUrl = `${BASE_URL}/${city}`
   const breadcrumbItems = [
@@ -79,72 +90,218 @@ export default async function CityHubPage({ params }: Props) {
   )
 
   return (
-    <>
+    <div className="aip-root">
+      <HomeNav />
+
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLd(
-          generateCollectionPage({
-            url: pageUrl,
-            name: `${cityObj.name} 업체 허브`,
-            description: dab,
-          }),
-        ) }}
+        dangerouslySetInnerHTML={{
+          __html: safeJsonLd(
+            generateCollectionPage({
+              url: pageUrl,
+              name: `${cityObj.name} 업체 허브`,
+              description: dab,
+            }),
+          ),
+        }}
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(generateBreadcrumbList(breadcrumbItems)) }}
       />
 
-      <Header />
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        <Breadcrumb items={breadcrumbItems} />
+      <main>
+        {/* HEAD */}
+        <header className="ch-head">
+          <div className="wrap">
+            <nav className="crumbs" aria-label="Breadcrumb">
+              <Link href="/">홈</Link>
+              <span className="sep">/</span>
+              <span className="cur">{cityObj.name}</span>
+            </nav>
 
-        <h1 className="mt-6 text-3xl font-bold text-[#1a1a1a]">{cityObj.name}</h1>
-        <p className="mt-3 text-[#444] text-base leading-relaxed">{dab}</p>
+            <div className="ch-meta-line" style={{ marginTop: 14 }}>
+              <span className="pill">City Hub · Live</span>
+              <span>doc-id <b>aip-city-{city}</b></span>
+              <span>·</span>
+              <span>updated <b>{lastUpdated}</b></span>
+              <span>·</span>
+              <span>places <b>{cityPlaces.length}</b></span>
+              <span>·</span>
+              <span>posts <b>{cityBlogs.length}</b></span>
+            </div>
 
-        <div className="mt-10 space-y-10">
-          {sectors.map(sec => {
-            const sectorCats = categories.filter(
-              c => c.sector === sec.slug && activeCategoryKeys.has(c.slug),
-            )
-            if (sectorCats.length === 0) return null
-            return (
-              <section key={sec.slug}>
-                <h2 className="text-xl font-semibold text-[#1a1a1a]">{sec.name}</h2>
-                <ul className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {sectorCats.map(cat => (
-                    <li key={cat.slug}>
-                      <Link
-                        href={`/${city}/${cat.slug}`}
-                        className="block rounded-lg border border-[#eee] px-3 py-2 text-sm hover:bg-[#f7f7f7]"
-                      >
-                        {cat.name}
-                        <span className="ml-2 text-xs text-[#888]">
-                          {countsByCategory.get(cat.slug) ?? 0}곳
+            <h1 className="ch-title">
+              <span className="it">{cityObj.name}</span> 로컬 비즈니스 색인.
+            </h1>
+            <p className="ch-lede">{dab}</p>
+
+            {/* Stat strip */}
+            <dl className="ch-stat-strip">
+              <div className="s">
+                <dt>등록 업체</dt>
+                <dd>{cityPlaces.length}</dd>
+                <span className="sub">활성 카테고리 {activeCategoryKeys.size}개</span>
+              </div>
+              <div className="s">
+                <dt>활성 업종</dt>
+                <dd>{activeSectors.length}</dd>
+                <span className="sub">/ 대분류 {sectors.length}개</span>
+              </div>
+              <div className="s">
+                <dt>발행 글</dt>
+                <dd>{cityBlogs.length}</dd>
+                <span className="sub">{cityObj.name} 가이드·비교·키워드</span>
+              </div>
+              <div className="s">
+                <dt>마지막 갱신</dt>
+                <dd className="accent">{lastUpdated.slice(5, 10).replace('-', '/')}</dd>
+                <span className="sub">{lastUpdated}</span>
+              </div>
+            </dl>
+
+            {/* Cross-nav: 다른 도시 */}
+            {cities.length > 1 && (
+              <div className="ch-xnav" aria-label="다른 도시로 이동">
+                <span className="lab">다른 도시</span>
+                {cities.map(c => {
+                  if (c.slug === city) {
+                    return (
+                      <span key={c.slug} className="cur">
+                        📍 {c.name}
+                      </span>
+                    )
+                  }
+                  const cnt = places.filter(p => p.city === c.slug).length
+                  return (
+                    <Link key={c.slug} href={`/${c.slug}`}>
+                      {c.name}
+                      {cnt > 0 ? <span className="ct">{cnt}</span> : <span className="ct">예정</span>}
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* SECTOR × CATEGORY GRID */}
+        <section className="ch-section no-border">
+          <div className="wrap">
+            <div className="ch-h">
+              <div>
+                <h2>
+                  <span className="it">업종별</span> 색인
+                </h2>
+                <p className="sub">
+                  활성 업종의 카테고리만 노출합니다. 카테고리를 클릭하면 해당 업체 리스트로 이동합니다.
+                </p>
+              </div>
+              <div className="anchor">categories</div>
+            </div>
+
+            {activeSectors.length === 0 ? (
+              <div className="ch-empty">
+                {cityObj.name}에 등록된 업체가 아직 없습니다. 다른 도시를 확인해보세요.
+              </div>
+            ) : (
+              activeSectors.map(sec => {
+                const sectorCats = categories.filter(
+                  c => c.sector === sec.slug && activeCategoryKeys.has(c.slug),
+                )
+                return (
+                  <div className="ch-sector-group" key={sec.slug}>
+                    <h3>
+                      <span className="it">{sec.name}</span>
+                      <span className="ct">{sectorCats.length}개 카테고리</span>
+                    </h3>
+                    <div className="ch-cat-grid">
+                      {sectorCats.map(cat => (
+                        <Link
+                          key={cat.slug}
+                          href={`/${city}/${cat.slug}`}
+                          className="ch-cat-card"
+                        >
+                          <span className="nm">{cat.name}</span>
+                          <span className="ct">
+                            <b>{countsByCategory.get(cat.slug) ?? 0}</b>곳
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </section>
+
+        {/* BLOG CARD */}
+        <section className="ch-section bg-2">
+          <div className="wrap">
+            <div className="ch-h">
+              <div>
+                <h2>
+                  <span className="it">{cityObj.name}</span> 블로그
+                </h2>
+                <p className="sub">
+                  업종별 가이드·비교·추천 글 모음. 발행 {cityBlogs.length}편.
+                </p>
+              </div>
+              <div className="anchor">blog</div>
+            </div>
+
+            {cityBlogs.length > 0 ? (
+              <>
+                <div className="ch-post-list">
+                  {cityBlogs.slice(0, 5).map(p => (
+                    <Link
+                      key={p.slug}
+                      className="ch-post-row"
+                      href={`/blog/${p.city}/${p.sector}/${p.slug}`}
+                    >
+                      <div className="lab-row">
+                        <span className={`ch-type-tag ${p.postType}`}>
+                          {sectors.find(s => s.slug === p.sector)?.name ?? p.sector}
                         </span>
-                      </Link>
-                    </li>
+                        <span className="when">{p.publishedAt?.slice(0, 10)}</span>
+                      </div>
+                      <div className="body">
+                        <h4>{p.title}</h4>
+                        <p>{p.summary}</p>
+                      </div>
+                      <div className="meta-side">
+                        <div className="views">{(p.viewCount ?? 0).toLocaleString()}</div>
+                      </div>
+                    </Link>
                   ))}
-                </ul>
-              </section>
-            )
-          })}
-        </div>
-
-        <div className="mt-12 rounded-xl border border-[#eee] bg-[#fafafa] p-5">
-          <h3 className="text-base font-semibold text-[#1a1a1a]">블로그</h3>
-          <p className="mt-2 text-sm text-[#666]">
-            {cityObj.name}의 업종별 가이드·비교·추천 글을 모아 보세요.
-          </p>
-          <Link
-            href={`/blog/${city}`}
-            className="mt-3 inline-flex items-center text-sm text-[#1a1a1a] underline hover:no-underline"
-          >
-            {cityObj.name} 블로그 보기 →
-          </Link>
-        </div>
+                </div>
+                <div style={{ marginTop: 16, textAlign: 'right' }}>
+                  <Link
+                    href={`/blog/${city}`}
+                    style={{
+                      fontFamily: 'var(--mono)',
+                      fontSize: 12,
+                      color: 'var(--accent)',
+                      letterSpacing: '.04em',
+                      textTransform: 'uppercase',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {cityObj.name} 블로그 전체보기 →
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <div className="ch-empty">
+                {cityObj.name} 블로그가 아직 발행되지 않았습니다 — 첫 글을 곧 올립니다.
+              </div>
+            )}
+          </div>
+        </section>
       </main>
-      <Footer />
-    </>
+
+      <SiteFooter />
+    </div>
   )
 }
