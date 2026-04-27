@@ -5,7 +5,6 @@
 // 만으로 막지 못하는 DDoS 증폭 / cost amplification 벡터 차단.
 
 import { scanSite, type ScanResult } from '@/lib/diagnostic/scan-site'
-import { getAdminClient } from '@/lib/supabase/admin-client'
 import { saveDiagnosticRun, getPreviousRun, scoreDelta, computeCheckDiffs } from '@/lib/diagnostic/history'
 import { checkRateLimit, clientIpFromHeaders } from '@/lib/security/rate-limit'
 import { headers } from 'next/headers'
@@ -76,55 +75,6 @@ export async function runPublicDiagnosticAction(url: string): Promise<ScanResult
   return { ...result, compare }
 }
 
-export interface LeadCaptureInput {
-  email: string
-  businessName?: string
-  targetUrl?: string
-  diagnosticScore?: number
-  phone?: string
-}
-
-export async function captureLeadAction(input: LeadCaptureInput): Promise<{ success: boolean; error?: string }> {
-  const email = input.email.trim().toLowerCase()
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { success: false, error: '올바른 이메일 주소를 입력해 주세요' }
-  }
-
-  // T-256 — 폼 제출 분당 10회/IP 제한 (이메일 enum + lead spam 방지).
-  const rlHeaders = await headers()
-  const rlIp = clientIpFromHeaders(name => rlHeaders.get(name))
-  const rl = await checkRateLimit(rlIp, 'form')
-  if (!rl.success) {
-    const retryInSec = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000))
-    return { success: false, error: `요청이 너무 많습니다. ${retryInSec}초 후 다시 시도해 주세요.` }
-  }
-
-  const admin = getAdminClient()
-  if (!admin) return { success: false, error: 'admin_unavailable' }
-
-  // IP 기반 간단 중복 방지 — 같은 이메일 24시간 내 중복 저장 무시.
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-  const { data: existing } = await admin
-    .from('leads')
-    .select('id')
-    .eq('email', email)
-    .gte('created_at', since)
-    .limit(1)
-  if (existing && existing.length > 0) {
-    return { success: true } // silent accept (중복 UX 친화적)
-  }
-
-  const hdrs = await headers()
-  const userAgent = hdrs.get('user-agent') ?? ''
-
-  const { error } = await admin.from('leads').insert({
-    email,
-    business_name: input.businessName?.trim() || null,
-    target_url: input.targetUrl?.trim() || null,
-    diagnostic_score: input.diagnosticScore ?? null,
-    source: 'check',
-    notes: userAgent.slice(0, 200),
-  })
-  if (error) return { success: false, error: error.message }
-  return { success: true }
-}
+// T-257 — captureLeadAction 제거. /check 페이지의 LeadForm 이 PDF 자동 발송 / 안내
+// 메일 / admin/leads 페이지 어느 것도 없는 dead funnel 이었음 (사용자에게 거짓 약속).
+// leads 테이블은 보존 (migration 025) — 미래 admin/leads + 자동 follow-up 도입 시 활용 가능.

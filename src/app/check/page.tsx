@@ -10,7 +10,6 @@ import { composePageTitle } from '@/lib/seo/compose-title'
 import { runPublicDiagnosticAction } from '@/lib/actions/diagnose'
 import { getBenchmark, scoreBucket, deltaVsRegistered } from '@/lib/diagnostic/benchmark'
 import { CheckForm } from './check-form'
-import { LeadForm } from './lead-form'
 import '@/styles/aip.css'
 import '@/styles/home-wrap.css'
 import '@/styles/methodology-remix.css'
@@ -306,12 +305,10 @@ export default async function CheckPage({ searchParams }: Props) {
                         구독 중인 업체는 <b>주 1회 실제 AI 인용 테스트</b> (ChatGPT/Claude/Gemini) 도 받아볼 수 있습니다.
                       </p>
 
-                      <div className="lead-card">
-                        <LeadForm targetUrl={result.url} score={result.score} />
-                      </div>
-
+                      {/* T-257 — lead-capture 폼 제거. PDF 자동 발송도, follow-up 메일도,
+                          admin/leads 페이지도 없어 거짓 약속이었음. CTA 는 페이지 링크로 유지. */}
                       <div className="lead-actions">
-                        <Link href="/about">서비스 소개</Link>
+                        <Link href="/owner/places/new">업체 등록</Link>
                         <Link href="/about/methodology">조사 방법론</Link>
                         <Link href="/pricing">요금</Link>
                       </div>
