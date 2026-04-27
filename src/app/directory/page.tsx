@@ -17,33 +17,41 @@ import { HomeNav } from '../_components/home/home-nav'
 import { SiteFooter } from '@/components/site/site-footer'
 import { FeedTabs } from './_components/feed-tabs'
 import { RoadmapFilter } from './_components/roadmap-filter'
+import { readCityCookieServer, CITY_ALL } from '@/lib/geo/city-cookie'
 import '@/styles/aip.css'
 import '@/styles/home-wrap.css'
 import '@/styles/directory-remix.css'
 
-export const revalidate = 3600
+// T-246 쿠키 기반 city 컨텍스트 — revalidate 제거하고 dynamic 렌더링.
+// (정적 캐시 시 모든 사용자가 같은 도시 페이지를 보게 됨.)
+export const dynamic = 'force-dynamic'
 
 const BASE_URL = 'https://aiplace.kr'
 
-export const metadata: Metadata = {
-  title: '전체 디렉토리 — AI Place',
-  description:
-    'ChatGPT·Claude·Gemini 인용 데이터를 기반으로 한 라이브 로컬 디렉토리. 지역×업종 매트릭스에서 바로 답변까지.',
-  alternates: {
-    canonical: '/directory',
-    languages: {
-      'ko-KR': BASE_URL + '/directory',
-      'x-default': BASE_URL + '/directory',
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieCity = await readCityCookieServer()
+  const cities = await getCities()
+  const matched = cities.find(c => c.slug === cookieCity)
+  const isNational = cookieCity === CITY_ALL || !matched
+  const title = isNational
+    ? '전국 디렉토리 — AI Place'
+    : `${matched.name} 디렉토리 — AI Place`
+  const description = isNational
+    ? 'ChatGPT·Claude·Gemini 인용 데이터를 기반으로 한 라이브 로컬 디렉토리. 도시 × 업종 매트릭스에서 바로 답변까지.'
+    : `${matched.name}의 활성 업종을 ChatGPT·Claude·Gemini 인용 가능 형태로 정리. 헤더 도시 칩으로 다른 지역 전환 가능.`
+  return {
+    title,
+    description,
+    alternates: { canonical: '/directory' },
+    openGraph: {
+      type: 'website',
+      url: BASE_URL + '/directory',
+      siteName: 'AI Place',
+      locale: 'ko_KR',
+      title,
+      description,
     },
-  },
-  openGraph: {
-    type: 'website',
-    url: BASE_URL + '/directory',
-    siteName: 'AI Place',
-    locale: 'ko_KR',
-    title: '전체 디렉토리 — AI Place',
-    description: '지역×업종 매트릭스에서 AI 가 추천하는 우리 동네 업체로 바로 이동.',
-  },
+  }
 }
 
 const POST_TYPE_LABEL: Record<string, string> = {
@@ -68,40 +76,57 @@ function formatRelative(iso: string | null): string {
 }
 
 export default async function DirectoryPage() {
-  const [cities, sectors, categories, places, blogs, stats] = await Promise.all([
+  const [cities, sectors, categories, places, blogs, stats, cookieCity] = await Promise.all([
     getCities(),
     getSectors(),
     getCategories(),
     getAllPlaces(),
     getRecentBlogPosts(8),
     getSiteStats(),
+    readCityCookieServer(),
   ])
 
   // ---- 활성 집합 ----
   const activeCitySet = new Set(stats.activeCities)
   const activeCategorySet = new Set(places.map(p => p.category))
-  const countByCategory = new Map<string, number>()
-  for (const p of places) {
-    countByCategory.set(p.category, (countByCategory.get(p.category) ?? 0) + 1)
-  }
+
   const countByCity = new Map<string, number>()
   for (const p of places) {
     countByCity.set(p.city, (countByCity.get(p.city) ?? 0) + 1)
   }
 
-  // ---- Quick Browse: 활성 카테고리 (현 도시 기준) ----
-  const primaryCity = cities.find(c => activeCitySet.has(c.slug)) ?? cities[0]
-  const primaryCitySlug = primaryCity?.slug ?? ''
+  // ---- Mode 결정: 쿠키가 'all' 이거나 매칭 도시 없으면 전국, 그 외엔 도시 ----
+  const cookieMatchedCity = cities.find(c => c.slug === cookieCity) ?? null
+  const isNationalMode = cookieCity === CITY_ALL || !cookieMatchedCity
+  const focusCity = cookieMatchedCity ?? cities.find(c => activeCitySet.has(c.slug)) ?? cities[0]
+  const focusCitySlug = focusCity?.slug ?? ''
+
+  // ---- countByCategory: 전국이면 전체, 도시 모드면 그 도시 안에서만 ----
+  const countByCategory = new Map<string, number>()
+  const countSource = isNationalMode ? places : places.filter(p => p.city === focusCitySlug)
+  for (const p of countSource) {
+    countByCategory.set(p.category, (countByCategory.get(p.category) ?? 0) + 1)
+  }
+
+  // ---- Quick Browse: 도시 모드에서만 노출 ----
   const activeCategoriesForCity = categories
     .filter(c => activeCategorySet.has(c.slug))
     .map(c => ({
       slug: c.slug,
       name: c.name,
       sector: c.sector,
-      count: places.filter(p => p.category === c.slug && p.city === primaryCitySlug).length,
+      count: places.filter(p => p.category === c.slug && p.city === focusCitySlug).length,
     }))
     .filter(c => c.count > 0)
     .sort((a, b) => b.count - a.count)
+
+  // ---- 전국 모드용 도시 카드 ----
+  const cityCards = cities.map(c => ({
+    city: c,
+    placeCount: countByCity.get(c.slug) ?? 0,
+    blogCount: blogs.filter(b => b.city === c.slug).length,
+    isActive: activeCitySet.has(c.slug),
+  }))
 
   // 매트릭스 컬럼: 활성 카테고리 우선 + 부족하면 sector 별 첫 카테고리 보충.
   const matrixIndustriesRaw: Array<{ slug: string; name: string; active: boolean }> = []
@@ -125,8 +150,9 @@ export default async function DirectoryPage() {
     }
   }
 
-  // ---- Featured: 평점·리뷰 상위 6개 업체 ----
-  const ratedPlaces = [...places]
+  // ---- Featured: 평점·리뷰 상위 6개 업체 (모드별 scope) ----
+  const featuredSource = isNationalMode ? places : places.filter(p => p.city === focusCitySlug)
+  const ratedPlaces = [...featuredSource]
     .filter(p => typeof p.rating === 'number' && (p.rating ?? 0) > 0)
     .sort((a, b) => {
       const ra = a.rating ?? 0
@@ -194,60 +220,129 @@ export default async function DirectoryPage() {
             <div className="grid">
               <div>
                 <span className="eyebrow">
-                  <span className="pulse" /> Live AI Index · <time dateTime={today}>{today}</time> 기준
+                  <span className="pulse" /> Live AI Index ·{' '}
+                  {isNationalMode ? '전국 종합' : `📍 ${focusCity?.name}`} ·{' '}
+                  <time dateTime={today}>{today}</time> 기준
                 </span>
                 <h1>
-                  AI가 지금 <span className="it">인용 중인</span>
-                  <br />
-                  로컬 업체 <span className="u">전체 색인</span>.
+                  {isNationalMode ? (
+                    <>
+                      AI가 지금 <span className="it">인용 중인</span>
+                      <br />
+                      <span className="u">전국 색인</span>.
+                    </>
+                  ) : (
+                    <>
+                      <span className="it">{focusCity?.name}</span>의<br />
+                      AI 검색 <span className="u">로컬 색인</span>.
+                    </>
+                  )}
                 </h1>
                 <p className="lede">
-                  현재 {stats.activeCities.length}개 도시 × {stats.activeCategories}개 활성 업종을
-                  ChatGPT·Claude·Gemini 인용 가능 형태로 정렬했습니다. 활성 업종을 클릭하면 바로
-                  결과로 이동합니다.
+                  {isNationalMode ? (
+                    <>
+                      현재 {stats.activeCities.length}개 도시 × {stats.activeCategories}개 활성
+                      업종을 ChatGPT·Claude·Gemini 인용 가능 형태로 정렬했습니다. 도시를 선택하면
+                      해당 지역의 빠른 인덱스로 이동합니다.
+                    </>
+                  ) : (
+                    <>
+                      <b>{focusCity?.name}</b>의 활성 업종 {activeCategoriesForCity.length}개를
+                      ChatGPT·Claude·Gemini 인용 가능 형태로 정렬했습니다. 다른 지역을 보려면
+                      좌상단 도시 칩을 사용하세요.
+                    </>
+                  )}
                 </p>
 
-                {/* Quick Browse — 활성 업종 직접 라우팅 */}
-                <div className="qb" aria-label="빠른 둘러보기">
-                  <div className="qb-region">
-                    <span className="lbl">지역</span>
-                    <span className="city">{primaryCity?.name ?? '천안'}</span>
-                    <span className="city-en">{primaryCity?.nameEn ?? 'Cheonan'}</span>
-                    <span className="stat">
-                      <b>{stats.totalPlaces.toLocaleString()}</b>곳 등록 ·{' '}
-                      <b>{stats.activeCategories}</b>개 활성 업종
-                    </span>
-                  </div>
-                  <div className="qb-cats">
-                    <span className="lbl">바로 살펴보기</span>
-                    {activeCategoriesForCity.length > 0 ? (
+                {/* 전국 모드 — 도시 카드 그리드 */}
+                {isNationalMode && (
+                  <div className="qb" aria-label="도시 인덱스">
+                    <div className="qb-region">
+                      <span className="lbl">도시별 인덱스</span>
+                      <span className="city">전국</span>
+                      <span className="city-en">All cities</span>
+                      <span className="stat">
+                        <b>{cities.length}</b>개 도시 등록 ·{' '}
+                        <b>{stats.activeCities.length}</b>개 활성
+                      </span>
+                    </div>
+                    <div className="qb-cats">
+                      <span className="lbl">도시 선택</span>
                       <div className="cards">
-                        {activeCategoriesForCity.map(c => (
-                          <Link
-                            key={c.slug}
-                            href={`/${primaryCitySlug}/${c.slug}`}
-                            className="card-link"
-                          >
-                            <span className="nm">{c.name}</span>
+                        {cityCards.map(({ city: c, placeCount, blogCount, isActive }) => (
+                          <Link key={c.slug} href={`/${c.slug}`} className="card-link">
+                            <span className="nm">
+                              📍 {c.name}{' '}
+                              {!isActive && (
+                                <span style={{ color: 'var(--muted)', fontSize: 11 }}>
+                                  · 모집 중
+                                </span>
+                              )}
+                            </span>
                             <span className="ct">
-                              <b>{c.count}곳</b> 등록
+                              {isActive ? (
+                                <>
+                                  <b>{placeCount}곳</b> · 글 <b>{blogCount}</b>편
+                                </>
+                              ) : (
+                                <>발행 준비 중</>
+                              )}
                             </span>
                           </Link>
                         ))}
                       </div>
-                    ) : (
-                      <p className="ct" style={{ color: 'var(--muted)' }}>
-                        등록된 업체가 아직 없습니다.
-                      </p>
-                    )}
+                    </div>
+                    <div className="qb-foot">
+                      <span>+ 도시 추가 요청은 헤더 칩에서</span>
+                      <a href="#by-industry">전체 {stats.totalCategories}개 업종 카탈로그 →</a>
+                    </div>
                   </div>
-                  <div className="qb-foot">
-                    <span>
-                      등록 예정 업종 {stats.totalCategories - stats.activeCategories}개
-                    </span>
-                    <a href="#by-industry">전체 {stats.totalCategories}개 카탈로그 보기 →</a>
+                )}
+
+                {/* 도시 모드 — 활성 업종 직접 라우팅 */}
+                {!isNationalMode && (
+                  <div className="qb" aria-label="빠른 둘러보기">
+                    <div className="qb-region">
+                      <span className="lbl">지역</span>
+                      <span className="city">{focusCity?.name ?? '천안'}</span>
+                      <span className="city-en">{focusCity?.nameEn ?? 'Cheonan'}</span>
+                      <span className="stat">
+                        <b>{(countByCity.get(focusCitySlug) ?? 0).toLocaleString()}</b>곳 등록 ·{' '}
+                        <b>{activeCategoriesForCity.length}</b>개 활성 업종
+                      </span>
+                    </div>
+                    <div className="qb-cats">
+                      <span className="lbl">바로 살펴보기</span>
+                      {activeCategoriesForCity.length > 0 ? (
+                        <div className="cards">
+                          {activeCategoriesForCity.map(c => (
+                            <Link
+                              key={c.slug}
+                              href={`/${focusCitySlug}/${c.slug}`}
+                              className="card-link"
+                            >
+                              <span className="nm">{c.name}</span>
+                              <span className="ct">
+                                <b>{c.count}곳</b> 등록
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="ct" style={{ color: 'var(--muted)' }}>
+                          {focusCity?.name}에 등록된 업체가 아직 없습니다. 헤더 칩에서 다른 도시를
+                          선택해보세요.
+                        </p>
+                      )}
+                    </div>
+                    <div className="qb-foot">
+                      <span>
+                        등록 예정 업종 {stats.totalCategories - stats.activeCategories}개
+                      </span>
+                      <a href="#by-industry">전체 {stats.totalCategories}개 카탈로그 보기 →</a>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Live Index Feed (블로그 발행 피드 변형) */}
@@ -581,7 +676,10 @@ export default async function DirectoryPage() {
                     <div className="chips">
                       {cats.map(cat => {
                         const cnt = countByCategory.get(cat.slug) ?? 0
-                        const targetCity = stats.activeCities[0] ?? cities[0]?.slug ?? 'cheonan'
+                        // 도시 모드: 그 도시 / 전국 모드: 활성 도시 첫 번째 (실데이터 기준)
+                        const targetCity = isNationalMode
+                          ? stats.activeCities[0] ?? cities[0]?.slug ?? 'cheonan'
+                          : focusCitySlug
                         if (cnt === 0) {
                           return (
                             <span className="ind-chip empty" key={cat.slug}>

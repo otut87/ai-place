@@ -7,6 +7,16 @@ export const CITY_COOKIE_MAX_AGE = 60 * 60 * 24 * 30 // 30 일
 export const CITY_ALL = 'all'
 
 /**
+ * 서버 컴포넌트에서 city 쿠키 읽기 (Next 16 async cookies()).
+ * 미설정 시 'all' 반환 — 첫 방문 + 미들웨어 미적용 환경 대비.
+ */
+export async function readCityCookieServer(): Promise<string> {
+  const { cookies } = await import('next/headers')
+  const store = await cookies()
+  return store.get(CITY_COOKIE_NAME)?.value ?? CITY_ALL
+}
+
+/**
  * 쿠키 값이 유효한 city slug 또는 'all' 인지 검증.
  * 화이트리스트는 호출처에서 cities 목록 전달.
  */
