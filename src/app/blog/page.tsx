@@ -66,43 +66,40 @@ interface BlogHomeProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-function buildFilterHref(params: { type?: string; sector?: string; sort?: string }): string {
+function buildFilterHref(params: { type?: string; city?: string; sector?: string; sort?: string }): string {
   const sp = new URLSearchParams()
   if (params.type && params.type !== 'all') sp.set('type', params.type)
+  if (params.city && params.city !== 'all') sp.set('city', params.city)
   if (params.sector && params.sector !== 'all') sp.set('sector', params.sector)
   if (params.sort && params.sort !== 'recent') sp.set('sort', params.sort)
   const qs = sp.toString()
   return qs ? `/blog?${qs}` : '/blog'
 }
 
+const POST_POOL_LIMIT = 500
+
 export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
   const raw = await searchParams
   const sectorFilter = typeof raw.sector === 'string' ? raw.sector : ''
+  const cityFilter = typeof raw.city === 'string' ? raw.city : ''
   const typeFilter = typeof raw.type === 'string' ? raw.type : ''
   const sortMode = raw.sort === 'popular' ? 'popular' : raw.sort === 'cited' ? 'cited' : 'recent'
 
-  const [recent, popular, _cities, sectors, stats] = await Promise.all([
-    getRecentBlogPosts(50),
+  // 전체 글 풀 (POST_POOL_LIMIT — 현재 규모 기준 충분히 여유). 인기글은 viewCount 정렬용으로 별도.
+  const [recent, popular, cities, sectors, stats] = await Promise.all([
+    getRecentBlogPosts(POST_POOL_LIMIT),
     getPopularBlogPosts(20),
     getCities(),
     getSectors(),
     getSiteStats(),
   ])
-  void _cities
 
-  // popular + recent 합쳐서 unique 풀 만들기
-  const seen = new Set<string>()
-  const merged: BlogPostSummary[] = []
-  for (const p of [...popular, ...recent]) {
-    if (!seen.has(p.slug)) {
-      seen.add(p.slug)
-      merged.push(p)
-    }
-  }
+  const all: BlogPostSummary[] = recent
 
-  // 유형/섹터 필터
-  let filtered = merged
+  // 필터
+  let filtered = all
   if (typeFilter) filtered = filtered.filter(p => p.postType === typeFilter)
+  if (cityFilter) filtered = filtered.filter(p => p.city === cityFilter)
   if (sectorFilter) filtered = filtered.filter(p => p.sector === sectorFilter)
 
   // 정렬
@@ -113,25 +110,35 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
     sorted = [...filtered].sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''))
   }
 
-  // 유형 카운트
+  // city 카운트 — 도시 chip 옆에 노출되는 숫자는 전체 기준.
+  const cityCounts = new Map<string, number>()
+  for (const p of all) cityCounts.set(p.city, (cityCounts.get(p.city) ?? 0) + 1)
+
+  // 전역 sector 카운트 — HEAD stat strip 의 "발행 글" sub 에 사용 (필터와 무관).
+  const sectorCountsGlobal = new Map<string, number>()
+  for (const p of all) sectorCountsGlobal.set(p.sector, (sectorCountsGlobal.get(p.sector) ?? 0) + 1)
+  const activeSectorsGlobal = sectors.filter(s => sectorCountsGlobal.has(s.slug))
+
+  // 도시 필터 적용 카운트 — 툴바 chip 의 숫자가 "이 chip 을 누르면 보일 글 수"와 일치하도록.
+  const cityScoped = cityFilter ? all.filter(p => p.city === cityFilter) : all
+
   const typeCounts: Record<string, number> = {}
-  for (const p of merged) typeCounts[p.postType] = (typeCounts[p.postType] ?? 0) + 1
+  for (const p of cityScoped) typeCounts[p.postType] = (typeCounts[p.postType] ?? 0) + 1
 
-  // sector 카운트
   const sectorCounts = new Map<string, number>()
-  for (const p of merged) sectorCounts.set(p.sector, (sectorCounts.get(p.sector) ?? 0) + 1)
-  const activeSectors = sectors.filter(s => sectorCounts.has(s.slug))
+  for (const p of cityScoped) sectorCounts.set(p.sector, (sectorCounts.get(p.sector) ?? 0) + 1)
+  const activeSectors = sectors.filter(s => (sectorCounts.get(s.slug) ?? 0) > 0)
 
-  // Featured: 조회수 1위
-  const featured =
-    [...merged].sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0))[0] ?? null
+  // Featured: 조회수 1위 (popular 우선, 없으면 all 풀에서)
+  const featured = popular[0] ?? [...all].sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0))[0] ?? null
 
-  // sector별 상위 글 (sector band)
+  // sector별 상위 글 (sector band) — 현재 활성 city 필터 적용
+  const sectorBandSource = cityFilter ? all.filter(p => p.city === cityFilter) : all
   const sectorBands = activeSectors.map(s => ({
     sector: s,
-    posts: merged.filter(p => p.sector === s.slug).slice(0, 6),
-    count: sectorCounts.get(s.slug) ?? 0,
-  }))
+    posts: sectorBandSource.filter(p => p.sector === s.slug).slice(0, 6),
+    count: sectorBandSource.filter(p => p.sector === s.slug).length,
+  })).filter(b => b.count > 0)
 
   // sector summary 텍스트 (간단한 정적 카피)
   const SECTOR_SUMMARY: Record<string, { desc: string; queries: string[] }> = {
@@ -239,7 +246,7 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
                 <dt>발행 글</dt>
                 <dd>{stats.totalBlogPosts}</dd>
                 <span className="sub">
-                  {activeSectors.map(s => `${s.name} ${sectorCounts.get(s.slug)}`).join(' · ')}
+                  {activeSectorsGlobal.map(s => `${s.name} ${sectorCountsGlobal.get(s.slug)}`).join(' · ')}
                 </span>
               </div>
               <div className="s">
@@ -248,9 +255,11 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
                 <span className="sub">/ {stats.totalCategories}개 업종</span>
               </div>
               <div className="s">
-                <dt>활성 도시</dt>
-                <dd>{stats.activeCities.length}</dd>
-                <span className="sub">{cityLabel}</span>
+                <dt>도시별 글</dt>
+                <dd>{cities.length}</dd>
+                <span className="sub">
+                  {cities.map(c => `${c.name} ${cityCounts.get(c.slug) ?? 0}`).join(' · ')}
+                </span>
               </div>
               <div className="s">
                 <dt>등록 업체</dt>
@@ -270,21 +279,21 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
         <div className="bi-toolbar">
           <div className="wrap">
             <div className="row">
-              <span className="lab">Type</span>
+              <span className="lab">City</span>
               <div className="bi-filt">
                 <Link
-                  href={buildFilterHref({ sector: sectorFilter, sort: sortMode })}
-                  className={typeFilter === '' ? 'active' : ''}
+                  href={buildFilterHref({ type: typeFilter, sector: sectorFilter, sort: sortMode })}
+                  className={cityFilter === '' ? 'active' : ''}
                 >
-                  전체 <span className="n">{merged.length}</span>
+                  전체 <span className="n">{all.length}</span>
                 </Link>
-                {presentTypes.map(t => (
+                {cities.map(c => (
                   <Link
-                    key={t}
-                    href={buildFilterHref({ type: t, sector: sectorFilter, sort: sortMode })}
-                    className={typeFilter === t ? 'active' : ''}
+                    key={c.slug}
+                    href={buildFilterHref({ type: typeFilter, city: c.slug, sector: sectorFilter, sort: sortMode })}
+                    className={cityFilter === c.slug ? 'active' : ''}
                   >
-                    {POST_TYPE_LABEL[t]} <span className="n">{typeCounts[t]}</span>
+                    {c.name} <span className="n">{cityCounts.get(c.slug) ?? 0}</span>
                   </Link>
                 ))}
               </div>
@@ -292,7 +301,7 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
               <span className="lab">Sector</span>
               <div className="bi-filt">
                 <Link
-                  href={buildFilterHref({ type: typeFilter, sort: sortMode })}
+                  href={buildFilterHref({ type: typeFilter, city: cityFilter, sort: sortMode })}
                   className={sectorFilter === '' ? 'active' : ''}
                 >
                   전체
@@ -300,22 +309,41 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
                 {activeSectors.map(s => (
                   <Link
                     key={s.slug}
-                    href={buildFilterHref({ type: typeFilter, sector: s.slug, sort: sortMode })}
+                    href={buildFilterHref({ type: typeFilter, city: cityFilter, sector: s.slug, sort: sortMode })}
                     className={sectorFilter === s.slug ? 'active' : ''}
                   >
-                    {s.name}
+                    {s.name} <span className="n">{sectorCounts.get(s.slug) ?? 0}</span>
+                  </Link>
+                ))}
+              </div>
+              <span className="bi-filt-sep" />
+              <span className="lab">Type</span>
+              <div className="bi-filt">
+                <Link
+                  href={buildFilterHref({ city: cityFilter, sector: sectorFilter, sort: sortMode })}
+                  className={typeFilter === '' ? 'active' : ''}
+                >
+                  전체
+                </Link>
+                {presentTypes.map(t => (
+                  <Link
+                    key={t}
+                    href={buildFilterHref({ type: t, city: cityFilter, sector: sectorFilter, sort: sortMode })}
+                    className={typeFilter === t ? 'active' : ''}
+                  >
+                    {POST_TYPE_LABEL[t]} <span className="n">{typeCounts[t]}</span>
                   </Link>
                 ))}
               </div>
               <div className="sort">
                 <Link
-                  href={buildFilterHref({ type: typeFilter, sector: sectorFilter })}
+                  href={buildFilterHref({ type: typeFilter, city: cityFilter, sector: sectorFilter })}
                   className={sortMode === 'recent' ? 'active' : ''}
                 >
                   Recent
                 </Link>
                 <Link
-                  href={buildFilterHref({ type: typeFilter, sector: sectorFilter, sort: 'popular' })}
+                  href={buildFilterHref({ type: typeFilter, city: cityFilter, sector: sectorFilter, sort: 'popular' })}
                   className={sortMode === 'popular' ? 'active' : ''}
                 >
                   Popular
@@ -324,6 +352,45 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
             </div>
           </div>
         </div>
+
+        {/* CITY INDEX — 다중 도시일 때만 노출 */}
+        {cities.length > 1 && !cityFilter && !sectorFilter && !typeFilter && (
+          <section className="bi-section no-border">
+            <div className="wrap">
+              <div className="bi-h">
+                <div>
+                  <h2>
+                    <span className="it">By City</span> · 지역별 인덱스
+                  </h2>
+                  <p className="sub">
+                    도시별 블로그 허브로 바로 이동. 각 도시 안에서 섹터별로 다시 탐색할 수 있습니다.
+                  </p>
+                </div>
+                <div className="anchor">cities</div>
+              </div>
+
+              <div className="bi-city-grid">
+                {cities.map(c => {
+                  const cnt = cityCounts.get(c.slug) ?? 0
+                  return (
+                    <Link key={c.slug} className="bi-city-card" href={cnt > 0 ? `/blog/${c.slug}` : buildFilterHref({ city: c.slug })}>
+                      <div className="bi-city-name">
+                        <span className="it">{c.name}</span>
+                      </div>
+                      <div className="bi-city-meta">
+                        <span className="num">{cnt}</span>
+                        <small>편</small>
+                      </div>
+                      <div className="bi-city-sub">
+                        {cnt > 0 ? `${c.name} 블로그 허브 →` : '발행 준비 중'}
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* TYPE LEGEND */}
         {presentTypes.length > 0 && (
@@ -360,7 +427,7 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
         )}
 
         {/* FEATURED */}
-        {featured && !typeFilter && !sectorFilter && (
+        {featured && !typeFilter && !sectorFilter && !cityFilter && (
           <section className="bi-section">
             <div className="wrap">
               <div className="bi-h">
@@ -396,7 +463,7 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
                 </div>
                 <div className="bi-feat-side">
                   <h5>같은 분야의 다른 글</h5>
-                  {merged
+                  {all
                     .filter(p => p.sector === featured.sector && p.slug !== featured.slug)
                     .slice(0, 2)
                     .map(p => (
@@ -418,9 +485,23 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
               <div>
                 <h2 id="all-posts">
                   <span className="it">All Posts</span> · <span className="num">{sorted.length}</span>편
-                  {(typeFilter || sectorFilter) && <span style={{ fontSize: 14, color: 'var(--muted)', marginLeft: 8 }}>필터 적용</span>}
+                  {(typeFilter || sectorFilter || cityFilter) && (
+                    <span style={{ fontSize: 14, color: 'var(--muted)', marginLeft: 8 }}>
+                      / 전체 {all.length}편
+                    </span>
+                  )}
                 </h2>
-                <p className="sub">위 툴바에서 유형·섹터로 필터, 정렬 방식 변경 가능.</p>
+                <p className="sub">
+                  발행된 모든 글을 한 페이지에 나열합니다. 위 툴바에서 도시·섹터·유형 필터, 정렬 방식 변경 가능.
+                  {(typeFilter || sectorFilter || cityFilter) && (
+                    <>
+                      {' '}
+                      <Link href="/blog" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
+                        필터 초기화
+                      </Link>
+                    </>
+                  )}
+                </p>
               </div>
               <div className="anchor">all</div>
             </div>
@@ -468,6 +549,11 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
                 <div>
                   <h2>
                     <span className="it">By Sector</span> · 업종별 인덱스
+                    {cityFilter && (
+                      <span style={{ fontSize: 14, color: 'var(--muted)', marginLeft: 8 }}>
+                        · {cities.find(c => c.slug === cityFilter)?.name ?? cityFilter} 한정
+                      </span>
+                    )}
                   </h2>
                   <p className="sub">
                     섹터별 상위 글을 묶어 LLM이 카테고리 단위로 인용 가능하도록 구성.
@@ -478,6 +564,11 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
 
               {sectorBands.map(band => {
                 const summary = SECTOR_SUMMARY[band.sector.slug]
+                const moreHref = buildFilterHref({
+                  city: cityFilter,
+                  sector: band.sector.slug,
+                  sort: sortMode,
+                })
                 return (
                   <div className="bi-sector-band" key={band.sector.slug}>
                     <div className="bi-sector-info">
@@ -498,6 +589,23 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
                           ))}
                         </div>
                       )}
+                      <Link
+                        href={moreHref}
+                        style={{
+                          marginTop: 14,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          fontFamily: 'var(--mono)',
+                          fontSize: 11.5,
+                          color: 'var(--accent)',
+                          textDecoration: 'none',
+                          letterSpacing: '.04em',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {band.sector.name} 전체 {band.count}편 →
+                      </Link>
                     </div>
                     <div className="bi-sector-posts">
                       {band.posts.map(p => (
