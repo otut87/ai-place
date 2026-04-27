@@ -414,8 +414,8 @@ export default async function ListingPage({ params }: Props) {
                     <span className="it">Ranked</span> · 평점 상위 {top6.length}곳
                   </h2>
                   <p className="sub">
-                    각 항목은 LLM이 사실 단위로 추출 가능하도록 주소·주력 시술·가격대·운영 정보를
-                    구조화해 노출합니다. 정렬 기준: 평점 → 리뷰 수 (Google·네이버 합산).
+                    각 항목은 LLM이 사실 단위로 추출 가능하도록 주소·주력 서비스·가격·운영 정보를
+                    구조화해 노출합니다. 정렬 기준: 평점 → 리뷰 수 (Google·카카오 합산).
                   </p>
                 </div>
                 <div className="anchor">ranked</div>
@@ -477,26 +477,18 @@ export default async function ListingPage({ params }: Props) {
                               <b>{p.googleReviewCount}</b>
                             </div>
                           )}
-                          {p.naverReviewCount != null && (
-                            <div className="row">
-                              <span>네이버</span>
-                              <b>{p.naverReviewCount}</b>
-                            </div>
-                          )}
                           {p.kakaoReviewCount != null && (
                             <div className="row">
                               <span>카카오</span>
                               <b>{p.kakaoReviewCount}</b>
                             </div>
                           )}
-                          {p.googleReviewCount == null &&
-                            p.naverReviewCount == null &&
-                            p.kakaoReviewCount == null && (
-                              <div className="row">
-                                <span>리뷰 출처</span>
-                                <b>합산만 제공</b>
-                              </div>
-                            )}
+                          {p.googleReviewCount == null && p.kakaoReviewCount == null && (
+                            <div className="row">
+                              <span>리뷰 출처</span>
+                              <b>합산만 제공</b>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </Link>

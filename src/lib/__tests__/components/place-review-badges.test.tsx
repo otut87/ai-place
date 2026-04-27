@@ -24,12 +24,14 @@ describe('PlaceReviewBadges', () => {
     expect(html).toContain('23')
   })
 
-  it('Naver 리뷰수만 있으면 Naver 배지만 렌더', () => {
-    const html = render({ place: { naverReviewCount: 663 } })
-    expect(html).toContain('Naver')
+  it('T-233: 네이버 리뷰는 공개 노출 금지 정책 — 배지로 렌더되지 않음', () => {
+    // place 타입에서 naverReviewCount 필드 자체는 보존 (DB 호환), 단 UI 노출 차단.
+    // PlaceReviewBadgesSource 에서 필드를 제거했으므로 컴파일 단에서 차단됨.
+    const html = render({ place: { kakaoReviewCount: 663 } })
+    expect(html).toContain('Kakao')
     expect(html).toContain('663')
+    expect(html).not.toContain('Naver')
     expect(html).not.toContain('Google')
-    expect(html).not.toContain('Kakao')
   })
 
   it('Kakao 평점만 있고 리뷰수 없으면 Kakao 평점 배지만 렌더', () => {
@@ -47,7 +49,7 @@ describe('PlaceReviewBadges', () => {
   })
 
   it('1만 이상 리뷰는 k 축약 (12500 → 12.5k)', () => {
-    const html = render({ place: { naverReviewCount: 12500 } })
+    const html = render({ place: { kakaoReviewCount: 12500 } })
     expect(html).toMatch(/12\.5k/)
   })
 
@@ -58,8 +60,8 @@ describe('PlaceReviewBadges', () => {
     expect(html).toContain('50')
   })
 
-  it('Naver/Kakao 수치가 0 이면 렌더하지 않음', () => {
-    const html = render({ place: { naverReviewCount: 0, kakaoReviewCount: 0 } })
+  it('Kakao 수치가 0 이면 렌더하지 않음', () => {
+    const html = render({ place: { kakaoReviewCount: 0 } })
     expect(html).toBe('')
   })
 })

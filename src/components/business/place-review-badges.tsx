@@ -2,12 +2,12 @@ import type { Place } from "@/lib/types"
 
 // Phase 11 — medicalkoreaguide 벤치마크.
 // 업체에 소스별 리뷰수/평점이 있을 때만 배지를 노출.
-// Google 은 Places API 로 자동, Naver/Kakao 는 크롤러로 수집 (수동 입력 금지).
+// Google 은 Places API 로 자동, Kakao 는 크롤러로 수집 (수동 입력 금지).
+// T-233: 네이버 리뷰는 공개 노출 금지 정책 — Naver 배지 제거.
 
 export interface PlaceReviewBadgesSource {
   googleRating?: number
   googleReviewCount?: number
-  naverReviewCount?: number
   kakaoRating?: number
   kakaoReviewCount?: number
   // Fallback: 기존 rating/reviewCount (Google 기반) — 전용 필드 없을 때만 사용
@@ -34,8 +34,6 @@ export function PlaceReviewBadges({
     googleRating: (place as Place).googleRating ?? (place as PlaceReviewBadgesSource).googleRating,
     googleReviewCount:
       (place as Place).googleReviewCount ?? (place as PlaceReviewBadgesSource).googleReviewCount,
-    naverReviewCount:
-      (place as Place).naverReviewCount ?? (place as PlaceReviewBadgesSource).naverReviewCount,
     kakaoRating: (place as Place).kakaoRating ?? (place as PlaceReviewBadgesSource).kakaoRating,
     kakaoReviewCount:
       (place as Place).kakaoReviewCount ?? (place as PlaceReviewBadgesSource).kakaoReviewCount,
@@ -47,21 +45,13 @@ export function PlaceReviewBadges({
   const googleRating = source.googleRating ?? source.fallbackRating
   const googleCount = source.googleReviewCount ?? source.fallbackReviewCount
 
-  const badges: Array<{ key: string; label: string; value: string; tone: "green" | "yellow" | "blue" }> = []
+  const badges: Array<{ key: string; label: string; value: string; tone: "yellow" | "blue" }> = []
 
   if (googleCount != null && googleCount > 0) {
     const label = googleRating != null
       ? `Google ${googleRating.toFixed(1)} (${formatCount(googleCount)})`
       : `Google ${formatCount(googleCount)}`
     badges.push({ key: "google", label: "Google", value: label, tone: "blue" })
-  }
-  if (source.naverReviewCount != null && source.naverReviewCount > 0) {
-    badges.push({
-      key: "naver",
-      label: "Naver",
-      value: `Naver ${formatCount(source.naverReviewCount)}`,
-      tone: "green",
-    })
   }
   if (source.kakaoReviewCount != null && source.kakaoReviewCount > 0) {
     const label = source.kakaoRating != null
@@ -81,7 +71,6 @@ export function PlaceReviewBadges({
 
   const padding = size === "md" ? "px-2.5 py-1 text-xs" : "px-2 py-0.5 text-[11px]"
   const tones: Record<string, string> = {
-    green: "bg-[#e6f7f2] text-[#008f6b] border-[#008f6b]/20",
     yellow: "bg-[#fff7e6] text-[#a16207] border-[#a16207]/20",
     blue: "bg-[#e6f0ff] text-[#1d4ed8] border-[#1d4ed8]/20",
   }

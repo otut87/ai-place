@@ -13,6 +13,17 @@ describe('getSourcesForCategory', () => {
     expect(cfg.methodology.some(m => m.includes('사업자등록번호'))).toBe(true)
   })
 
+  it('네이버 플레이스 출처에서 "리뷰"는 노출 금지 (T-233 정책)', () => {
+    const sectors = ['medical', 'beauty', 'living', 'auto', 'food', 'education', 'professional', 'pet']
+    for (const slug of sectors) {
+      const cfg = getSourcesForCategory({ sectorSlug: slug })
+      const naver = cfg.sources.find(s => s.name === '네이버 플레이스')
+      if (naver) expect(naver.detail).not.toMatch(/리뷰/)
+      // 방법론에서도 "Google·네이버·카카오" 결합 표현 없음
+      expect(cfg.methodology.every(m => !m.includes('네이버·카카오'))).toBe(true)
+    }
+  })
+
   it('의료 카테고리는 건강보험심사평가원 + 의료광고법 고지가 포함된다', () => {
     const cfg = getSourcesForCategory({ sectorSlug: 'medical' })
     expect(cfg.priceLabel).toBe('시술 시작가')

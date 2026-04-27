@@ -47,12 +47,12 @@ export function PlaceCard({ place }: { place: Place }) {
             </div>
           )}
 
-          {/* Phase 11: Naver/Kakao 리뷰 배지 — 크롤러가 채운 수치만 노출 (Google 은 상단 평점과 중복) */}
-          {(place.naverReviewCount || place.kakaoRating != null || place.kakaoReviewCount) && (
+          {/* T-233: Kakao 리뷰 배지 — 크롤러가 채운 수치만 노출 (Google 은 상단 평점과 중복).
+              네이버 리뷰는 공개 노출 금지 정책으로 제외. */}
+          {(place.kakaoRating != null || place.kakaoReviewCount) && (
             <PlaceReviewBadges
               className="mt-2"
               place={{
-                naverReviewCount: place.naverReviewCount,
                 kakaoRating: place.kakaoRating,
                 kakaoReviewCount: place.kakaoReviewCount,
               }}
