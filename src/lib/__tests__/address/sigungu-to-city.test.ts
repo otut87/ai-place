@@ -23,8 +23,8 @@ describe('cityFromAddress', () => {
   it('천안시 동남구', () => {
     expect(cityFromAddress('충남 천안시 동남구 신방동 464-1')).toBe('cheonan')
   })
-  it('아산시 (MVP 미지원) → null', () => {
-    expect(cityFromAddress('충남 아산시 탕정면')).toBeNull()
+  it('"아산시" 포함 주소 → asan', () => {
+    expect(cityFromAddress('충남 아산시 탕정면')).toBe('asan')
   })
   it('서울 (미지원) → null', () => {
     expect(cityFromAddress('서울 강남구 테헤란로 1')).toBeNull()
@@ -43,5 +43,11 @@ describe('SIGUNGU_TO_CITY map', () => {
     expect(cheonanCodes).toHaveLength(2)
     expect(cheonanCodes).toContain('44130')
     expect(cheonanCodes).toContain('44131')
+  })
+  it('아산 시군구 코드 정의', () => {
+    const asanCodes = Object.entries(SIGUNGU_TO_CITY)
+      .filter(([, v]) => v === 'asan')
+      .map(([k]) => k)
+    expect(asanCodes).toContain('44200')
   })
 })

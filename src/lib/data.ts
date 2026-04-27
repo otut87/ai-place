@@ -6,6 +6,7 @@ import type { Place, City, Category, Sector, ComparisonTopic, ComparisonPage, Gu
 // --- 시드 데이터: 도시 ---
 const cities: City[] = [
   { slug: 'cheonan', name: '천안', nameEn: 'Cheonan' },
+  { slug: 'asan', name: '아산', nameEn: 'Asan' },
 ]
 
 // --- 시드 데이터: 대분류 (Sector) — 업종사전 기준 10개 ---
