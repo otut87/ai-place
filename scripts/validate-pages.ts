@@ -33,6 +33,10 @@ function classifyPage(relativePath: string): PageType {
   if (relativePath.match(/^owner\//)) return 'other'
   if (relativePath.match(/^login/)) return 'other'
   if (relativePath.match(/^signup/)) return 'other'
+  // T-255: about 하위 페이지(/, /methodology) 는 카테고리 허브가 아니라
+  //   E-E-A-T 콘텐츠 허브 — 'category' 검증 프로파일(<time>, Freshness 등) 미적용.
+  //   methodology.html 본문에 LAST_UPDATED 가 자체 노출되므로 freshness 신호는 충분.
+  if (relativePath.match(/^about\//) || relativePath === 'about.html') return 'other'
   // T-097: 블로그 허브/글은 'other' — 별도 SEO 프로파일 미적용 (기존 블로그 글은 기본
   // Article 스키마 검증만 별도로 있음)
   if (relativePath.match(/^blog\//)) return 'other'

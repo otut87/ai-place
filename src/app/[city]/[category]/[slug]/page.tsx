@@ -267,7 +267,9 @@ export default async function ProfilePage({ params }: Props) {
               </span>
               <span>·</span>
               <span>
-                last reviewed <b>{lastUpdated}</b>
+                {/* T-255 — `<time>` semantic + 한글 "최종 업데이트" 라벨로
+                    validate-pages SEO 게이트(time tag) 통과. */}
+                최종 업데이트 <time dateTime={lastUpdated}><b>{lastUpdated}</b></time>
               </span>
               <span>·</span>
               <span>

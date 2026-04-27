@@ -19,6 +19,7 @@ import {
   getPlaces,
   getCities,
   getCategories,
+  getAllPlaces,
   getMetaDescriptorForCategory,
   getSectorForCategory,
   getSchemaTypeForCategory,
@@ -42,11 +43,21 @@ interface Props {
 
 const BASE_URL = 'https://aiplace.kr'
 
+// T-255 — 등록 업체가 1개 이상 있는 (city, category) 조합만 정적 생성.
+// /[city] · /blog/[city] · /blog/[city]/[sector] 동일 정책 일관 적용.
+// 빈 카테고리 페이지(예: 아산 × 모든 카테고리)가 thin content 로 build 되어
+// validate-pages.ts 의 freshness/<time>/heading 게이트를 깨고 deploy 차단하던 회귀 차단.
 export async function generateStaticParams() {
-  const cities = await getCities()
-  const categories = await getCategories()
+  const [cities, categories, allPlaces] = await Promise.all([
+    getCities(),
+    getCategories(),
+    getAllPlaces(),
+  ])
+  const activePairs = new Set(allPlaces.map(p => `${p.city}/${p.category}`))
   return cities.flatMap(city =>
-    categories.map(cat => ({ city: city.slug, category: cat.slug })),
+    categories
+      .filter(cat => activePairs.has(`${city.slug}/${cat.slug}`))
+      .map(cat => ({ city: city.slug, category: cat.slug })),
   )
 }
 
@@ -303,7 +314,9 @@ export default async function ListingPage({ params }: Props) {
               </span>
               <span>·</span>
               <span>
-                last reviewed <b>{lastUpdated}</b>
+                {/* T-255 — `<time>` semantic + 한글 "최종 업데이트" 라벨로
+                    validate-pages SEO 게이트(time tag + Freshness) 통과. */}
+                최종 업데이트 <time dateTime={lastUpdated}><b>{lastUpdated}</b></time>
               </span>
               <span>·</span>
               <span>
