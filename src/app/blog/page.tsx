@@ -14,10 +14,18 @@ import { getSiteStats } from '@/lib/site-stats'
 import { generateCollectionPage, generateBlogItemList } from '@/lib/jsonld'
 import { generateBreadcrumbList } from '@/lib/seo'
 import { safeJsonLd } from '@/lib/utils'
+import { readCityCookieServer, CITY_ALL } from '@/lib/geo/city-cookie'
+import { searchBlogPosts } from '@/lib/blog/search'
+import { pageNumbers } from '@/lib/blog/pagination'
 import type { BlogPostSummary } from '@/lib/types'
 import '@/styles/aip.css'
 import '@/styles/home-wrap.css'
 import '@/styles/blog-index-remix.css'
+
+// 쿠키 기반 city 컨텍스트 + 동적 필터/페이지네이션 — 정적 캐싱 비활성.
+export const dynamic = 'force-dynamic'
+
+const PAGE_SIZE = 20
 
 const BASE_URL = 'https://aiplace.kr'
 
@@ -66,12 +74,23 @@ interface BlogHomeProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-function buildFilterHref(params: { type?: string; city?: string; sector?: string; sort?: string }): string {
+interface FilterHrefParams {
+  type?: string
+  city?: string
+  sector?: string
+  sort?: string
+  q?: string
+  page?: number
+}
+
+function buildFilterHref(params: FilterHrefParams): string {
   const sp = new URLSearchParams()
   if (params.type && params.type !== 'all') sp.set('type', params.type)
   if (params.city && params.city !== 'all') sp.set('city', params.city)
   if (params.sector && params.sector !== 'all') sp.set('sector', params.sector)
   if (params.sort && params.sort !== 'recent') sp.set('sort', params.sort)
+  if (params.q) sp.set('q', params.q)
+  if (params.page && params.page > 1) sp.set('page', String(params.page))
   const qs = sp.toString()
   return qs ? `/blog?${qs}` : '/blog'
 }
@@ -81,18 +100,30 @@ const POST_POOL_LIMIT = 500
 export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
   const raw = await searchParams
   const sectorFilter = typeof raw.sector === 'string' ? raw.sector : ''
-  const cityFilter = typeof raw.city === 'string' ? raw.city : ''
+  const urlCityFilter = typeof raw.city === 'string' ? raw.city : ''
   const typeFilter = typeof raw.type === 'string' ? raw.type : ''
+  const query = typeof raw.q === 'string' ? raw.q : ''
+  const pageParam = typeof raw.page === 'string' ? parseInt(raw.page, 10) : 1
+  const currentPage = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1
   const sortMode = raw.sort === 'popular' ? 'popular' : raw.sort === 'cited' ? 'cited' : 'recent'
 
   // 전체 글 풀 (POST_POOL_LIMIT — 현재 규모 기준 충분히 여유). 인기글은 viewCount 정렬용으로 별도.
-  const [recent, popular, cities, sectors, stats] = await Promise.all([
+  const [recent, popular, cities, sectors, stats, cookieCity] = await Promise.all([
     getRecentBlogPosts(POST_POOL_LIMIT),
     getPopularBlogPosts(20),
     getCities(),
     getSectors(),
     getSiteStats(),
+    readCityCookieServer(),
   ])
+
+  // 쿠키 동기화 — URL ?city= 가 없으면 쿠키 도시를 디폴트로 적용 ('all' 은 필터 미적용).
+  const effectiveCity =
+    urlCityFilter || (cookieCity !== CITY_ALL && cities.some(c => c.slug === cookieCity)
+      ? cookieCity
+      : '')
+  // 헤더 칩의 active 표시는 effectiveCity 기준.
+  const cityFilter = effectiveCity
 
   const all: BlogPostSummary[] = recent
 
@@ -101,6 +132,7 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
   if (typeFilter) filtered = filtered.filter(p => p.postType === typeFilter)
   if (cityFilter) filtered = filtered.filter(p => p.city === cityFilter)
   if (sectorFilter) filtered = filtered.filter(p => p.sector === sectorFilter)
+  filtered = searchBlogPosts(filtered, query)
 
   // 정렬
   let sorted: BlogPostSummary[]
@@ -109,6 +141,14 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
   } else {
     sorted = [...filtered].sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''))
   }
+
+  // 페이지네이션
+  const totalCount = sorted.length
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const safePage = Math.min(currentPage, totalPages)
+  const pageStart = (safePage - 1) * PAGE_SIZE
+  const pageEnd = pageStart + PAGE_SIZE
+  const pageItems = sorted.slice(pageStart, pageEnd)
 
   // city 카운트 — 도시 chip 옆에 노출되는 숫자는 전체 기준.
   const cityCounts = new Map<string, number>()
@@ -481,19 +521,62 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
         {/* POST LIST */}
         <section className="bi-section no-border" style={{ background: 'var(--bg-2)' }}>
           <div className="wrap">
+            {/* SEARCH */}
+            <form className="bi-search" action="/blog" method="get" role="search">
+              {/* 다른 필터 보존을 위한 hidden inputs (q 변경 시 page 는 리셋) */}
+              {typeFilter && <input type="hidden" name="type" value={typeFilter} />}
+              {urlCityFilter && <input type="hidden" name="city" value={urlCityFilter} />}
+              {sectorFilter && <input type="hidden" name="sector" value={sectorFilter} />}
+              {sortMode !== 'recent' && <input type="hidden" name="sort" value={sortMode} />}
+              <label htmlFor="bi-q" className="lab">검색</label>
+              <input
+                id="bi-q"
+                type="search"
+                name="q"
+                placeholder="제목 · 요약 · 태그에서 검색"
+                defaultValue={query}
+                aria-label="블로그 글 검색"
+              />
+              <button type="submit" className="btn-go">검색 →</button>
+              {query && (
+                <Link
+                  className="btn-clear"
+                  href={buildFilterHref({
+                    type: typeFilter,
+                    city: urlCityFilter,
+                    sector: sectorFilter,
+                    sort: sortMode,
+                  })}
+                >
+                  지우기
+                </Link>
+              )}
+            </form>
+
             <div className="bi-h">
               <div>
                 <h2 id="all-posts">
-                  <span className="it">All Posts</span> · <span className="num">{sorted.length}</span>편
-                  {(typeFilter || sectorFilter || cityFilter) && (
+                  <span className="it">All Posts</span> · <span className="num">{totalCount}</span>편
+                  {(typeFilter || sectorFilter || cityFilter || query) && (
                     <span style={{ fontSize: 14, color: 'var(--muted)', marginLeft: 8 }}>
                       / 전체 {all.length}편
                     </span>
                   )}
+                  {totalPages > 1 && (
+                    <span style={{ fontSize: 14, color: 'var(--muted)', marginLeft: 8 }}>
+                      · 페이지 {safePage}/{totalPages}
+                    </span>
+                  )}
                 </h2>
                 <p className="sub">
-                  발행된 모든 글을 한 페이지에 나열합니다. 위 툴바에서 도시·섹터·유형 필터, 정렬 방식 변경 가능.
-                  {(typeFilter || sectorFilter || cityFilter) && (
+                  {query && (
+                    <>
+                      &ldquo;<b>{query}</b>&rdquo; 검색 결과.
+                      {totalCount === 0 && ' 일치하는 글이 없습니다.'}
+                    </>
+                  )}
+                  {!query && '발행된 모든 글을 페이지당 20편씩 나열합니다. 위 툴바에서 도시·섹터·유형 필터, 정렬 방식 변경 가능.'}
+                  {(typeFilter || sectorFilter || cityFilter || query) && (
                     <>
                       {' '}
                       <Link href="/blog" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
@@ -506,37 +589,109 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
               <div className="anchor">all</div>
             </div>
 
-            {sorted.length > 0 ? (
-              <div className="bi-list">
-                {sorted.map((p, idx) => (
-                  <Link key={p.slug} href={`/blog/${p.city}/${p.sector}/${p.slug}`} className="bi-row">
-                    <div className="idx">{String(idx + 1).padStart(2, '0')}</div>
-                    <div className="type-cell">
-                      <span className={`bi-type-tag ${p.postType}`}>{POST_TYPE_LABEL[p.postType]}</span>
-                      <span className="when">{p.publishedAt?.slice(0, 10) ?? '발행 대기'}</span>
-                    </div>
-                    <div className="body">
-                      <h3>{p.title}</h3>
-                      <p>{p.summary}</p>
-                      {p.tags.length > 0 && (
-                        <div className="tag-row">
-                          {p.tags.slice(0, 4).map(tag => (
-                            <span className="tag" key={tag}>
-                              #{tag}
-                            </span>
-                          ))}
-                        </div>
+            {pageItems.length > 0 ? (
+              <>
+                <div className="bi-list">
+                  {pageItems.map((p, idx) => (
+                    <Link key={p.slug} href={`/blog/${p.city}/${p.sector}/${p.slug}`} className="bi-row">
+                      <div className="idx">{String(pageStart + idx + 1).padStart(2, '0')}</div>
+                      <div className="type-cell">
+                        <span className={`bi-type-tag ${p.postType}`}>{POST_TYPE_LABEL[p.postType]}</span>
+                        <span className="when">{p.publishedAt?.slice(0, 10) ?? '발행 대기'}</span>
+                      </div>
+                      <div className="body">
+                        <h3>{p.title}</h3>
+                        <p>{p.summary}</p>
+                        {p.tags.length > 0 && (
+                          <div className="tag-row">
+                            {p.tags.slice(0, 4).map(tag => (
+                              <span className="tag" key={tag}>
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="meta-side">
+                        <div className="views">{(p.viewCount ?? 0).toLocaleString()}</div>
+                        <div className="when-sub">{sectors.find(s => s.slug === p.sector)?.name ?? p.sector}</div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+
+                {/* PAGINATION */}
+                {totalPages > 1 && (
+                  <nav className="bi-pager" aria-label="페이지 이동">
+                    {safePage > 1 ? (
+                      <Link
+                        className="pg prev"
+                        href={buildFilterHref({
+                          type: typeFilter,
+                          city: urlCityFilter,
+                          sector: sectorFilter,
+                          sort: sortMode,
+                          q: query,
+                          page: safePage - 1,
+                        })}
+                      >
+                        ← 이전
+                      </Link>
+                    ) : (
+                      <span className="pg disabled">← 이전</span>
+                    )}
+
+                    <span className="pg-nums">
+                      {pageNumbers(safePage, totalPages).map((n, i) =>
+                        n === '...' ? (
+                          <span key={`gap-${i}`} className="pg gap">…</span>
+                        ) : n === safePage ? (
+                          <span key={n} className="pg active" aria-current="page">{n}</span>
+                        ) : (
+                          <Link
+                            key={n}
+                            className="pg"
+                            href={buildFilterHref({
+                              type: typeFilter,
+                              city: urlCityFilter,
+                              sector: sectorFilter,
+                              sort: sortMode,
+                              q: query,
+                              page: n,
+                            })}
+                          >
+                            {n}
+                          </Link>
+                        ),
                       )}
-                    </div>
-                    <div className="meta-side">
-                      <div className="views">{(p.viewCount ?? 0).toLocaleString()}</div>
-                      <div className="when-sub">{sectors.find(s => s.slug === p.sector)?.name ?? p.sector}</div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                    </span>
+
+                    {safePage < totalPages ? (
+                      <Link
+                        className="pg next"
+                        href={buildFilterHref({
+                          type: typeFilter,
+                          city: urlCityFilter,
+                          sector: sectorFilter,
+                          sort: sortMode,
+                          q: query,
+                          page: safePage + 1,
+                        })}
+                      >
+                        다음 →
+                      </Link>
+                    ) : (
+                      <span className="pg disabled">다음 →</span>
+                    )}
+                  </nav>
+                )}
+              </>
             ) : (
-              <div className="bi-empty">해당 조건에 맞는 글이 없습니다 — 필터를 바꿔보세요.</div>
+              <div className="bi-empty">
+                {query
+                  ? `"${query}" 검색 결과가 없습니다 — 다른 키워드를 시도해보세요.`
+                  : '해당 조건에 맞는 글이 없습니다 — 필터를 바꿔보세요.'}
+              </div>
             )}
           </div>
         </section>

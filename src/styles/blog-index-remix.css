@@ -420,6 +420,123 @@ section.bi-section.no-border { border-top: none; }
 }
 .bi-feat-side .related-link b { color: var(--ink); display: block; margin-bottom: 4px; font-weight: 600; }
 
+/* ---------- SEARCH BOX (T-248) ---------- */
+.bi-search {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+}
+@media (max-width: 640px) {
+  .bi-search { grid-template-columns: 1fr auto; }
+  .bi-search .lab { grid-column: 1 / -1; }
+}
+.bi-search .lab {
+  font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+  letter-spacing: .12em; text-transform: uppercase; padding-right: 4px;
+}
+.bi-search input[type="search"] {
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink);
+  width: 100%;
+}
+.bi-search input[type="search"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 18%, transparent);
+}
+.bi-search input[type="search"]::placeholder { color: var(--muted-2); }
+.bi-search .btn-go {
+  height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: var(--ink);
+  color: var(--bg);
+  font: 600 12.5px var(--font);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+}
+.bi-search .btn-go:hover { background: var(--accent); }
+.bi-search .btn-clear {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: .04em;
+  text-decoration: underline;
+  white-space: nowrap;
+  padding: 0 6px;
+}
+.bi-search .btn-clear:hover { color: var(--ink); }
+
+/* ---------- PAGINATION (T-248) ---------- */
+.bi-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap;
+}
+.bi-pager .pg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2);
+  background: var(--card);
+  border-radius: var(--r-sm);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.bi-pager .pg:hover { border-color: var(--ink); color: var(--ink); }
+.bi-pager .pg.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+  font-weight: 600;
+}
+.bi-pager .pg.disabled {
+  color: var(--muted-2);
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: .6;
+}
+.bi-pager .pg.gap {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  min-width: 24px;
+  pointer-events: none;
+}
+.bi-pager .pg.prev,
+.bi-pager .pg.next { font-weight: 500; }
+.bi-pager .pg-nums {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 4px;
+}
+
 /* ---------- POST LIST ---------- */
 .bi-list {
   background: var(--card);
