@@ -29,24 +29,31 @@ interface Props {
   params: Promise<{ city: string }>
 }
 
+// T-253 — 등록 업체가 1개 이상 있는 도시만 정적 생성. 빈 city hub (예: 아산 0곳)
+// 가 인덱싱되어 thin content 로 잡히던 SEO 회귀 차단. /blog/[city] 와 동일 정책.
 export async function generateStaticParams() {
-  const cities = await getCities()
-  return cities.map(c => ({ city: c.slug }))
+  const [cities, places] = await Promise.all([getCities(), getAllPlaces()])
+  const activeCitySet = new Set(places.map(p => p.city))
+  return cities.filter(c => activeCitySet.has(c.slug)).map(c => ({ city: c.slug }))
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { city } = await params
-  const cities = await getCities()
+  const [cities, places] = await Promise.all([getCities(), getAllPlaces()])
   const cityObj = cities.find(c => c.slug === city)
   if (!cityObj) return {}
+  const cityPlaceCount = places.filter(p => p.city === city).length
   const title = composePageTitle(`${cityObj.name} 로컬 업체 허브`)
   const url = `/${city}`
   const description = `${cityObj.name}의 업종별 로컬 업체를 AI 추천과 리뷰로 한눈에. 의료·뷰티·음식·교육·전문서비스 등.`
+  // T-253 — 등록 업체 0곳이면 noindex (빈 디렉토리 색인 차단).
+  const robots = cityPlaceCount === 0 ? { index: false, follow: true } : undefined
   return {
     title,
     description,
     alternates: { canonical: url },
     openGraph: { title, description, url, type: 'website' },
+    ...(robots ? { robots } : {}),
   }
 }
 
