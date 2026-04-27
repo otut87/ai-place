@@ -1,11 +1,10 @@
 'use client'
 
-// T-136 — 공개 진단 URL 입력 폼.
+// /check 진단 URL 입력 폼 (T-245 paper/orange aip 리믹스).
 // 제출 시 /check?url=... 로 이동해 서버가 진단 후 렌더.
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Loader2 } from 'lucide-react'
 
 export function CheckForm({ initialUrl }: { initialUrl: string }) {
   const router = useRouter()
@@ -20,26 +19,37 @@ export function CheckForm({ initialUrl }: { initialUrl: string }) {
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9a9a9a]" />
+    <form className="au-form" onSubmit={submit}>
+      <div className="form-num">
+        DIAGNOSTIC · <b>FREE</b>
+      </div>
+
+      <label htmlFor="check-url">진단할 페이지 URL</label>
+      <p className="hint">
+        업체 홈페이지 · 자체 사이트 · AI Place 업체 페이지 모두 가능. 사이트맵이 있으면 고유 경로 8개까지 자동 스캔합니다.
+      </p>
+
+      <div className="url-row">
         <input
+          id="check-url"
           type="url"
-          placeholder="https://my-business.com 또는 my-business.com"
+          placeholder="https://my-business.com"
           value={url}
           onChange={e => setUrl(e.target.value)}
-          className="h-12 w-full rounded-lg border border-[#dddddd] bg-white pl-10 pr-3 text-sm focus:border-[#008060] focus:outline-none"
           required
+          disabled={loading}
         />
+        <button className="btn-go" type="submit" disabled={loading || !url.trim()}>
+          {loading ? '진단 중...' : '진단 시작 →'}
+        </button>
       </div>
-      <button
-        type="submit"
-        disabled={loading || !url.trim()}
-        className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#008060] px-6 text-sm font-medium text-white hover:bg-[#006b4f] disabled:opacity-60"
-      >
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-        {loading ? '진단 중…' : '진단 시작'}
-      </button>
+
+      <div className="meta-strip">
+        <span>예상 소요 <b>30초</b></span>
+        <span>저장하지 않음 <span className="ac">●</span></span>
+        <span>로그인 <b>불필요</b></span>
+        <span>API 비용 <b>0원</b></span>
+      </div>
     </form>
   )
 }

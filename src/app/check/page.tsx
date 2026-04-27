@@ -1,18 +1,24 @@
-// T-136 — 공개 진단 페이지 /check.
-// 누구나 URL 입력 → 기술 진단 받기 (API 비용 0, fetch+regex 만).
+// /check — AI 가독성 진단 (T-245 paper/orange aip 리믹스).
+// 디자인 핸드오프: claude.ai/design sHNR2MeJ1i73zyOLouu1rQ, audit.html
+// 라이브 fetch + regex 진단 (API 비용 0). methodology-remix 의 .au-* 베이스 + check-remix 추가 컴포넌트.
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Header } from '@/components/header'
-import { Footer } from '@/components/footer'
+import { HomeNav } from '@/app/_components/home/home-nav'
+import { SiteFooter } from '@/components/site/site-footer'
 import { composePageTitle } from '@/lib/seo/compose-title'
 import { runPublicDiagnosticAction } from '@/lib/actions/diagnose'
 import { getBenchmark, scoreBucket, deltaVsRegistered } from '@/lib/diagnostic/benchmark'
 import { CheckForm } from './check-form'
 import { LeadForm } from './lead-form'
+import '@/styles/aip.css'
+import '@/styles/home-wrap.css'
+import '@/styles/methodology-remix.css'
+import '@/styles/check-remix.css'
 
 const TITLE = composePageTitle('AI 가독성 진단 — 내 사이트가 AI 검색에 노출되는가')
-const DESC = '업체 홈페이지 URL을 입력하면 AI 검색(ChatGPT·Perplexity·Claude)에서 인용될 가능성을 30초 안에 진단합니다. GEO·AEO·SEO 13개 항목을 점검.'
+const DESC =
+  '업체 홈페이지 URL을 입력하면 AI 검색(ChatGPT·Perplexity·Claude)에서 인용될 가능성을 30초 안에 진단합니다. GEO·AEO·SEO 13개 항목을 점검.'
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -25,6 +31,31 @@ interface Props {
   searchParams: Promise<{ url?: string }>
 }
 
+const CategoryMeta: Record<'geo' | 'aeo' | 'seo', { title: string; desc: string; weight: number }> = {
+  geo: { title: 'AI 검색 인용', desc: 'ChatGPT·Perplexity·Claude 가 답변에 인용할 때 핵심 신호', weight: 55 },
+  aeo: { title: '답변 구조', desc: '직접 답변 단락·엔티티 링크·신선도', weight: 20 },
+  seo: { title: '기초 SEO', desc: 'HTTPS·제목·설명·사이트맵 등 전통적 SEO 기본', weight: 25 },
+}
+
+const CheckIcon = (
+  <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+)
+const WarnIcon = (
+  <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+    <path d="M12 8v4M12 16h.01M3 19h18L12 4 3 19z" />
+  </svg>
+)
+const FailIcon = (
+  <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+    <line x1="6" y1="6" x2="18" y2="18" />
+    <line x1="18" y1="6" x2="6" y2="18" />
+  </svg>
+)
+
+const LAST_UPDATED = new Date().toISOString().slice(0, 10)
+
 export default async function CheckPage({ searchParams }: Props) {
   const { url } = await searchParams
   const bench = getBenchmark()
@@ -33,58 +64,126 @@ export default async function CheckPage({ searchParams }: Props) {
   const bucket = result && !result.error ? scoreBucket(result.score) : null
 
   return (
-    <>
-      <Header />
-      <main className="flex-1">
-        <section className="py-16 px-6">
-          <div className="mx-auto max-w-3xl">
-            <h1 className="text-[28px] font-bold text-[#222222] leading-tight">
-              AI 가독성 진단
-            </h1>
-            <p className="mt-3 text-base text-[#222222]">
-              홈페이지 URL 을 입력하면 AI 검색(ChatGPT, Claude, Gemini)이 당신의 업체를 읽을 수 있는지 30초 안에 확인합니다.
-            </p>
+    <div className="aip-root">
+      <HomeNav />
 
-            <div className="mt-6">
-              <CheckForm initialUrl={url ?? ''} />
+      <main>
+        {/* HEAD */}
+        <header className="au-head">
+          <div className="wrap-sm">
+            <nav className="crumbs" aria-label="Breadcrumb">
+              <Link href="/">홈</Link>
+              <span className="sep">/</span>
+              <span className="cur">AI 가독성 진단</span>
+            </nav>
+
+            <div className="au-meta-line" style={{ marginTop: 14 }}>
+              <span className="pill">Diagnostic · Free</span>
+              <span>doc-id <b>aip-check</b></span>
+              <span>·</span>
+              <span>checks <b>13</b></span>
+              <span>·</span>
+              <span>avg <b>30초</b></span>
+              <span>·</span>
+              <span>updated <b>{LAST_UPDATED}</b></span>
             </div>
 
+            <h1 className="au-title">AI 가독성 <span className="it">진단</span></h1>
+            <p className="au-lede">
+              내 업체 페이지가 ChatGPT · Claude · Gemini 에 <mark>얼마나 잘 노출되는지</mark> 30초 안에 진단합니다.
+              URL 만 입력하면 GEO 5 + AEO 5 + SEO 6 = <b>13개 항목</b>을 점검한 결과를 받을 수 있습니다.
+            </p>
+          </div>
+        </header>
+
+        {/* FORM */}
+        <section className="au-form-wrap">
+          <div className="wrap-sm">
+            <CheckForm initialUrl={url ?? ''} />
+
+            {/* 빈 상태 — 무엇을 점검하나요 미리보기 */}
+            {!result && (
+              <div className="au-empty-preview">
+                <h2>무엇을 점검하나요? <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontWeight: 400 }}>13개 항목</span></h2>
+                <div className="sub">Princeton GEO 논문 + BrightEdge·SeoClarity·Otterly 외 25+ 출처 기반</div>
+
+                <div className="grid">
+                  <div className="col geo">
+                    <span className="badge">GEO · 55점</span>
+                    <h3>AI 인용 신호</h3>
+                    <ul>
+                      <li>JSON-LD LocalBusiness</li>
+                      <li>robots.txt AI 크롤러 허용</li>
+                      <li>FAQPage schema</li>
+                      <li>AggregateRating</li>
+                      <li>BreadcrumbList</li>
+                    </ul>
+                  </div>
+                  <div className="col aeo">
+                    <span className="badge">AEO · 20점</span>
+                    <h3>답변 구조</h3>
+                    <ul>
+                      <li>Direct Answer Block</li>
+                      <li>sameAs 엔티티 링크</li>
+                      <li>Last Updated Freshness</li>
+                      <li>Author/Person</li>
+                    </ul>
+                  </div>
+                  <div className="col seo">
+                    <span className="badge">SEO · 25점</span>
+                    <h3>기초</h3>
+                    <ul>
+                      <li>HTTPS · Title · Description</li>
+                      <li>sitemap.xml</li>
+                      <li>llms.txt</li>
+                      <li>Viewport meta</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="foot">
+                  근거 문서 <code>docs/GEO-SEO-AEO-딥리서치.md</code> · 산정 방식 자세히는 <Link href="/about/methodology" style={{ color: 'var(--accent)' }}>조사 방법론</Link>
+                </div>
+              </div>
+            )}
+
+            {/* 결과 */}
             {result && (
-              <div className="mt-10">
+              <div className="au-result" style={{ marginTop: 26 }}>
                 {result.error ? (
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">
-                    <p className="font-semibold">진단 실패</p>
-                    <p className="mt-1">{result.error}</p>
-                    <p className="mt-2 text-xs">URL 이 올바른지, 사이트가 접근 가능한지 확인해 주세요.</p>
+                  <div className="au-callout warn-callout">
+                    <strong>진단 실패</strong>
+                    <span>{result.error}</span>
+                    <span className="meta">URL 이 올바른지, 사이트가 접근 가능한지 확인해 주세요.</span>
                   </div>
                 ) : (
                   <>
-                    {/* 이전 진단 대비 변화 (M11.4) */}
+                    {/* 이전 진단 대비 변화 */}
                     {result.compare?.prev && (
-                      <div className={`mb-4 rounded-xl border p-4 text-sm ${
-                        result.compare.delta.tone === 'up' ? 'border-emerald-300 bg-emerald-50 text-emerald-900' :
-                        result.compare.delta.tone === 'down' ? 'border-red-300 bg-red-50 text-red-900' :
-                        'border-slate-300 bg-slate-50 text-slate-800'
-                      }`}>
-                        <p className="font-semibold">
-                          {result.compare.delta.tone === 'up' ? '↑' : result.compare.delta.tone === 'down' ? '↓' : '='} {result.compare.delta.label}
-                        </p>
-                        <p className="mt-1 text-xs">
-                          이전 진단: {new Date(result.compare.prev.createdAt).toLocaleDateString('ko-KR')} · 점수 {result.compare.prev.score}
-                          → 현재 {result.score}
-                        </p>
+                      <div className={`au-callout ${result.compare.delta.tone}`}>
+                        <strong>
+                          {result.compare.delta.tone === 'up' ? '↑' : result.compare.delta.tone === 'down' ? '↓' : '='}{' '}
+                          {result.compare.delta.label}
+                        </strong>
+                        <span className="meta">
+                          이전 {new Date(result.compare.prev.createdAt).toLocaleDateString('ko-KR')} · 점수{' '}
+                          {result.compare.prev.score} → 현재 {result.score}
+                        </span>
                         {result.compare.checkDiffs && result.compare.checkDiffs.some(d => d.pointDelta !== 0) && (
-                          <details className="mt-2">
-                            <summary className="cursor-pointer text-xs underline">체크별 변화 상세</summary>
-                            <ul className="mt-2 space-y-1 text-xs">
-                              {result.compare.checkDiffs.filter(d => d.pointDelta !== 0).map(d => (
-                                <li key={d.id}>
-                                  <strong>{d.label}</strong>: {d.prevStatus ?? '-'} → {d.currStatus}
-                                  {' '}(<span className={d.pointDelta > 0 ? 'text-emerald-700' : 'text-red-700'}>
-                                    {d.pointDelta > 0 ? `+${d.pointDelta}` : d.pointDelta}점
-                                  </span>)
-                                </li>
-                              ))}
+                          <details>
+                            <summary>체크별 변화 상세 →</summary>
+                            <ul>
+                              {result.compare.checkDiffs
+                                .filter(d => d.pointDelta !== 0)
+                                .map(d => (
+                                  <li key={d.id}>
+                                    <strong>{d.label}</strong>: {d.prevStatus ?? '-'} → {d.currStatus}
+                                    {' '}
+                                    <span className={d.pointDelta > 0 ? 'delta-up' : 'delta-down'}>
+                                      ({d.pointDelta > 0 ? `+${d.pointDelta}` : d.pointDelta}점)
+                                    </span>
+                                  </li>
+                                ))}
                             </ul>
                           </details>
                         )}
@@ -93,192 +192,159 @@ export default async function CheckPage({ searchParams }: Props) {
 
                     {/* 사이트맵 없음 경고 */}
                     {!result.sitemapPresent && (
-                      <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
-                        <p className="font-semibold">⚠ 사이트맵(sitemap.xml)이 없습니다</p>
-                        <p className="mt-1 text-xs">
-                          AI 크롤러가 상세 페이지를 발견하지 못합니다. 현재 진단은 <strong>홈페이지 한 페이지만</strong> 스캔한 결과입니다.
-                          실제 사이트에는 FAQ·리뷰가 있어도 크롤러가 찾을 수 없으면 없는 것과 같습니다.
-                        </p>
+                      <div className="au-callout warn-callout">
+                        <strong>⚠ 사이트맵(sitemap.xml)이 없습니다</strong>
+                        <span className="meta">
+                          AI 크롤러가 상세 페이지를 발견하지 못합니다. 현재 진단은 <strong>홈페이지 한 페이지만</strong>{' '}
+                          스캔한 결과입니다. 실제 사이트에 FAQ·리뷰가 있어도 크롤러가 찾을 수 없으면 없는 것과 같습니다.
+                        </span>
                       </div>
                     )}
 
                     {/* 점수 헤더 */}
-                    <div className="rounded-2xl border border-[#e7e7e7] bg-white p-6">
-                      <div className="flex items-end justify-between">
+                    <div className="head-card">
+                      <div className="head-row">
                         <div>
-                          <p className="text-xs text-[#6a6a6a]">진단 대상</p>
-                          <p className="mt-0.5 break-all font-mono text-sm text-[#191919]">{result.url}</p>
-                          <p className="mt-1 text-xs text-[#6a6a6a]">
+                          <div className="head-target">진단 대상</div>
+                          <div className="head-url">{result.url}</div>
+                          <div className="head-pages">
                             {result.pagesScanned}개 고유 경로 스캔 (route pattern 단위)
                             {result.sampledPages && result.sampledPages.length > 1 && (
-                              <span className="ml-1 font-mono">({result.sampledPages.slice(0, 5).join(', ')}{result.sampledPages.length > 5 ? '...' : ''})</span>
+                              <>
+                                {' '}
+                                ({result.sampledPages.slice(0, 5).join(', ')}
+                                {result.sampledPages.length > 5 ? '…' : ''})
+                              </>
                             )}
-                          </p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-xs text-[#6a6a6a]">AI 가독성 점수</p>
-                          <p className={`text-5xl font-bold leading-none ${
-                            bucket?.tone === 'great' ? 'text-emerald-600' :
-                            bucket?.tone === 'ok' ? 'text-sky-600' :
-                            bucket?.tone === 'warn' ? 'text-amber-600' : 'text-red-600'
-                          }`}>
+                        <div className="score-block">
+                          <div className="score-lab">AI 가독성 점수</div>
+                          <div className={`score-big tone-${bucket?.tone ?? 'warn'}`}>
                             {result.score}
-                            <span className="text-xl text-[#9a9a9a]">/100</span>
-                          </p>
-                          {bucket && <p className="mt-1 text-xs text-[#6a6a6a]">{bucket.label}</p>}
+                            <small>/100</small>
+                          </div>
+                          {bucket && <div className="bucket">{bucket.label}</div>}
                         </div>
                       </div>
 
                       {/* 벤치마크 */}
-                      <div className="mt-4 border-t border-[#f0f0f0] pt-4">
-                        <p className="mb-2 text-xs font-medium text-[#6b6b6b]">업종 평균 비교</p>
+                      <div className="bench">
+                        <h4>업종 평균 비교</h4>
                         <BenchmarkBar label="내 사이트" value={result.score} tone={bucket?.tone ?? 'warn'} />
                         <BenchmarkBar label="일반 업체 평균" value={bench.unregistered} tone="warn" />
-                        <BenchmarkBar label="AI Place 등록 업체 평균" value={bench.registered} tone="great" />
-                        <p className="mt-2 text-xs text-[#6a6a6a]">{deltaVsRegistered(result.score, bench)}</p>
+                        <BenchmarkBar
+                          label="AI Place 등록 업체 평균"
+                          value={bench.registered}
+                          tone="great"
+                        />
+                        <p className="bench-note">{deltaVsRegistered(result.score, bench)}</p>
                       </div>
                     </div>
 
-                    {/* 체크 항목 — 카테고리별 그룹 */}
+                    {/* 카테고리별 체크 그룹 */}
                     {(['geo', 'aeo', 'seo'] as const).map(cat => {
                       const items = result.checks.filter(c => c.category === cat)
                       if (items.length === 0) return null
                       const sum = items.reduce((s, c) => s + c.points, 0)
                       const max = items.reduce((s, c) => s + c.maxPoints, 0)
-                      const meta =
-                        cat === 'geo' ? { title: 'GEO — AI 검색 인용 (가중치 55)', desc: 'ChatGPT·Perplexity·Claude가 업체를 답변에 인용할 때 핵심 신호' } :
-                        cat === 'aeo' ? { title: 'AEO — 답변 구조 (가중치 20)', desc: '직접 답변 단락·엔티티 링크·신선도' } :
-                        { title: 'SEO — 기초 (가중치 25)', desc: 'HTTPS·제목·설명·사이트맵 등 전통적 SEO 기본' }
+                      const meta = CategoryMeta[cat]
                       return (
-                        <div key={cat} className="mt-6 rounded-2xl border border-[#e7e7e7] bg-white p-6">
-                          <div className="mb-3 flex items-baseline justify-between">
+                        <div key={cat} className="au-cat-group">
+                          <div className="cat-head">
                             <div>
-                              <h2 className="text-base font-semibold text-[#191919]">{meta.title}</h2>
-                              <p className="mt-0.5 text-xs text-[#6a6a6a]">{meta.desc}</p>
+                              <h3>
+                                <span className="it">{cat.toUpperCase()}</span> · {meta.title}
+                              </h3>
+                              <span className="desc">{meta.desc} · 가중치 {meta.weight}</span>
                             </div>
-                            <span className="font-mono text-sm text-[#191919]">{sum}/{max}</span>
+                            <span className="sum">
+                              {sum}/{max}
+                            </span>
                           </div>
-                          <ul className="space-y-3">
+                          <div className="checks">
                             {items.map(c => {
-                              const icon = c.status === 'pass' ? '✅' : c.status === 'warn' ? '⚠' : '❌'
-                              const bg = c.status === 'pass' ? 'bg-emerald-50' : c.status === 'warn' ? 'bg-amber-50' : 'bg-red-50'
+                              const tone = c.status === 'pass' ? 'ok' : c.status === 'warn' ? 'warn' : 'fail'
+                              const icon = c.status === 'pass' ? CheckIcon : c.status === 'warn' ? WarnIcon : FailIcon
                               return (
-                                <li key={c.id} className={`rounded-lg border border-[#f0f0f0] p-3 ${bg}`}>
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="flex items-start gap-2">
-                                      <span className="text-base leading-none">{icon}</span>
-                                      <div>
-                                        <p className="text-sm font-medium text-[#191919]">
-                                          {c.label}
-                                          {c.reference && <span className="ml-1.5 text-[10px] text-[#9a9a9a]">{c.reference}</span>}
-                                          {c.foundOn && <span className="ml-1.5 font-mono text-[10px] text-emerald-700">발견: {c.foundOn}</span>}
-                                        </p>
-                                        {c.detail && <p className="mt-0.5 text-xs text-[#6a6a6a]">{c.detail}</p>}
-                                      </div>
-                                    </div>
-                                    <span className="shrink-0 text-xs text-[#6a6a6a]">
-                                      {c.points}/{c.maxPoints}
+                                <div key={c.id} className={`ck ${tone}`}>
+                                  {icon}
+                                  <div>
+                                    <span className="label-line">
+                                      <b>{c.label}</b>
+                                      {c.reference && <span className="ref">{c.reference}</span>}
+                                      {c.foundOn && <span className="found">발견: {c.foundOn}</span>}
                                     </span>
+                                    {c.detail && <span className="detail">{c.detail}</span>}
                                   </div>
-                                </li>
+                                  <span className="pts">
+                                    <b>{c.points}</b>/{c.maxPoints}
+                                  </span>
+                                </div>
                               )
                             })}
-                          </ul>
+                          </div>
                         </div>
                       )
                     })}
 
-                    {/* CTA + 리드 수집 */}
-                    <div className="mt-6 rounded-2xl bg-[#008060] p-6 text-white">
-                      <h2 className="text-lg font-semibold">
-                        {result.score < 70
-                          ? `AI Place 에 등록하면 ${bench.registered}점까지 올라갑니다.`
-                          : '이미 좋은 점수지만, 더 높일 수 있습니다.'}
+                    {/* 리드 수집 + CTA */}
+                    <div className="au-lead">
+                      <h2>
+                        {result.score < 70 ? (
+                          <>
+                            AI Place 에 등록하면 <span className="it">{bench.registered}점</span>까지 올라갑니다
+                          </>
+                        ) : (
+                          <>
+                            이미 좋은 점수지만, <span className="it">더 높일</span> 수 있습니다
+                          </>
+                        )}
                       </h2>
-                      <p className="mt-1.5 text-sm text-emerald-50">
-                        JSON-LD, robots.txt, sitemap, llms.txt, 업종 최적화 메타까지 — 등록 즉시 자동 적용.
-                        구독 중인 업체는 <strong>주 1회 실제 AI 인용 테스트</strong> (ChatGPT/Claude/Gemini) 도 받아볼 수 있습니다.
+                      <p>
+                        JSON-LD · robots.txt · sitemap · llms.txt · 업종 최적화 메타까지 — 등록 즉시 자동 적용.
+                        구독 중인 업체는 <b>주 1회 실제 AI 인용 테스트</b> (ChatGPT/Claude/Gemini) 도 받아볼 수 있습니다.
                       </p>
 
-                      <div className="mt-4 rounded-xl bg-white/10 p-4">
+                      <div className="lead-card">
                         <LeadForm targetUrl={result.url} score={result.score} />
                       </div>
 
-                      <div className="mt-3 flex gap-2">
-                        <Link
-                          href="/about"
-                          className="inline-flex h-10 items-center rounded-lg border border-white/30 px-4 text-sm hover:bg-white/10"
-                        >
-                          서비스 소개
-                        </Link>
-                        <Link
-                          href="/about/methodology"
-                          className="inline-flex h-10 items-center rounded-lg border border-white/30 px-4 text-sm hover:bg-white/10"
-                        >
-                          조사 방법론
-                        </Link>
+                      <div className="lead-actions">
+                        <Link href="/about">서비스 소개</Link>
+                        <Link href="/about/methodology">조사 방법론</Link>
+                        <Link href="/pricing">요금</Link>
                       </div>
                     </div>
                   </>
                 )}
               </div>
             )}
-
-            {/* FAQ — 신규 방문자 설명 */}
-            {!result && (
-              <div className="mt-12 rounded-2xl border border-[#e7e7e7] bg-[#fafafa] p-6">
-                <h2 className="text-base font-semibold text-[#191919]">무엇을 점검하나요? (13개 항목 · Princeton GEO 논문 기반)</h2>
-                <div className="mt-3 grid gap-4 md:grid-cols-3">
-                  <div>
-                    <p className="text-xs font-semibold text-emerald-700">GEO — AI 인용 (55점)</p>
-                    <ul className="mt-1.5 space-y-1 text-sm text-[#484848]">
-                      <li>✓ JSON-LD LocalBusiness (subtype)</li>
-                      <li>✓ robots.txt AI 크롤러 허용</li>
-                      <li>✓ FAQPage schema</li>
-                      <li>✓ AggregateRating (집계 평점)</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-sky-700">AEO — 답변 구조 (20점)</p>
-                    <ul className="mt-1.5 space-y-1 text-sm text-[#484848]">
-                      <li>✓ Direct Answer Block</li>
-                      <li>✓ sameAs 엔티티 링크</li>
-                      <li>✓ 최종 업데이트 (Freshness)</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-[#6a6a6a]">SEO 기초 (25점)</p>
-                    <ul className="mt-1.5 space-y-1 text-sm text-[#484848]">
-                      <li>✓ 제목·설명·사이트맵</li>
-                      <li>✓ HTTPS·Viewport·llms.txt</li>
-                    </ul>
-                  </div>
-                </div>
-                <p className="mt-4 text-xs text-[#6a6a6a]">
-                  API 비용 없이 즉시 실행. 브라우저·로그인 불필요. 30초 내 결과. 근거: <code>docs/GEO-SEO-AEO-딥리서치.md</code>
-                </p>
-              </div>
-            )}
           </div>
         </section>
       </main>
-      <Footer />
-    </>
+
+      <SiteFooter />
+    </div>
   )
 }
 
-function BenchmarkBar({ label, value, tone }: { label: string; value: number; tone: 'bad' | 'warn' | 'ok' | 'great' }) {
-  const color =
-    tone === 'great' ? 'bg-emerald-500' :
-    tone === 'ok' ? 'bg-sky-500' :
-    tone === 'warn' ? 'bg-amber-500' : 'bg-red-500'
+function BenchmarkBar({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: number
+  tone: 'bad' | 'warn' | 'ok' | 'great'
+}) {
   return (
-    <div className="mb-2 flex items-center gap-3 text-xs">
-      <span className="w-40 shrink-0 text-[#484848]">{label}</span>
-      <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#f0f0f0]">
-        <div className={`h-full ${color}`} style={{ width: `${Math.min(100, value)}%` }} />
+    <div className="bench-row">
+      <span className="lbl">{label}</span>
+      <div className="bar">
+        <div className={`fill tone-${tone}`} style={{ width: `${Math.min(100, value)}%` }} />
       </div>
-      <span className="w-10 shrink-0 text-right font-mono text-[#191919]">{value}</span>
+      <span className="val">{value}</span>
     </div>
   )
 }
