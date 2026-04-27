@@ -96,7 +96,7 @@ export function ConfirmForm() {
   if (ready === 'loading') {
     return (
       <div className="result-card">
-        <p style={{ color: 'var(--muted)', textAlign: 'center', margin: 0 }}>
+        <p style={{ color: 'var(--aip-muted)', textAlign: 'center', margin: 0 }}>
           링크를 확인하는 중입니다...
         </p>
       </div>

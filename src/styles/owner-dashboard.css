@@ -36,7 +36,7 @@
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--muted);
+  color: var(--aip-muted);
   margin: 0 24px 10px;
   padding-top: 8px;
   font-weight: 500;
@@ -63,9 +63,9 @@
 .side-nav a:hover,
 .side-nav button:hover { background: var(--bg-2); color: var(--ink) }
 .side-nav a.active {
-  color: var(--accent);
-  background: color-mix(in oklab, var(--accent) 8%, transparent);
-  border-left-color: var(--accent);
+  color: var(--aip-accent);
+  background: color-mix(in oklab, var(--aip-accent) 8%, transparent);
+  border-left-color: var(--aip-accent);
   font-weight: 600;
 }
 .side-nav a svg,
@@ -73,7 +73,7 @@
 .side-nav .divider { margin: 20px 0; border-bottom: 1px solid var(--line) }
 .side-nav .badge {
   margin-left: auto;
-  color: var(--accent);
+  color: var(--aip-accent);
   font-family: var(--mono);
   font-size: 11px;
 }
@@ -81,7 +81,7 @@
   margin-top: auto;
   padding: 16px 24px 0;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--aip-muted);
   border-top: 1px solid var(--line);
 }
 .side-nav .user-foot .email {
@@ -140,7 +140,7 @@
   align-items: center;
   gap: 4px;
   font-size: 12.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   text-decoration: none;
   margin-bottom: 8px;
   font-family: var(--mono);
@@ -203,7 +203,7 @@
   font-weight: 400;
 }
 .greeting p { margin: 0; color: var(--ink-2); font-size: 14.5px }
-.greeting .sub-weak { color: var(--muted) }
+.greeting .sub-weak { color: var(--aip-muted) }
 
 .status-pill {
   background: color-mix(in oklab, var(--good) 12%, transparent);
@@ -231,10 +231,10 @@
 .status-pill.warn::before { background: var(--warn) }
 .status-pill.muted {
   background: var(--bg-2);
-  color: var(--muted);
+  color: var(--aip-muted);
   border-color: var(--line-2);
 }
-.status-pill.muted::before { background: var(--muted) }
+.status-pill.muted::before { background: var(--aip-muted) }
 
 /* --- KPI grid / card --- */
 .kpi-grid {
@@ -258,7 +258,7 @@
 }
 .kpi .k {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-family: var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -272,13 +272,13 @@
 }
 .kpi .v .u {
   font-size: 14px;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-weight: 500;
   margin-left: 4px;
 }
 .kpi .sub {
   font-size: 12.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   line-height: 1.5;
 }
 .kpi .rule-sm {
@@ -309,13 +309,13 @@
 .kpi .attr .row .v { font-variant-numeric: tabular-nums; font-weight: 500 }
 .kpi .measuring-v {
   font-size: 22px;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-weight: 500;
   letter-spacing: -0.01em;
 }
 .kpi .info-note {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--aip-muted);
   padding-top: 6px;
   border-top: 1px dashed var(--line);
   line-height: 1.5;
@@ -369,7 +369,7 @@
 .dash-panel .head h3 { margin: 0; font-size: 16px; font-weight: 700 }
 .dash-panel .head .more {
   font-size: 12.5px;
-  color: var(--accent);
+  color: var(--aip-accent);
   font-family: var(--mono);
   text-decoration: none;
 }
@@ -447,7 +447,7 @@
 }
 .gauge-circle .val .s {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-family: var(--mono);
 }
 .gauge-desc {
@@ -472,12 +472,12 @@
 }
 .gauge-rules .rule-row .lbl { color: var(--ink-2); flex: 1 }
 .gauge-rules .rule-row.pass .lbl::before { content: '✓ '; color: var(--good) }
-.gauge-rules .rule-row.fail .lbl::before { content: '· '; color: var(--muted) }
-.gauge-rules .rule-row.fail .lbl { color: var(--muted) }
+.gauge-rules .rule-row.fail .lbl::before { content: '· '; color: var(--aip-muted) }
+.gauge-rules .rule-row.fail .lbl { color: var(--aip-muted) }
 .gauge-rules .rule-row .w {
   font-family: var(--mono);
   font-size: 11.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
 }
 
 /* --- Bot visit table --- */
@@ -498,10 +498,10 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-weight: 500;
 }
-.bot-table tr:hover td { background: color-mix(in oklab, var(--accent) 4%, transparent) }
+.bot-table tr:hover td { background: color-mix(in oklab, var(--aip-accent) 4%, transparent) }
 .bot-table .eng {
   font-family: var(--mono);
   font-size: 12px;
@@ -527,13 +527,13 @@
 .bot-table .ts {
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--muted);
+  color: var(--aip-muted);
   white-space: nowrap;
 }
 .bot-table .empty {
   text-align: center;
   padding: 32px 16px;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-style: italic;
 }
 .bot-table-note {
@@ -541,7 +541,7 @@
   padding-top: 10px;
   border-top: 1px dashed var(--line);
   font-size: 11.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   line-height: 1.5;
 }
 
@@ -564,12 +564,12 @@
 }
 .task .body span {
   font-size: 12.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   line-height: 1.45;
 }
 .task .body a {
   font-size: 12px;
-  color: var(--accent);
+  color: var(--aip-accent);
   font-family: var(--mono);
   text-decoration: none;
   margin-top: 4px;
@@ -586,13 +586,13 @@
   flex: 0 0 auto;
   letter-spacing: 0.04em;
 }
-.task .pri.HIGH { background: color-mix(in oklab, var(--accent) 18%, transparent); color: var(--accent) }
+.task .pri.HIGH { background: color-mix(in oklab, var(--aip-accent) 18%, transparent); color: var(--aip-accent) }
 .task .pri.MID  { background: var(--bg-2); color: var(--ink-2) }
 .task .pri.LOW  { background: color-mix(in oklab, #4285f4 14%, transparent); color: #1e40af }
 .task-empty {
   text-align: center;
   padding: 32px 16px;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-size: 13px;
 }
 
@@ -623,7 +623,7 @@
 }
 .place-row .meta {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-variant-numeric: tabular-nums;
   font-family: var(--mono);
   line-height: 1.5;
@@ -642,12 +642,12 @@
 }
 .place-row .actions a {
   font-size: 12.5px;
-  color: var(--accent);
+  color: var(--aip-accent);
   text-decoration: none;
   font-family: var(--mono);
 }
 .place-row .actions a:hover { text-decoration: underline }
-.place-row .actions a.ghost { color: var(--muted) }
+.place-row .actions a.ghost { color: var(--aip-muted) }
 
 .deficiency-chip {
   font-size: 10.5px;
@@ -680,7 +680,7 @@
 }
 .progress-bar > div {
   height: 100%;
-  background: var(--accent);
+  background: var(--aip-accent);
   transition: width 0.3s ease;
 }
 
@@ -743,7 +743,7 @@
 .owner-empty-state .i {
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--muted);
+  color: var(--aip-muted);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -824,7 +824,7 @@
 .steps-nav .st .i {
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--muted);
+  color: var(--aip-muted);
 }
 .steps-nav .st b { font-weight: 600; font-size: 14px }
 .steps-nav .st.done {
@@ -834,10 +834,10 @@
 }
 .steps-nav .st.done .i { color: rgba(255,255,255,0.6) }
 .steps-nav .st.cur {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 20%, transparent);
+  border-color: var(--aip-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--aip-accent) 20%, transparent);
 }
-.steps-nav .st.cur .i { color: var(--accent) }
+.steps-nav .st.cur .i { color: var(--aip-accent) }
 @media (max-width: 640px) { .steps-nav { flex-wrap: wrap } }
 
 .form-card {
@@ -857,7 +857,7 @@
 }
 .form-card .hint {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--aip-muted);
   margin-bottom: 8px;
   line-height: 1.5;
 }
@@ -882,8 +882,8 @@
 .form-card textarea:focus,
 .form-card select:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent);
+  border-color: var(--aip-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--aip-accent) 18%, transparent);
 }
 .form-card textarea { min-height: 100px; resize: vertical; line-height: 1.5 }
 
@@ -912,7 +912,7 @@
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
-.candidate-card:hover { border-color: var(--accent); background: var(--card) }
+.candidate-card:hover { border-color: var(--aip-accent); background: var(--card) }
 .candidate-card.disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -933,7 +933,7 @@
   gap: 12px;
   flex-wrap: wrap;
   font-size: 11.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-family: var(--mono);
 }
 .candidate-card .detect b { color: var(--ink) }
@@ -963,7 +963,7 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--aip-muted);
 }
 
 .photo-grid {
@@ -984,13 +984,13 @@
   background: var(--bg-2);
   transition: border-color 0.15s, opacity 0.15s;
 }
-.photo-grid label.sel { border-color: var(--accent) }
+.photo-grid label.sel { border-color: var(--aip-accent) }
 .photo-grid label:not(.sel) { opacity: 0.55 }
 .photo-grid label input {
   position: absolute;
   top: 6px; left: 6px;
   z-index: 10;
-  accent-color: var(--accent);
+  accent-color: var(--aip-accent);
 }
 .photo-grid img {
   width: 100%; height: 100%;
@@ -1041,7 +1041,7 @@
 }
 .summary-card .foot {
   font-size: 11.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-family: var(--mono);
   padding-top: 6px;
   border-top: 1px dashed var(--line);
@@ -1086,7 +1086,7 @@
 .form-section-head .form-section-title { margin-bottom: 0 }
 .form-counter {
   font-size: 11.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-weight: 400;
   font-family: var(--mono);
   letter-spacing: 0.02em;
@@ -1105,7 +1105,7 @@
   border: 1px solid var(--line-2);
   border-radius: 8px;
   background: var(--bg);
-  color: var(--muted);
+  color: var(--aip-muted);
   cursor: pointer;
   font-size: 13px;
   transition: all 120ms ease;
@@ -1126,16 +1126,16 @@
   gap: 4px;
   padding: 6px 10px;
   font-size: 13px;
-  color: var(--accent);
+  color: var(--aip-accent);
   background: transparent;
-  border: 1px dashed color-mix(in oklab, var(--accent) 40%, transparent);
+  border: 1px dashed color-mix(in oklab, var(--aip-accent) 40%, transparent);
   border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
   transition: all 120ms ease;
 }
 .form-add-btn:hover {
-  background: color-mix(in oklab, var(--accent) 8%, transparent);
+  background: color-mix(in oklab, var(--aip-accent) 8%, transparent);
   border-style: solid;
 }
 
@@ -1197,7 +1197,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--muted);
+  color: var(--aip-muted);
 }
 .citations-filter select {
   height: 32px;
@@ -1212,7 +1212,7 @@
   min-width: 140px;
 }
 .citations-filter select:hover { border-color: var(--line-3) }
-.citations-filter select:focus { outline: 2px solid color-mix(in oklab, var(--accent) 30%, transparent); outline-offset: 1px }
+.citations-filter select:focus { outline: 2px solid color-mix(in oklab, var(--aip-accent) 30%, transparent); outline-offset: 1px }
 
 /* 콘텐츠 목록 공통 카드 */
 .content-row {
@@ -1241,7 +1241,7 @@
 .content-row .body h4 a:hover { text-decoration: underline }
 .content-row .meta {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--aip-muted);
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -1256,7 +1256,7 @@
   color: var(--ink-2);
 }
 .content-row .actions { flex: 0 0 auto; display: flex; gap: 10px }
-.content-row .actions a { font-size: 12px; color: var(--accent); text-decoration: none }
+.content-row .actions a { font-size: 12px; color: var(--aip-accent); text-decoration: none }
 .content-row .actions a:hover { text-decoration: underline }
 
 /* 콘텐츠 타입 탭 */
@@ -1269,12 +1269,12 @@
 .content-tabs a {
   padding: 8px 14px;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--aip-muted);
   text-decoration: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
 }
-.content-tabs a.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600 }
+.content-tabs a.active { color: var(--ink); border-bottom-color: var(--aip-accent); font-weight: 600 }
 .content-tabs a:hover { color: var(--ink-2) }
 
 /* 리포트 카드 */
@@ -1293,8 +1293,8 @@
 .report-card .icon {
   width: 40px; height: 40px;
   border-radius: 8px;
-  background: color-mix(in oklab, var(--accent) 12%, transparent);
-  color: var(--accent);
+  background: color-mix(in oklab, var(--aip-accent) 12%, transparent);
+  color: var(--aip-accent);
   display: grid; place-items: center;
   flex: 0 0 40px;
   font-size: 18px;
@@ -1305,7 +1305,7 @@
   font-size: 14.5px;
   font-weight: 600;
 }
-.report-card .body .meta { font-size: 12px; color: var(--muted) }
+.report-card .body .meta { font-size: 12px; color: var(--aip-muted) }
 .report-card .cta { flex: 0 0 auto }
 
 /* 추천 키워드 칩 (업체 등록/수정 폼용) */
@@ -1328,7 +1328,7 @@
   font-weight: 600;
 }
 .keyword-suggest h4 span {
-  color: var(--muted);
+  color: var(--aip-muted);
   font-weight: 400;
   font-size: 11.5px;
   font-family: var(--mono);
@@ -1337,7 +1337,7 @@
 .keyword-suggest p {
   margin: 0 0 10px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--aip-muted);
   line-height: 1.5;
 }
 .keyword-suggest p b {
@@ -1362,7 +1362,7 @@
   background: var(--bg);
   transition: border-color 120ms ease;
 }
-.keyword-chip-group:hover { border-color: var(--accent) }
+.keyword-chip-group:hover { border-color: var(--aip-accent) }
 .keyword-chip,
 .keyword-chip-action {
   padding: 4px 10px;
@@ -1375,18 +1375,18 @@
   transition: all 120ms ease;
 }
 .keyword-chip:hover:not(:disabled),
-.keyword-chip-action:hover { color: var(--accent) }
+.keyword-chip-action:hover { color: var(--aip-accent) }
 .keyword-chip-action {
   border-left: 1px solid var(--line-2);
   font-size: 10.5px;
   font-family: var(--mono);
-  color: var(--muted);
+  color: var(--aip-muted);
   letter-spacing: 0.04em;
   padding: 4px 8px;
 }
 .keyword-chip.added {
-  background: color-mix(in oklab, var(--accent) 12%, transparent);
-  color: var(--accent);
+  background: color-mix(in oklab, var(--aip-accent) 12%, transparent);
+  color: var(--aip-accent);
   cursor: default;
 }
 .keyword-chip:disabled { cursor: default }

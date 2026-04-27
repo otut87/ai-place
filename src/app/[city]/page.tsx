@@ -282,7 +282,7 @@ export default async function CityHubPage({ params }: Props) {
                     style={{
                       fontFamily: 'var(--mono)',
                       fontSize: 12,
-                      color: 'var(--accent)',
+                      color: 'var(--aip-accent)',
                       letterSpacing: '.04em',
                       textTransform: 'uppercase',
                       textDecoration: 'none',

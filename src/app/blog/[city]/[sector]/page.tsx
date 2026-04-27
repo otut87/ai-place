@@ -171,7 +171,7 @@ export default async function BlogSectorHubPage({ params }: Props) {
                 <dt>디렉토리</dt>
                 <dd>→</dd>
                 <span className="sub">
-                  <Link href={`/${city}`} style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+                  <Link href={`/${city}`} style={{ color: 'var(--aip-accent)', textDecoration: 'none' }}>
                     {cityObj.name} 업체 보기
                   </Link>
                 </span>

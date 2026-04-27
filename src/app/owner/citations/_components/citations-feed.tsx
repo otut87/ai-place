@@ -60,7 +60,7 @@ export function CitationsFeed({ visits, placeNameById, totalDays }: Props) {
       <div className="phead">
         <h3>
           실시간 피드
-          <small style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', fontWeight: 500, marginLeft: 8 }}>
+          <small style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--aip-muted)', fontWeight: 500, marginLeft: 8 }}>
             {totalLabel}
           </small>
         </h3>

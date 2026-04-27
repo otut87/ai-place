@@ -10,17 +10,19 @@
   --ink:#0c0c0c;
   --ink-2:#2a2a2a;
   --ink-3:#4a4a4a;
-  --muted:#737373;
-  --muted-2:#9a9a9a;
+  --aip-muted:#737373;
+  --aip-muted-2:#9a9a9a;
   --line: rgba(12,12,12,.08);
   --line-2: rgba(12,12,12,.16);
   --line-3: rgba(12,12,12,.28);
   --card:#ffffff;
-  --accent:#ff5c2b;
-  --accent-2:#ff7a50;
-  --accent-soft:#ffe8dd;
+  --aip-accent:#ff5c2b;
+  --aip-accent-2:#ff7a50;
+  --aip-accent-soft:#ffe8dd;
   --good:#0f7d3d;
   --warn:#b45309;
+  /* P0: Tailwind v4 border-border 디폴트가 paper 라인과 일치하도록 globals.css 의 --border(#c1c1c1) 오버라이드. */
+  --border: rgba(12,12,12,.08);
   --chat:#10a37f;
   --claude:#cc785c;
   --gemini-a:#4285f4;
@@ -63,9 +65,9 @@ body{
 }
 a{color:inherit; text-decoration:none}
 a:focus-visible, button:focus-visible, details > summary:focus-visible{
-  outline:2px solid var(--accent); outline-offset:3px; border-radius:4px;
+  outline:2px solid var(--aip-accent); outline-offset:3px; border-radius:4px;
 }
-::selection{background:var(--accent); color:#fff}
+::selection{background:var(--aip-accent); color:#fff}
 img{max-width:100%; display:block}
 button{font-family:inherit}
 
@@ -78,12 +80,12 @@ section{padding: clamp(56px, 8vw, 104px) 0; position:relative}
 .sec-head{margin-bottom: clamp(28px, 4vw, 48px); max-width:760px}
 .sec-kicker{
   font-family:var(--mono); font-size:12px; letter-spacing:.12em;
-  text-transform:uppercase; color:var(--accent);
+  text-transform:uppercase; color:var(--aip-accent);
   display:inline-flex; align-items:center; gap:10px;
   margin-bottom:14px;
 }
 .sec-kicker::before{
-  content:""; width:20px; height:1px; background:var(--accent); display:inline-block;
+  content:""; width:20px; height:1px; background:var(--aip-accent); display:inline-block;
 }
 h1.sec-title, h2.sec-title{
   font-size: var(--h2); font-weight:700; letter-spacing:-.03em;
@@ -94,7 +96,7 @@ h2.sec-title .it, h1.hero-title .it{
   letter-spacing:-.015em;
 }
 h1.hero-title .u{
-  background: linear-gradient(180deg, transparent 60%, color-mix(in oklab, var(--accent) 45%, transparent) 60%);
+  background: linear-gradient(180deg, transparent 60%, color-mix(in oklab, var(--aip-accent) 45%, transparent) 60%);
 }
 .sec-lede{font-size:var(--lede); color:var(--ink-2); max-width:60ch; margin:0}
 
@@ -117,7 +119,7 @@ nav.top .inner{
   width:26px; height:26px; border-radius:50%;
   background:
     radial-gradient(circle at 32% 32%, #fff 0 24%, transparent 26%),
-    conic-gradient(from 200deg, var(--accent), #ffb392, var(--accent));
+    conic-gradient(from 200deg, var(--aip-accent), #ffb392, var(--aip-accent));
   position:relative; flex:0 0 auto;
   box-shadow: 0 0 0 1px var(--line-2);
 }
@@ -130,7 +132,7 @@ nav .links a{position:relative; padding:6px 2px; transition:color .15s}
 nav .links a:hover{color:var(--ink)}
 nav .links a[aria-current="page"]{color:var(--ink); font-weight:600}
 nav .links a[aria-current="page"]::after{
-  content:""; position:absolute; left:0; right:0; bottom:-22px; height:2px; background:var(--accent);
+  content:""; position:absolute; left:0; right:0; bottom:-22px; height:2px; background:var(--aip-accent);
 }
 nav .right{margin-left:auto; display:flex; gap:10px; align-items:center}
 .nav-toggle{display:none; background:transparent; border:1px solid var(--line-2); width:40px; height:40px; border-radius:10px; cursor:pointer; align-items:center; justify-content:center}
@@ -168,13 +170,13 @@ nav .right{margin-left:auto; display:flex; gap:10px; align-items:center}
 }
 .btn svg{width:16px; height:16px}
 .btn.primary{background:var(--ink); color:var(--bg)}
-.btn.primary:hover{background:var(--accent); transform:translateY(-1px)}
+.btn.primary:hover{background:var(--aip-accent); transform:translateY(-1px)}
 .btn.ghost{background:transparent; color:var(--ink); border-color:var(--line-3)}
 .btn.ghost:hover{background:var(--ink); color:var(--bg); border-color:var(--ink)}
-.btn.accent{background:var(--accent); color:#fff}
+.btn.accent{background:var(--aip-accent); color:#fff}
 .btn.accent:hover{filter:brightness(1.06); transform:translateY(-1px)}
 .btn.invert{background:#fff; color:var(--ink)}
-.btn.invert:hover{background:var(--accent); color:#fff}
+.btn.invert:hover{background:var(--aip-accent); color:#fff}
 .btn.sm{padding:8px 14px; font-size:13px}
 .btn.lg{padding:14px 22px; font-size:15.5px}
 .btn[disabled]{opacity:.5; cursor:not-allowed}
@@ -187,7 +189,7 @@ nav .right{margin-left:auto; display:flex; gap:10px; align-items:center}
   background:var(--bg-2); color:var(--ink-2);
   border:1px solid var(--line);
 }
-.chip.accent{background:var(--accent-soft); color:#9a2c00; border-color:color-mix(in oklab, var(--accent) 40%, transparent)}
+.chip.accent{background:var(--aip-accent-soft); color:#9a2c00; border-color:color-mix(in oklab, var(--aip-accent) 40%, transparent)}
 .chip.ink{background:var(--ink); color:var(--bg); border-color:var(--ink)}
 .chip.good{background:color-mix(in oklab, var(--good) 12%, transparent); color:var(--good); border-color:color-mix(in oklab, var(--good) 35%, transparent)}
 
@@ -218,16 +220,16 @@ nav .right{margin-left:auto; display:flex; gap:10px; align-items:center}
 
 /* ---------- BREADCRUMBS ---------- */
 .crumbs{
-  font-family:var(--mono); font-size:12px; color:var(--muted);
+  font-family:var(--mono); font-size:12px; color:var(--aip-muted);
   display:flex; flex-wrap:wrap; gap:6px; align-items:center;
 }
 .crumbs a:hover{color:var(--ink)}
-.crumbs .sep{color:var(--muted-2)}
+.crumbs .sep{color:var(--aip-muted-2)}
 .crumbs .cur{color:var(--ink)}
 
 /* ---------- STARS ---------- */
 .stars{display:inline-flex; gap:1px; color:#e6c200; font-size:14px; letter-spacing:1px}
-.stars .dim{color:var(--line-3)}
+.stars .aip-dim{color:var(--line-3)}
 
 /* ---------- AI LOGO ---------- */
 .ai-logo{
@@ -267,10 +269,10 @@ nav .right{margin-left:auto; display:flex; gap:10px; align-items:center}
 .cite-chip{
   display:inline-flex; align-items:center; gap:6px;
   padding:2px 9px; border-radius:999px;
-  background: color-mix(in oklab, var(--accent) 16%, transparent);
-  color: var(--accent);
+  background: color-mix(in oklab, var(--aip-accent) 16%, transparent);
+  color: var(--aip-accent);
   font-weight:600; font-size:13.5px;
-  border:1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+  border:1px solid color-mix(in oklab, var(--aip-accent) 40%, transparent);
 }
 .cite-chip::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor}
 
@@ -281,7 +283,7 @@ details.faq{
   transition: background .15s;
 }
 details.faq + details.faq{margin-top:10px}
-details.faq[open]{background:color-mix(in oklab, var(--accent) 4%, var(--card))}
+details.faq[open]{background:color-mix(in oklab, var(--aip-accent) 4%, var(--card))}
 details.faq summary{
   list-style:none; cursor:pointer;
   font-weight:600; font-size:16px; letter-spacing:-.01em;
@@ -289,7 +291,7 @@ details.faq summary{
 }
 details.faq summary::-webkit-details-marker{display:none}
 details.faq summary::after{
-  content:"+"; font-family:var(--mono); font-size:22px; color:var(--accent); font-weight:400;
+  content:"+"; font-family:var(--mono); font-size:22px; color:var(--aip-accent); font-weight:400;
   transition: transform .2s;
 }
 details.faq[open] summary::after{content:"−"}
@@ -305,15 +307,15 @@ footer .cols{display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap:28px;
 @media(max-width:520px){ footer .cols{grid-template-columns: 1fr} }
 footer h5{
   font-size:11.5px; font-family:var(--mono); text-transform:uppercase;
-  letter-spacing:.12em; color:var(--muted); margin:0 0 14px;
+  letter-spacing:.12em; color:var(--aip-muted); margin:0 0 14px;
 }
 footer ul{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:9px}
-footer ul a:hover{color:var(--accent)}
-footer .brand-col p{margin:12px 0 0; max-width:40ch; color:var(--muted); font-size:13px}
+footer ul a:hover{color:var(--aip-accent)}
+footer .brand-col p{margin:12px 0 0; max-width:40ch; color:var(--aip-muted); font-size:13px}
 footer .meta{
   display:flex; justify-content:space-between; flex-wrap:wrap; gap:14px;
   padding-top:24px; border-top:1px solid var(--line);
-  font-size:12px; color:var(--muted); font-family:var(--mono);
+  font-size:12px; color:var(--aip-muted); font-family:var(--mono);
 }
 footer .meta .ai-mini{display:inline-flex; gap:6px; align-items:center}
 footer .meta .ai-mini .d{width:8px; height:8px; border-radius:2px}
@@ -331,7 +333,7 @@ footer .meta .ai-mini .d{width:8px; height:8px; border-radius:2px}
 .page-head .lede{font-size: var(--lede); color:var(--ink-2); max-width:62ch; margin:0}
 .page-head .meta-row{
   margin-top:20px; display:flex; gap:16px; flex-wrap:wrap; align-items:center;
-  font-size:13px; color:var(--muted); font-family:var(--mono);
+  font-size:13px; color:var(--aip-muted); font-family:var(--mono);
 }
 
 /* ---------- TOAST ---------- */
@@ -344,23 +346,23 @@ footer .meta .ai-mini .d{width:8px; height:8px; border-radius:2px}
 }
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 
-/* ---------- UTILITIES ---------- */
-.muted{color:var(--muted)}
+/* ---------- UTILITIES (aip-prefixed to avoid Tailwind/global collision) ---------- */
+.aip-muted{color:var(--aip-muted)}
 .ink-2{color:var(--ink-2)}
-.mono{font-family:var(--mono)}
-.serif{font-family:var(--serif); font-style:italic}
+.aip-mono{font-family:var(--mono)}
+.aip-serif{font-family:var(--serif); font-style:italic}
 .hidden-mobile{}
 .hidden-desktop{display:none}
 @media(max-width:760px){
   .hidden-mobile{display:none !important}
   .hidden-desktop{display:initial}
 }
-.grid{display:grid; gap:16px}
-.flex{display:flex}
-.between{justify-content:space-between}
-.center{align-items:center}
-.gap-sm{gap:8px} .gap-md{gap:16px} .gap-lg{gap:24px}
-.mt-sm{margin-top:8px} .mt-md{margin-top:16px} .mt-lg{margin-top:24px} .mt-xl{margin-top:40px}
+.aip-grid{display:grid; gap:16px}
+.aip-flex{display:flex}
+.aip-between{justify-content:space-between}
+.aip-center{align-items:center}
+.aip-gap-sm{gap:8px} .aip-gap-md{gap:16px} .aip-gap-lg{gap:24px}
+.aip-mt-sm{margin-top:8px} .aip-mt-md{margin-top:16px} .aip-mt-lg{margin-top:24px} .aip-mt-xl{margin-top:40px}
 
 /* ---------- MOBILE GLOBAL PATCHES ---------- */
 @media(max-width:760px){
@@ -510,4 +512,4 @@ footer .meta .ai-mini .d{width:8px; height:8px; border-radius:2px}
 ::-webkit-scrollbar{width:10px; height:10px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--line-3); border-radius:999px; border:2px solid var(--bg)}
-::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+::-webkit-scrollbar-thumb:hover{background:var(--aip-muted)}

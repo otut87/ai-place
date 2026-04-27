@@ -53,7 +53,7 @@ export function PilotEndingBanner({
       <div>
         <b>{headline}</b>
         {activePlaceCount > 0 && (
-          <span style={{ marginLeft: 8, fontSize: 12.5, color: 'var(--muted)' }}>
+          <span style={{ marginLeft: 8, fontSize: 12.5, color: 'var(--aip-muted)' }}>
             {breakdown}
           </span>
         )}
@@ -64,7 +64,7 @@ export function PilotEndingBanner({
           자세히 →
         </Link>
       )}
-      <Link href="/owner/billing/cancel" style={{ color: 'var(--muted)' }}>
+      <Link href="/owner/billing/cancel" style={{ color: 'var(--aip-muted)' }}>
         해지
       </Link>
     </div>

@@ -110,29 +110,29 @@ function Chart({
       <div className="summary">
         <div>
           <div className="big">{total.toLocaleString()}<span className="u">건</span></div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--aip-muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginTop: 2 }}>
             {rangeDays}일 합계
           </div>
         </div>
         <div className="engines">
           {total === 0 ? (
             <>
-              <div style={{ color: 'var(--muted-2)' }}>아직 기록 없음</div>
-              <div style={{ color: 'var(--muted)', marginTop: 3 }}>AI 봇 발견까지 평균 3~10일</div>
+              <div style={{ color: 'var(--aip-muted-2)' }}>아직 기록 없음</div>
+              <div style={{ color: 'var(--aip-muted)', marginTop: 3 }}>AI 봇 발견까지 평균 3~10일</div>
             </>
           ) : (
             <>
               <div className={`lead${group === 'aiTraining' ? ' warn' : ''}`}>
                 ● {leadEngine.label} 주도 · {leadEngine.sum}건
               </div>
-              <div style={{ color: 'var(--muted)', marginTop: 3 }}>총 {total}건</div>
+              <div style={{ color: 'var(--aip-muted)', marginTop: 3 }}>총 {total}건</div>
             </>
           )}
         </div>
       </div>
 
       <svg className="chart-svg" viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="none">
-        {/* grid */}
+        {/* aip-grid */}
         <g stroke="#efece4" strokeWidth={1}>
           {yLabels.map((_, i) => {
             const y = PAD_T + (plotH * i) / GRID_TICKS

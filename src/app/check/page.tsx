@@ -107,7 +107,7 @@ export default async function CheckPage({ searchParams }: Props) {
                 <h2>무엇을 점검하나요? <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontWeight: 400 }}>13개 항목</span></h2>
                 <div className="sub">Princeton GEO 논문 + BrightEdge·SeoClarity·Otterly 외 25+ 출처 기반</div>
 
-                <div className="grid">
+                <div className="aip-grid">
                   <div className="col geo">
                     <span className="badge">GEO · 55점</span>
                     <h3>AI 인용 신호</h3>
@@ -142,7 +142,7 @@ export default async function CheckPage({ searchParams }: Props) {
                 </div>
 
                 <div className="foot">
-                  근거 문서 <code>docs/GEO-SEO-AEO-딥리서치.md</code> · 산정 방식 자세히는 <Link href="/about/methodology" style={{ color: 'var(--accent)' }}>조사 방법론</Link>
+                  근거 문서 <code>docs/GEO-SEO-AEO-딥리서치.md</code> · 산정 방식 자세히는 <Link href="/about/methodology" style={{ color: 'var(--aip-accent)' }}>조사 방법론</Link>
                 </div>
               </div>
             )}

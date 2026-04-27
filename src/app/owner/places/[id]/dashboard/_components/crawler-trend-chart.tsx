@@ -140,7 +140,7 @@ export function CrawlerTrendChart({ rows, totals, periodLabel, compareLabel }: P
             </linearGradient>
           </defs>
 
-          {/* 가로 grid */}
+          {/* 가로 aip-grid */}
           <g stroke="var(--line)" strokeWidth={1}>
             {yTicks.map((t, i) => (
               <line key={i} x1={PAD_L} y1={t.y.toFixed(1)} x2={VB_W - PAD_R} y2={t.y.toFixed(1)} />
@@ -148,14 +148,14 @@ export function CrawlerTrendChart({ rows, totals, periodLabel, compareLabel }: P
           </g>
 
           {/* Y 라벨 */}
-          <g style={{ fontFamily: 'var(--mono)' }} fontSize="9.5" fill="var(--muted-2)">
+          <g style={{ fontFamily: 'var(--mono)' }} fontSize="9.5" fill="var(--aip-muted-2)">
             {yTicks.map((t, i) => (
               <text key={i} x={4} y={(t.y + 4).toFixed(1)}>{t.v}</text>
             ))}
           </g>
 
           {/* X 라벨 */}
-          <g style={{ fontFamily: 'var(--mono)' }} fontSize="9.5" fill="var(--muted)" textAnchor="middle">
+          <g style={{ fontFamily: 'var(--mono)' }} fontSize="9.5" fill="var(--aip-muted)" textAnchor="middle">
             {xTicks.map((t, i) => (
               <text key={i} x={t.x.toFixed(1)} y={VB_H - 8}>{t.label}</text>
             ))}

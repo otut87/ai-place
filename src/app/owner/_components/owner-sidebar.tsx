@@ -1,7 +1,7 @@
 'use client'
 
 // /owner 좌측 사이드바. 모바일 drawer 는 헤더 햄버거가 제어 (OwnerSidebarContext).
-// 데스크톱에서는 항상 열린 grid item, 모바일에서는 고정 포지션 drawer.
+// 데스크톱에서는 항상 열린 aip-grid item, 모바일에서는 고정 포지션 drawer.
 
 import { useEffect } from 'react'
 import Link from 'next/link'

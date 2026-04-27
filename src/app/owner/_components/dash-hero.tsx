@@ -74,15 +74,15 @@ export function DashHero({
   }
 
   const headline = search30 > 0
-    ? <>이번 달, AI가 당신의<br />업체를 <span style={{ color: 'var(--accent-2)' }}>{search30}회</span> 인용했습니다.</>
-    : <>이번 달, AI 인용을<br /><span style={{ color: 'var(--accent-2)' }}>측정</span>하고 있어요.</>
+    ? <>이번 달, AI가 당신의<br />업체를 <span style={{ color: 'var(--aip-accent-2)' }}>{search30}회</span> 인용했습니다.</>
+    : <>이번 달, AI 인용을<br /><span style={{ color: 'var(--aip-accent-2)' }}>측정</span>하고 있어요.</>
 
   return (
     <section className="hero">
       <div>
         <p className="kicker">{periodLabel}</p>
         <h1>
-          안녕하세요, <span className="serif">{userName}</span>님.<br />
+          안녕하세요, <span className="aip-serif">{userName}</span>님.<br />
           {headline}
         </h1>
         <p className="lede">{lede}</p>
@@ -122,7 +122,7 @@ export function DashHero({
         </HeroStat>
 
         <HeroStat
-          color="var(--accent)"
+          color="var(--aip-accent)"
           label={`AEO 점수 (${placesCount}곳 평균)`}
           value={averageAeoScore ?? 0}
           unit="/ 100"

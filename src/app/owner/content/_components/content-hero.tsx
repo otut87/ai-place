@@ -15,10 +15,10 @@ interface Props {
 }
 
 const TAB_DEFS: Array<{ key: ContentTabKey; label: string; hint: string; color: string }> = [
-  { key: 'detail',  label: '업체 정보',     hint: '특정 업체 1곳 심층',     color: 'var(--accent-2)' },
-  { key: 'compare', label: '비교',          hint: '업체 vs 업체',          color: 'color-mix(in oklab, var(--accent-2) 70%, var(--accent))' },
-  { key: 'guide',   label: '가이드',        hint: '시술·서비스별 선택',    color: 'color-mix(in oklab, var(--accent-2) 35%, var(--accent))' },
-  { key: 'keyword', label: '키워드 페이지', hint: '지역+업종 랜딩',        color: 'var(--accent)' },
+  { key: 'detail',  label: '업체 정보',     hint: '특정 업체 1곳 심층',     color: 'var(--aip-accent-2)' },
+  { key: 'compare', label: '비교',          hint: '업체 vs 업체',          color: 'color-mix(in oklab, var(--aip-accent-2) 70%, var(--aip-accent))' },
+  { key: 'guide',   label: '가이드',        hint: '시술·서비스별 선택',    color: 'color-mix(in oklab, var(--aip-accent-2) 35%, var(--aip-accent))' },
+  { key: 'keyword', label: '키워드 페이지', hint: '지역+업종 랜딩',        color: 'var(--aip-accent)' },
 ]
 
 function formatKickerDate(iso: string | null): string {
@@ -47,7 +47,7 @@ export function ContentHero({ counts, totalCount, latestSortKey }: Props) {
       <div>
         <p className="kicker">{kicker}</p>
         <h1>
-          내가 언급된 <span className="serif">콘텐츠</span><br />
+          내가 언급된 <span className="aip-serif">콘텐츠</span><br />
           <span className="hi">{totalCount}건</span>
         </h1>
         <p className="lede">

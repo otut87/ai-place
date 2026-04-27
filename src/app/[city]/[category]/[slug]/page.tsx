@@ -420,7 +420,7 @@ export default async function ProfilePage({ params }: Props) {
                     업체가 직접 제공한 단가표. LLM이 가격 답변 시 그대로 인용 가능하도록 구조화돼 있습니다.
                   </p>
                 </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>§ services</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--aip-muted)' }}>§ services</div>
               </div>
 
               <div className="svc-shell">
@@ -468,7 +468,7 @@ export default async function ProfilePage({ params }: Props) {
                     Google·카카오 공식 리뷰를 키워드 단위로 요약했습니다. 네이버 플레이스 리뷰는 정책상 미노출.
                   </p>
                 </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>§ reviews</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--aip-muted)' }}>§ reviews</div>
               </div>
 
               <div className="rev-grid">
@@ -527,7 +527,7 @@ export default async function ProfilePage({ params }: Props) {
                 </h2>
                 <p className="sub">{normalizeAddress(place.address)}</p>
               </div>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>§ hours</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--aip-muted)' }}>§ hours</div>
             </div>
 
             <div className="loc-grid">
@@ -545,7 +545,7 @@ export default async function ProfilePage({ params }: Props) {
                     <span className="d">
                       {KO_DAY_LABEL[row.day]} {row.isToday ? '· 오늘' : ''}
                     </span>
-                    <span style={{ color: row.label === '휴무' ? 'var(--muted)' : 'var(--ink)' }}>
+                    <span style={{ color: row.label === '휴무' ? 'var(--aip-muted)' : 'var(--ink)' }}>
                       {row.label}
                     </span>
                   </div>
@@ -567,7 +567,7 @@ export default async function ProfilePage({ params }: Props) {
                   </h2>
                   <p className="sub">FAQPage 스키마로 마크업되어 LLM이 단답으로 추출 가능합니다.</p>
                 </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>§ faq</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--aip-muted)' }}>§ faq</div>
               </div>
 
               <div className="faq-list">
@@ -593,7 +593,7 @@ export default async function ProfilePage({ params }: Props) {
                   </h2>
                   <p className="sub">같은 카테고리의 평점 상위 업체입니다.</p>
                 </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>§ similar</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--aip-muted)' }}>§ similar</div>
               </div>
 
               <div className="sim-grid">
@@ -620,9 +620,9 @@ export default async function ProfilePage({ params }: Props) {
                 })}
               </div>
 
-              <p style={{ marginTop: 16, fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--muted)' }}>
+              <p style={{ marginTop: 16, fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--aip-muted)' }}>
                 → {cityObj.name} {catObj.name} 전체 {sameCategoryPlaces.length}곳은{' '}
-                <Link href={`/${city}/${category}`} style={{ color: 'var(--accent)' }}>
+                <Link href={`/${city}/${category}`} style={{ color: 'var(--aip-accent)' }}>
                   카테고리 페이지
                 </Link>
                 에서 확인.
@@ -675,7 +675,7 @@ export default async function ProfilePage({ params }: Props) {
                 </h2>
                 <p className="sub">LLM이 본 페이지를 인용할 때 함께 참조 가능하도록 출처를 명시합니다.</p>
               </div>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>§ sources</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--aip-muted)' }}>§ sources</div>
             </div>
 
             <div className="stamp">

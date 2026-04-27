@@ -19,7 +19,7 @@
   font-family: var(--mono);
   font-size: 11.5px;
   letter-spacing: .04em;
-  color: var(--muted);
+  color: var(--aip-muted);
   text-transform: uppercase;
   padding-bottom: 14px;
   border-bottom: 1px dashed var(--line);
@@ -55,7 +55,7 @@ h1.doc-title {
   margin: 6px 0 16px;
 }
 h1.doc-title .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
-h1.doc-title .num { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+h1.doc-title .num { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--aip-accent); }
 
 /* ---------- TL;DR ---------- */
 .tldr {
@@ -72,15 +72,15 @@ h1.doc-title .num { font-family: var(--serif); font-style: italic; font-weight: 
   position: absolute;
   top: -10px;
   left: 18px;
-  background: var(--accent);
+  background: var(--aip-accent);
   color: #fff;
   padding: 2px 10px;
   border-radius: 999px;
   font: 600 10.5px var(--mono);
   letter-spacing: .14em;
 }
-.tldr .q { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin: 4px 0 12px; }
-.tldr .q::before { content: "Q. "; color: var(--accent); font-weight: 600; }
+.tldr .q { font-family: var(--mono); font-size: 12.5px; color: var(--aip-muted); margin: 4px 0 12px; }
+.tldr .q::before { content: "Q. "; color: var(--aip-accent); font-weight: 600; }
 .tldr .a {
   font-size: clamp(17px, 1.5vw, 20px);
   line-height: 1.65;
@@ -89,7 +89,7 @@ h1.doc-title .num { font-family: var(--serif); font-style: italic; font-weight: 
 }
 .tldr .a::before {
   content: "A. ";
-  color: var(--accent);
+  color: var(--aip-accent);
   font-family: var(--mono);
   font-weight: 600;
   font-size: .7em;
@@ -106,7 +106,7 @@ h1.doc-title .num { font-family: var(--serif); font-style: italic; font-weight: 
 .tldr .picks .lab {
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--muted);
+  color: var(--aip-muted);
   text-transform: uppercase;
   letter-spacing: .1em;
   padding: 5px 0;
@@ -116,8 +116,8 @@ h1.doc-title .num { font-family: var(--serif); font-style: italic; font-weight: 
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
-  background: color-mix(in oklab, var(--accent) 10%, var(--card));
-  border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+  background: color-mix(in oklab, var(--aip-accent) 10%, var(--card));
+  border: 1px solid color-mix(in oklab, var(--aip-accent) 40%, transparent);
   color: var(--ink);
   font-weight: 600;
   font-size: 13.5px;
@@ -125,10 +125,10 @@ h1.doc-title .num { font-family: var(--serif); font-style: italic; font-weight: 
   border-radius: 999px;
   text-decoration: none;
 }
-.tldr .pick:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
-.tldr .pick .ord { font-family: var(--mono); font-size: 10.5px; font-weight: 600; color: var(--accent); }
+.tldr .pick:hover { background: var(--aip-accent); color: #fff; border-color: var(--aip-accent); }
+.tldr .pick .ord { font-family: var(--mono); font-size: 10.5px; font-weight: 600; color: var(--aip-accent); }
 .tldr .pick:hover .ord { color: #fff; }
-.tldr .pick .why { font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 400; }
+.tldr .pick .why { font-family: var(--mono); font-size: 11px; color: var(--aip-muted); font-weight: 400; }
 .tldr .pick:hover .why { color: rgba(255, 255, 255, .8); }
 
 /* ---------- KEY FACTS ---------- */
@@ -159,7 +159,7 @@ h1.doc-title .num { font-family: var(--serif); font-style: italic; font-weight: 
 .kf-grid .kf dt {
   font-family: var(--mono);
   font-size: 10.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   text-transform: uppercase;
   letter-spacing: .1em;
 }
@@ -197,7 +197,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
   font-size: 10.5px;
   letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--aip-muted);
 }
 .doc-h .anchor::before { content: "§ "; }
 .doc-h .sub { font-size: 14.5px; color: var(--ink-2); margin-top: 6px; max-width: 72ch; line-height: 1.6; }
@@ -227,7 +227,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
   font-style: italic;
   font-weight: 400;
   font-size: 44px;
-  color: var(--accent);
+  color: var(--aip-accent);
   line-height: 1;
   letter-spacing: -.02em;
 }
@@ -235,7 +235,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
   display: block;
   font-family: var(--mono);
   font-size: 9.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   text-transform: uppercase;
   letter-spacing: .14em;
   margin-top: 6px;
@@ -257,7 +257,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
   max-width: 64ch;
 }
 .rk-summary mark {
-  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  background: color-mix(in oklab, var(--aip-accent) 18%, transparent);
   color: var(--ink);
   padding: 0 3px;
   border-radius: 2px;
@@ -274,7 +274,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
 .rk-facts dt {
   font-family: var(--mono);
   font-size: 10.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   text-transform: uppercase;
   letter-spacing: .1em;
   padding: 8px 0;
@@ -314,7 +314,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
   gap: 8px;
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--muted);
+  color: var(--aip-muted);
 }
 .rk-side .rate b { color: var(--ink); font-size: 18px; font-weight: 700; font-family: var(--font); }
 .rk-side .info {
@@ -345,7 +345,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
   font-size: 11px;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-weight: 500;
   text-align: left;
   padding: 12px 16px;
@@ -363,7 +363,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
 .cmp-table .pro .desc {
   display: block;
   font-weight: 400;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-size: 11.5px;
   margin-top: 2px;
   font-family: var(--mono);
@@ -371,7 +371,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
 }
 .cmp-table .pick { text-align: center; font-weight: 600; letter-spacing: -.01em; }
 .cmp-table .pick a { color: inherit; text-decoration: none; }
-.cmp-table .pick a:hover { color: var(--accent); }
+.cmp-table .pick a:hover { color: var(--aip-accent); }
 .cmp-table .pick .stars {
   display: block;
   color: #e6c200;
@@ -380,7 +380,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
   margin-top: 2px;
   font-family: var(--font);
 }
-.cmp-table .n { text-align: center; font-family: var(--mono); color: var(--accent); font-weight: 600; }
+.cmp-table .n { text-align: center; font-family: var(--mono); color: var(--aip-accent); font-weight: 600; }
 
 /* ---------- Q&A ---------- */
 .qa-grid {
@@ -412,7 +412,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
 }
 .qa h4::before {
   content: "Q. ";
-  color: var(--accent);
+  color: var(--aip-accent);
   font-family: var(--mono);
   font-weight: 600;
   font-size: 11px;
@@ -495,7 +495,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
 }
 .related-grid a:hover { border-color: var(--ink); }
 .related-grid .q { font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; line-height: 1.4; }
-.related-grid .meta { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.related-grid .meta { font-size: 11px; color: var(--aip-muted); font-family: var(--mono); }
 
 /* ---------- EMPTY STATE ---------- */
 .empty-state {
@@ -504,7 +504,7 @@ section.doc { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--lin
   border-radius: var(--r-lg);
   padding: 48px 24px;
   text-align: center;
-  color: var(--muted);
+  color: var(--aip-muted);
 }
 .empty-state h3 {
   margin: 0 0 8px;

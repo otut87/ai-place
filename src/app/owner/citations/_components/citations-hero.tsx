@@ -196,7 +196,7 @@ export function CitationsHero({
         <p className="kicker">{kicker}</p>
         <h1>
           AI가 당신의 업체를<br />
-          총 <span className="serif">{grandTotal}회</span> 접촉했습니다.
+          총 <span className="aip-serif">{grandTotal}회</span> 접촉했습니다.
         </h1>
         <p className="lede">
           실시간 답변 <b>{searchTotal}회</b>, 학습 크롤링 <b>{trainingTotal}회</b>. 전체 <b>{placesCount}곳</b> 대상.
@@ -287,7 +287,7 @@ export function CitationsHero({
         </div>
         <div className="stat">
           <div>
-            <div className="lbl"><i style={{ background: 'var(--accent)' }} /> 마지막 발생</div>
+            <div className="lbl"><i style={{ background: 'var(--aip-accent)' }} /> 마지막 발생</div>
             <div className="v" style={{ fontSize: lastVisitIso ? 22 : 26 }}>{lastVisitLabel}</div>
             <div className="sub">
               {lastVisitTime ? <>{lastVisitTime} · {lastVisitSub ?? '—'}</> : 'AI 봇 방문 대기 중'}

@@ -206,13 +206,13 @@ export default async function HomePage() {
       <main>
       {/* HERO */}
       <header className="hero">
-        <div className="wrap grid">
+        <div className="wrap aip-grid">
           <div>
             <span className="eyebrow">
               <span className="pulse" />
               {s.totalCities}개 도시 · {s.totalCategories}개 업종 · {s.totalPlaces}개 업체 등록
               {' '}
-              <span className="muted" style={{ marginLeft: 6 }}>
+              <span className="aip-muted" style={{ marginLeft: 6 }}>
                 · 기준 <time dateTime={s.updatedAt}>{s.updatedAt}</time>
               </span>
             </span>
@@ -302,7 +302,7 @@ export default async function HomePage() {
                     </div>
                     <div className="proof-q">등록 업체 부족 — 첫 업체 등록 후 자동 채워집니다.</div>
                     <div className="proof-foot">
-                      <span className="muted">대기 중</span>
+                      <span className="aip-muted">대기 중</span>
                     </div>
                   </div>
                 )
@@ -332,14 +332,14 @@ export default async function HomePage() {
                   </div>
                   <div className="proof-foot">
                     <span>위치: 답변 1문단</span>
-                    <span className="muted">예시</span>
+                    <span className="aip-muted">예시</span>
                   </div>
                 </div>
               )
             })}
 
             <div className="proof-card c-metric col-6">
-              <div className="flex between" style={{ alignItems: 'flex-start' }}>
+              <div className="flex aip-between" style={{ alignItems: 'flex-start' }}>
                 <div>
                   <div className="proof-q">최근 30일 AI 봇 방문 (실측)</div>
                   <div className="metric-big">
@@ -356,7 +356,7 @@ export default async function HomePage() {
                 const spark = buildSparkline(s.botByDay)
                 if (spark.empty) {
                   return (
-                    <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
+                    <p className="aip-muted" style={{ fontSize: 13, marginTop: 8 }}>
                       수집 시작 단계입니다. 누적되는 대로 일별 추이를 표시합니다.
                     </p>
                   )
@@ -489,7 +489,7 @@ export default async function HomePage() {
       {s.featured.length > 0 && (
         <section style={{ background: 'var(--bg-2)' }}>
           <div className="wrap">
-            <div className="sec-head flex between center" style={{ maxWidth: '100%', flexWrap: 'wrap', gap: 16 }}>
+            <div className="sec-head flex aip-between aip-center" style={{ maxWidth: '100%', flexWrap: 'wrap', gap: 16 }}>
               <div>
                 <div className="sec-kicker">등록 업체 미리보기 · SAMPLES</div>
                 <h2 className="sec-title">지금 이런 업체가 등록되어 있습니다.</h2>
@@ -513,10 +513,10 @@ export default async function HomePage() {
                       <div className="rate">
                         <span className="stars">
                           {'★'.repeat(Math.round(p.rating))}
-                          <span className="dim">{'★'.repeat(5 - Math.round(p.rating))}</span>
+                          <span className="aip-dim">{'★'.repeat(5 - Math.round(p.rating))}</span>
                         </span>
                         {' '}{p.rating.toFixed(1)}{' '}
-                        <span className="muted">· 리뷰 {p.reviewCount ?? 0}</span>
+                        <span className="aip-muted">· 리뷰 {p.reviewCount ?? 0}</span>
                       </div>
                     )}
                     <div className="tags">

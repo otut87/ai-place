@@ -1,5 +1,5 @@
 // /owner/citations — 상위 방문 페이지 테이블 (Remix tpage).
-// 1~5 rank serif + 경로 + 업체 + hit(막대) + 접촉 엔진.
+// 1~5 rank aip-serif + 경로 + 업체 + hit(막대) + 접촉 엔진.
 
 import type { OwnerPathSummaryRow } from '@/lib/owner/bot-stats'
 
@@ -51,7 +51,7 @@ export function TopPathsTable({ rows, placeNameById }: Props) {
         <h3>
           상위 방문 페이지
           {rows.length > 0 && (
-            <small style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', fontWeight: 500, marginLeft: 8 }}>
+            <small style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--aip-muted)', fontWeight: 500, marginLeft: 8 }}>
               {top.length}개 · 총 {rows.reduce((s, r) => s + r.total, 0)}건
             </small>
           )}

@@ -217,7 +217,7 @@ export default async function DirectoryPage() {
               <span className="cur">디렉토리</span>
             </nav>
 
-            <div className="grid">
+            <div className="aip-grid">
               <div>
                 <span className="eyebrow">
                   <span className="pulse" /> Live AI Index ·{' '}
@@ -274,7 +274,7 @@ export default async function DirectoryPage() {
                             <span className="nm">
                               📍 {c.name}{' '}
                               {!isActive && (
-                                <span style={{ color: 'var(--muted)', fontSize: 11 }}>
+                                <span style={{ color: 'var(--aip-muted)', fontSize: 11 }}>
                                   · 모집 중
                                 </span>
                               )}
@@ -329,7 +329,7 @@ export default async function DirectoryPage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="ct" style={{ color: 'var(--muted)' }}>
+                        <p className="ct" style={{ color: 'var(--aip-muted)' }}>
                           {focusCity?.name}에 등록된 업체가 아직 없습니다. 헤더 칩에서 다른 도시를
                           선택해보세요.
                         </p>
@@ -400,24 +400,24 @@ export default async function DirectoryPage() {
               <div className="stat">
                 <span className="lab">등록 업체</span>
                 <span className="val">{stats.totalPlaces.toLocaleString()}</span>
-                <span className="delta muted">파일럿 운영 중</span>
+                <span className="delta aip-muted">파일럿 운영 중</span>
               </div>
               <div className="stat">
                 <span className="lab">활성 업종</span>
                 <span className="val">
                   {stats.activeCategories} / {stats.totalCategories}
                 </span>
-                <span className="delta muted">대분류 {sectors.length}개</span>
+                <span className="delta aip-muted">대분류 {sectors.length}개</span>
               </div>
               <div className="stat">
                 <span className="lab">발행 콘텐츠</span>
                 <span className="val">{stats.totalBlogPosts.toLocaleString()}</span>
-                <span className="delta muted">가이드·비교·키워드 통합</span>
+                <span className="delta aip-muted">가이드·비교·키워드 통합</span>
               </div>
               <div className="stat">
                 <span className="lab">활성 도시</span>
                 <span className="val">{stats.activeCities.length}</span>
-                <span className="delta muted">
+                <span className="delta aip-muted">
                   {stats.activeCities
                     .map(slug => cities.find(c => c.slug === slug)?.name ?? slug)
                     .join(' · ') || '모집 중'}
@@ -449,15 +449,15 @@ export default async function DirectoryPage() {
                   <span className="legend">
                     밀도
                     <span className="scale" aria-hidden>
-                      <i style={{ background: 'color-mix(in oklab, var(--accent) 6%, var(--card))' }} />
-                      <i style={{ background: 'color-mix(in oklab, var(--accent) 14%, var(--card))' }} />
-                      <i style={{ background: 'color-mix(in oklab, var(--accent) 24%, var(--card))' }} />
-                      <i style={{ background: 'color-mix(in oklab, var(--accent) 38%, var(--card))' }} />
-                      <i style={{ background: 'color-mix(in oklab, var(--accent) 56%, var(--card))' }} />
+                      <i style={{ background: 'color-mix(in oklab, var(--aip-accent) 6%, var(--card))' }} />
+                      <i style={{ background: 'color-mix(in oklab, var(--aip-accent) 14%, var(--card))' }} />
+                      <i style={{ background: 'color-mix(in oklab, var(--aip-accent) 24%, var(--card))' }} />
+                      <i style={{ background: 'color-mix(in oklab, var(--aip-accent) 38%, var(--card))' }} />
+                      <i style={{ background: 'color-mix(in oklab, var(--aip-accent) 56%, var(--card))' }} />
                     </span>
-                    <span style={{ color: 'var(--muted)' }}>0 → 120+</span>
+                    <span style={{ color: 'var(--aip-muted)' }}>0 → 120+</span>
                   </span>
-                  <span style={{ color: 'var(--muted)' }}>·</span>
+                  <span style={{ color: 'var(--aip-muted)' }}>·</span>
                   <span className="legend">
                     <span className="live-dot" /> 가이드 발행 중
                   </span>
@@ -557,7 +557,7 @@ export default async function DirectoryPage() {
                   marginTop: 12,
                   fontFamily: 'var(--mono)',
                   fontSize: 11.5,
-                  color: 'var(--muted)',
+                  color: 'var(--aip-muted)',
                 }}
               >
                 * 실제 등록 업체 수 기준. 다른 도시 행은 파일럿 확장 단계로 노출 전 상태입니다.
@@ -624,7 +624,7 @@ export default async function DirectoryPage() {
                                 {p.reviewCount != null && ` · 리뷰 ${p.reviewCount}`}
                               </span>
                             )}
-                            <span style={{ color: 'var(--accent)' }}>
+                            <span style={{ color: 'var(--aip-accent)' }}>
                               {sector?.name ?? '업체'}
                             </span>
                           </div>

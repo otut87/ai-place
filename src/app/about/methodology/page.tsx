@@ -222,7 +222,7 @@ export default function MethodologyPage() {
               {eeat.map((x, i) => (
                 <div className="au-step" key={x.axis}>
                   <span className="n">{String.fromCharCode(0x2160 + i)}</span>
-                  <h3>{x.axis} <span style={{ color: 'var(--muted)', fontWeight: 400, fontSize: 13 }}>· {x.korean}</span></h3>
+                  <h3>{x.axis} <span style={{ color: 'var(--aip-muted)', fontWeight: 400, fontSize: 13 }}>· {x.korean}</span></h3>
                   <p>{x.practice}</p>
                 </div>
               ))}
@@ -259,7 +259,7 @@ export default function MethodologyPage() {
                       <td>{row.code}</td>
                       <td>
                         <b>{row.label}</b>
-                        <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 12, fontFamily: 'var(--mono)' }}>{row.detail}</div>
+                        <div style={{ marginTop: 4, color: 'var(--aip-muted)', fontSize: 12, fontFamily: 'var(--mono)' }}>{row.detail}</div>
                       </td>
                       <td>{row.max}</td>
                     </tr>
@@ -268,7 +268,7 @@ export default function MethodologyPage() {
               </table>
             </div>
 
-            <p style={{ marginTop: 14, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: '.04em' }}>
+            <p style={{ marginTop: 14, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--aip-muted)', letterSpacing: '.04em' }}>
               ※ 같은 URL 3회 연속 실행 시 편차 ≤ 1점 (재현성 보장) · 5xx 자동 재시도 · User-Agent: AIPlaceDiagnostic/3.1
             </p>
           </div>
@@ -308,7 +308,7 @@ export default function MethodologyPage() {
               fontFamily: 'var(--mono)',
               fontSize: 11.5,
               lineHeight: 1.7,
-              color: 'var(--muted)',
+              color: 'var(--aip-muted)',
               letterSpacing: '.02em',
             }}>
               <b style={{ color: 'var(--ink)' }}>면책</b> · 본 페이지의 수치·순위는 공개 데이터에 기반한 자체 조사 결과이며,
@@ -316,8 +316,8 @@ export default function MethodologyPage() {
               <br />
               <br />
               마지막 업데이트 <b style={{ color: 'var(--ink)' }}>{LAST_UPDATED}</b> · 작성{' '}
-              <Link href="/about" style={{ color: 'var(--accent)' }}>이지수 큐레이터</Link> · 문의{' '}
-              <a href={`mailto:${SITE_BRAND.email}`} style={{ color: 'var(--accent)' }}>{SITE_BRAND.email}</a>
+              <Link href="/about" style={{ color: 'var(--aip-accent)' }}>이지수 큐레이터</Link> · 문의{' '}
+              <a href={`mailto:${SITE_BRAND.email}`} style={{ color: 'var(--aip-accent)' }}>{SITE_BRAND.email}</a>
             </div>
           </div>
         </section>

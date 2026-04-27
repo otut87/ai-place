@@ -7,7 +7,7 @@
 .au-meta-line {
   display: flex; gap: 12px 18px; flex-wrap: wrap; align-items: center;
   font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em;
-  color: var(--muted); text-transform: uppercase;
+  color: var(--aip-muted); text-transform: uppercase;
   padding-bottom: 14px; border-bottom: 1px dashed var(--line); margin-bottom: 22px;
 }
 .au-meta-line b { color: var(--ink); font-weight: 600; }
@@ -16,7 +16,7 @@
   background: var(--card); border: 1px solid var(--line-2); padding: 3px 9px; border-radius: 999px;
   color: var(--ink-2); font-size: 11px;
 }
-.au-meta-line .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.au-meta-line .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--aip-accent); }
 h1.au-title {
   font-size: clamp(34px, 5vw, 60px); font-weight: 700; letter-spacing: -.034em;
   line-height: 1.04; margin: 8px 0 14px;
@@ -24,7 +24,7 @@ h1.au-title {
 h1.au-title .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
 .au-lede { font-size: clamp(15px, 1.3vw, 17px); line-height: 1.65; color: var(--ink-2); max-width: 60ch; margin: 6px 0 0; }
 .au-lede mark {
-  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  background: color-mix(in oklab, var(--aip-accent) 18%, transparent);
   color: var(--ink); padding: 0 3px; border-radius: 2px; font-weight: 600;
 }
 
@@ -36,11 +36,11 @@ h1.au-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
 }
 .au-form .form-num {
   font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--muted); margin-bottom: 14px;
+  text-transform: uppercase; color: var(--aip-muted); margin-bottom: 14px;
 }
-.au-form .form-num b { color: var(--accent); font-weight: 600; }
+.au-form .form-num b { color: var(--aip-accent); font-weight: 600; }
 .au-form label { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
-.au-form .hint { font-size: 12px; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
+.au-form .hint { font-size: 12px; color: var(--aip-muted); margin-bottom: 8px; line-height: 1.5; }
 .au-form .url-row { display: flex; gap: 8px; align-items: stretch; }
 @media (max-width: 640px) { .au-form .url-row { flex-direction: column; } }
 .au-form input[type="url"] {
@@ -49,24 +49,24 @@ h1.au-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
   color: var(--ink); transition: border-color .15s, box-shadow .15s;
 }
 .au-form input[type="url"]:focus {
-  outline: none; border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent);
+  outline: none; border-color: var(--aip-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--aip-accent) 18%, transparent);
 }
-.au-form input[type="url"]::placeholder { color: var(--muted-2); font-family: var(--mono); }
+.au-form input[type="url"]::placeholder { color: var(--aip-muted-2); font-family: var(--mono); }
 .au-form .btn-go {
   background: var(--ink); color: var(--bg); border: none; padding: 0 24px;
   font: 600 13px var(--font); border-radius: var(--r-sm); cursor: pointer;
   letter-spacing: -.005em; white-space: nowrap;
   transition: background .15s;
 }
-.au-form .btn-go:hover { background: var(--accent); }
+.au-form .btn-go:hover { background: var(--aip-accent); }
 .au-form .meta-strip {
   margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line);
   display: flex; gap: 18px; flex-wrap: wrap;
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; color: var(--muted);
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; color: var(--aip-muted);
 }
 .au-form .meta-strip b { color: var(--ink); font-weight: 600; }
-.au-form .meta-strip .ac { color: var(--accent); font-weight: 600; }
+.au-form .meta-strip .ac { color: var(--aip-accent); font-weight: 600; }
 
 /* Sample preview */
 .au-sample {
@@ -75,21 +75,21 @@ h1.au-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
   padding: 22px 26px;
 }
 .au-sample .lab {
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--aip-muted);
   margin-bottom: 10px;
 }
 .au-sample h3 { margin: 0 0 4px; font-size: 17px; font-weight: 700; letter-spacing: -.014em; }
-.au-sample h3 .url { font-family: var(--mono); font-size: 13px; color: var(--accent); font-weight: 500; margin-left: 8px; }
+.au-sample h3 .url { font-family: var(--mono); font-size: 13px; color: var(--aip-accent); font-weight: 500; margin-left: 8px; }
 .au-sample .score-row { display: flex; align-items: baseline; gap: 14px; margin: 14px 0 18px; flex-wrap: wrap; }
 .au-sample .score-big {
-  font-size: 56px; font-weight: 700; letter-spacing: -.034em; line-height: 1; color: var(--accent);
+  font-size: 56px; font-weight: 700; letter-spacing: -.034em; line-height: 1; color: var(--aip-accent);
 }
-.au-sample .score-big small { font-size: 18px; color: var(--muted-2); font-weight: 500; margin-left: 4px; }
+.au-sample .score-big small { font-size: 18px; color: var(--aip-muted-2); font-weight: 500; margin-left: 4px; }
 .au-sample .score-grade {
   font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
   color: var(--ink-2); padding: 4px 10px; border: 1px solid var(--line-2); border-radius: 999px; background: var(--card);
 }
-.au-sample .score-grade b { color: var(--accent); font-weight: 600; }
+.au-sample .score-grade b { color: var(--aip-accent); font-weight: 600; }
 .au-sample .checks {
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 0;
   background: var(--card); border: 1px solid var(--line-2); border-radius: var(--r-md); overflow: hidden;
@@ -108,7 +108,7 @@ h1.au-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
 .au-sample .ck.warn .ic { color: var(--warn); }
 .au-sample .ck.fail .ic { color: #b03a2e; }
 .au-sample .ck b { color: var(--ink); font-weight: 600; }
-.au-sample .ck .pts { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.au-sample .ck .pts { font-family: var(--mono); font-size: 11.5px; color: var(--aip-muted); }
 .au-sample .ck .pts b { color: var(--ink); }
 .au-sample .ck.fail .pts b { color: #b03a2e; }
 
@@ -122,14 +122,14 @@ h1.au-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
   padding: 24px; display: flex; flex-direction: column; gap: 8px;
 }
 .au-step .n {
-  font-family: var(--serif); font-style: italic; font-size: 36px; line-height: 1; color: var(--accent); font-weight: 400;
+  font-family: var(--serif); font-style: italic; font-size: 36px; line-height: 1; color: var(--aip-accent); font-weight: 400;
 }
 .au-step h3 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.014em; }
 .au-step p { margin: 0; font-size: 13.5px; line-height: 1.65; color: var(--ink-2); }
 .au-step p b { color: var(--ink); font-weight: 600; }
 .au-step .tail {
   margin-top: auto; padding-top: 12px; border-top: 1px dashed var(--line);
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; color: var(--muted);
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; color: var(--aip-muted);
 }
 
 /* Reference table */
@@ -143,10 +143,10 @@ h1.au-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
 }
 .au-table thead th {
   background: var(--bg-2); font-family: var(--mono); font-size: 11px; font-weight: 500;
-  color: var(--muted); text-transform: uppercase; letter-spacing: .1em;
+  color: var(--aip-muted); text-transform: uppercase; letter-spacing: .1em;
 }
 .au-table tbody td:first-child {
-  font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: .04em; width: 60px;
+  font-family: var(--mono); font-size: 11px; color: var(--aip-accent); letter-spacing: .04em; width: 60px;
 }
 .au-table tbody td:nth-child(2) b { color: var(--ink); font-weight: 600; }
 .au-table tbody td:nth-child(3) {

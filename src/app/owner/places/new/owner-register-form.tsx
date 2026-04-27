@@ -357,7 +357,7 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
               {loading ? '검색 중…' : '검색'}
             </button>
           </div>
-          <p className="hint" style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
+          <p className="hint" style={{ marginTop: 8, fontSize: 12, color: 'var(--aip-muted)' }}>
             네이버 플레이스에서 찾고, Google 에서 자동으로 정보를 가져옵니다.
           </p>
 
@@ -379,7 +379,7 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
                       {disabled
                         ? <span className="chip bad">이미 등록됨</span>
                         : <span className="chip good">naver</span>}
-                      {c.naverCategory && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{c.naverCategory}</span>}
+                      {c.naverCategory && <span style={{ fontSize: 11.5, color: 'var(--aip-muted)' }}>{c.naverCategory}</span>}
                     </div>
                     <div className="addr">{c.roadAddress ?? c.jibunAddress}</div>
                     {disabled && c.alreadyRegistered ? (
@@ -389,11 +389,11 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          style={{ color: 'var(--accent)', fontFamily: 'var(--mono)' }}
+                          style={{ color: 'var(--aip-accent)', fontFamily: 'var(--mono)' }}
                         >
                           → 등록된 업체 보기
                         </a>
-                        <span style={{ color: 'var(--muted-2)' }}>|</span>
+                        <span style={{ color: 'var(--aip-muted-2)' }}>|</span>
                         <ClaimPlaceButton
                           placeId={c.alreadyRegistered.id}
                           placeName={c.alreadyRegistered.name}
@@ -426,11 +426,11 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
             <div className="pl-info warn" style={{ marginTop: 12 }}>
               <b>네이버 플레이스에 없는 업체는 등록 불가</b> 입니다.
               먼저{' '}
-              <a href="https://smartplace.naver.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
+              <a href="https://smartplace.naver.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--aip-accent)' }}>
                 네이버 스마트플레이스
               </a>
               {' '}또는{' '}
-              <a href="https://www.google.com/business" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
+              <a href="https://www.google.com/business" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--aip-accent)' }}>
                 Google Business Profile
               </a>
               {' '}에 등록 후 다시 검색해 주세요.
@@ -461,13 +461,13 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
                 <label>자동 분류 — 틀리면 수정</label>
                 <div className="row-2">
                   <div>
-                    <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>도시</label>
+                    <label style={{ fontSize: 11, color: 'var(--aip-muted)', marginBottom: 4, display: 'block' }}>도시</label>
                     <select className="pe-inp" value={city} onChange={(e) => setCity(e.target.value)}>
                       {cities.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
                     </select>
                   </div>
                   <div className="cat-picker">
-                    <label style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block' }}>업종</label>
+                    <label style={{ fontSize: 11, color: 'var(--aip-muted)', marginBottom: 4, display: 'block' }}>업종</label>
                     <input
                       className="pe-inp"
                       type="text"
@@ -539,7 +539,7 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
                   <label>URL 슬러그 <span className="opt">자동</span></label>
                   <p className="hint">aiplace.kr/{city}/{category || '...'}/{slug || '...'}</p>
                   <input
-                    className="pe-inp mono"
+                    className="pe-inp aip-mono"
                     type="text"
                     value={slug}
                     onChange={(e) => setSlug(buildSlug(e.target.value))}
@@ -581,7 +581,7 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
                 <label>대표 전화</label>
                 <p className="hint">숫자만 입력하면 자동으로 하이픈이 붙습니다.</p>
                 <input
-                  className="pe-inp mono"
+                  className="pe-inp aip-mono"
                   type="tel"
                   inputMode="tel"
                   value={phone}
@@ -859,7 +859,7 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
               <div className="pl-sec-head">
                 <div>
                   <div className="eyebrow">Section 07</div>
-                  <h3>사진 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', marginLeft: 6 }}>Google 자동</span></h3>
+                  <h3>사진 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--aip-accent)', marginLeft: 6 }}>Google 자동</span></h3>
                 </div>
               </div>
               {photoRefs.length === 0 ? (
@@ -985,7 +985,7 @@ function RegLinkField({ label, value, onChange, placeholder, searchUrl, searchLa
       <div className="link-field">
         <input
           type="url"
-          className="pe-inp mono"
+          className="pe-inp aip-mono"
           value={value}
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
           placeholder={placeholder}

@@ -558,12 +558,12 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
                 <h2 id="all-posts">
                   <span className="it">All Posts</span> · <span className="num">{totalCount}</span>편
                   {(typeFilter || sectorFilter || cityFilter || query) && (
-                    <span style={{ fontSize: 14, color: 'var(--muted)', marginLeft: 8 }}>
+                    <span style={{ fontSize: 14, color: 'var(--aip-muted)', marginLeft: 8 }}>
                       / 전체 {all.length}편
                     </span>
                   )}
                   {totalPages > 1 && (
-                    <span style={{ fontSize: 14, color: 'var(--muted)', marginLeft: 8 }}>
+                    <span style={{ fontSize: 14, color: 'var(--aip-muted)', marginLeft: 8 }}>
                       · 페이지 {safePage}/{totalPages}
                     </span>
                   )}
@@ -579,7 +579,7 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
                   {(typeFilter || sectorFilter || cityFilter || query) && (
                     <>
                       {' '}
-                      <Link href="/blog" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
+                      <Link href="/blog" style={{ color: 'var(--aip-accent)', textDecoration: 'underline' }}>
                         필터 초기화
                       </Link>
                     </>
@@ -705,7 +705,7 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
                   <h2>
                     <span className="it">By Sector</span> · 업종별 인덱스
                     {cityFilter && (
-                      <span style={{ fontSize: 14, color: 'var(--muted)', marginLeft: 8 }}>
+                      <span style={{ fontSize: 14, color: 'var(--aip-muted)', marginLeft: 8 }}>
                         · {cities.find(c => c.slug === cityFilter)?.name ?? cityFilter} 한정
                       </span>
                     )}
@@ -753,7 +753,7 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
                           gap: 6,
                           fontFamily: 'var(--mono)',
                           fontSize: 11.5,
-                          color: 'var(--accent)',
+                          color: 'var(--aip-accent)',
                           textDecoration: 'none',
                           letterSpacing: '.04em',
                           textTransform: 'uppercase',

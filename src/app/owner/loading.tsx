@@ -1,5 +1,5 @@
 // /owner 공통 로딩 스켈레톤 — 클릭 즉시 반응 보장 (Next.js App Router loading.tsx).
-// 오너 대시보드 레이아웃과 동일한 grid 구조로 스켈레톤 블록을 배치한다.
+// 오너 대시보드 레이아웃과 동일한 aip-grid 구조로 스켈레톤 블록을 배치한다.
 
 export default function OwnerLoading() {
   return (

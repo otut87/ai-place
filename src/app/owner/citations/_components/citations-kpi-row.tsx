@@ -97,12 +97,12 @@ export function CitationsKpiRow({ botSummary, byPath, placeCount, lastVisitIso }
       <article className="cit-kpi">
         <div className="head">
           <span className="dt" style={{ background: 'var(--chat)' }} />
-          <h3>직접 답변 <small style={{ fontWeight: 500, marginLeft: 4, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>(인용 포함)</small></h3>
+          <h3>직접 답변 <small style={{ fontWeight: 500, marginLeft: 4, color: 'var(--aip-muted)', fontFamily: 'var(--mono)' }}>(인용 포함)</small></h3>
         </div>
         <div className="num">
           <span className="big">{answer}</span>
           <span className="u">회</span>
-          <span className={`pct ${answer > 0 ? 'good' : 'muted'}`}>{answerPct}%</span>
+          <span className={`pct ${answer > 0 ? 'good' : 'aip-muted'}`}>{answerPct}%</span>
         </div>
         <div className="prog"><i style={{ width: `${answerPct}%`, background: 'var(--chat)' }} /></div>
         <div className="desc">
@@ -117,12 +117,12 @@ export function CitationsKpiRow({ botSummary, byPath, placeCount, lastVisitIso }
       <article className="cit-kpi">
         <div className="head">
           <span className="dt" style={{ background: 'var(--warn)' }} />
-          <h3>간접 노출 <small style={{ fontWeight: 500, marginLeft: 4, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>(학습·크롤링)</small></h3>
+          <h3>간접 노출 <small style={{ fontWeight: 500, marginLeft: 4, color: 'var(--aip-muted)', fontFamily: 'var(--mono)' }}>(학습·크롤링)</small></h3>
         </div>
         <div className="num">
           <span className="big">{crawl}</span>
           <span className="u">회</span>
-          <span className={`pct ${crawl > 0 ? 'warn' : 'muted'}`}>{crawlPct}%</span>
+          <span className={`pct ${crawl > 0 ? 'warn' : 'aip-muted'}`}>{crawlPct}%</span>
         </div>
         <div className="prog"><i style={{ width: `${crawlPct}%`, background: 'var(--warn)' }} /></div>
         <div className="desc">

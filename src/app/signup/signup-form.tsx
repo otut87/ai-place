@@ -165,7 +165,7 @@ export function SignupForm() {
       >
         <div className="lbl-row">
           <label htmlFor="signup-email">
-            이메일 <span style={{ color: 'var(--accent)' }}>*</span>
+            이메일 <span style={{ color: 'var(--aip-accent)' }}>*</span>
           </label>
           <EmailStatusHint state={emailState} />
         </div>
@@ -193,11 +193,11 @@ export function SignupForm() {
         {emailState === 'taken' && (
           <div className="err" style={{ display: 'block' }}>
             이미 가입된 이메일입니다 ·{' '}
-            <Link href="/login" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'underline' }}>
+            <Link href="/login" style={{ color: 'var(--aip-accent)', fontWeight: 600, textDecoration: 'underline' }}>
               로그인
             </Link>
             {' 또는 '}
-            <Link href="/account/reset-password" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'underline' }}>
+            <Link href="/account/reset-password" style={{ color: 'var(--aip-accent)', fontWeight: 600, textDecoration: 'underline' }}>
               비밀번호 찾기
             </Link>
           </div>
@@ -208,7 +208,7 @@ export function SignupForm() {
       <div className="field">
         <div className="lbl-row">
           <label htmlFor="signup-phone">
-            휴대폰 번호 <span style={{ color: 'var(--accent)' }}>*</span>
+            휴대폰 번호 <span style={{ color: 'var(--aip-accent)' }}>*</span>
           </label>
           <span className="hint">본인 확인용</span>
         </div>
@@ -231,7 +231,7 @@ export function SignupForm() {
       <div className="field">
         <div className="lbl-row">
           <label htmlFor="signup-pw">
-            비밀번호 <span style={{ color: 'var(--accent)' }}>*</span>
+            비밀번호 <span style={{ color: 'var(--aip-accent)' }}>*</span>
           </label>
           <span className="hint">8자 이상</span>
         </div>
@@ -358,7 +358,7 @@ export function SignupForm() {
 
 function EmailStatusHint({ state }: { state: EmailState }) {
   if (state === 'checking') {
-    return <span className="hint" style={{ color: 'var(--muted)' }}>확인 중…</span>
+    return <span className="hint" style={{ color: 'var(--aip-muted)' }}>확인 중…</span>
   }
   if (state === 'available') {
     return <span className="hint" style={{ color: 'var(--good)' }}>사용 가능</span>

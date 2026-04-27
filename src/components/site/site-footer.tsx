@@ -77,7 +77,7 @@ export async function SiteFooter({
             </Link>
             <p>{SITE_BRAND.tagline}</p>
             {currentSectorLabel && (
-              <p style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>
+              <p style={{ marginTop: 6, fontSize: 12, color: 'var(--aip-muted)' }}>
                 현재 페이지: {currentSectorLabel}
               </p>
             )}
@@ -116,7 +116,7 @@ export async function SiteFooter({
                 ))
               ) : (
                 <li>
-                  <span style={{ color: 'var(--muted)' }}>모집 중</span>
+                  <span style={{ color: 'var(--aip-muted)' }}>모집 중</span>
                 </li>
               )}
             </ul>

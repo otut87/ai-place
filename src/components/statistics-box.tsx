@@ -10,7 +10,7 @@ export function StatisticsBox({ statistics, sources, lastUpdated }: StatisticsBo
   return (
     <div className="bg-[#f2f2f2] rounded-[14px] p-6">
       <h2 className="text-lg font-semibold text-[#222222] mb-4">주요 통계</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="aip-grid grid-cols-1 sm:grid-cols-2 gap-4">
         {statistics.map(stat => (
           <div key={stat.label} className="bg-white rounded-lg p-4">
             <p className="text-sm text-[#6a6a6a]">{stat.label}</p>

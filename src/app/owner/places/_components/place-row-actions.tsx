@@ -120,7 +120,7 @@ export function PlaceRowActions({ placeId, placeName, status }: Props) {
       )}
 
       <style>{`
-        .danger-btn { color: var(--muted) !important; }
+        .danger-btn { color: var(--aip-muted) !important; }
         .danger-btn:hover { background: color-mix(in oklab, #b42318 8%, transparent) !important; color: #b42318 !important; }
 
         .row-confirm-backdrop {

@@ -35,7 +35,7 @@
   font-family: var(--mono);
   font-size: 11.5px;
   letter-spacing: .04em;
-  color: var(--muted);
+  color: var(--aip-muted);
   text-transform: uppercase;
   padding-bottom: 14px;
   border-bottom: 1px dashed var(--line);
@@ -74,7 +74,7 @@
   border-radius: var(--r-md);
   font-family: var(--mono);
   font-size: 11.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   line-height: 1.7;
 }
 
@@ -95,7 +95,7 @@
   font-family: var(--mono);
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--aip-accent);
   margin: 0 0 12px;
   font-weight: 500;
 }

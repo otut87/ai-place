@@ -41,13 +41,13 @@ export function DashPlaceList({ places }: Props) {
     <div className="dash-panel2 biz-grid">
       <div className="phead">
         <h3>등록된 업체 · {places.length}곳</h3>
-        <Link href="/owner/places/new" style={{ fontSize: 12, fontFamily: 'var(--mono)', color: 'var(--accent)', textDecoration: 'none' }}>
+        <Link href="/owner/places/new" style={{ fontSize: 12, fontFamily: 'var(--mono)', color: 'var(--aip-accent)', textDecoration: 'none' }}>
           + 업체 추가
         </Link>
       </div>
 
       {places.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--aip-muted)', fontSize: 13 }}>
           아직 등록된 업체가 없어요.
         </div>
       ) : (

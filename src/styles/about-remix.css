@@ -10,7 +10,7 @@
 .ab-meta-line {
   display: flex; gap: 12px 18px; flex-wrap: wrap; align-items: center;
   font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em;
-  color: var(--muted); text-transform: uppercase;
+  color: var(--aip-muted); text-transform: uppercase;
   padding-bottom: 14px; border-bottom: 1px dashed var(--line); margin-bottom: 22px;
 }
 .ab-meta-line b { color: var(--ink); font-weight: 600; }
@@ -19,7 +19,7 @@
   background: var(--card); border: 1px solid var(--line-2); padding: 3px 9px; border-radius: 999px;
   color: var(--ink-2); font-size: 11px;
 }
-.ab-meta-line .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.ab-meta-line .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--aip-accent); }
 
 h1.ab-title {
   font-size: clamp(34px, 5vw, 60px); font-weight: 700; letter-spacing: -.034em;
@@ -31,7 +31,7 @@ h1.ab-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
   margin: 6px 0 0;
 }
 .ab-lede mark {
-  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  background: color-mix(in oklab, var(--aip-accent) 18%, transparent);
   color: var(--ink); padding: 0 3px; border-radius: 2px; font-weight: 600;
 }
 
@@ -51,12 +51,12 @@ h1.ab-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
 @media (max-width: 640px) { .ab-author-card .ava { width: 48px; height: 48px; font-size: 18px; } }
 .ab-author-card h3 { margin: 0 0 4px; font-size: 17px; font-weight: 700; letter-spacing: -.014em; }
 .ab-author-card .role {
-  font-family: var(--mono); font-size: 11px; color: var(--muted);
+  font-family: var(--mono); font-size: 11px; color: var(--aip-muted);
   text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px;
 }
 .ab-author-card p { margin: 0; font-size: 13.5px; line-height: 1.65; color: var(--ink-2); }
 .ab-author-card p b { color: var(--ink); font-weight: 600; }
-.ab-author-card a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.ab-author-card a { color: var(--aip-accent); text-decoration: underline; text-underline-offset: 2px; }
 
 .ab-section { padding: clamp(40px, 5vw, 64px) 0; }
 
@@ -65,10 +65,10 @@ h1.ab-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
 .ab-prose p:last-child { margin-bottom: 0; }
 .ab-prose b { color: var(--ink); font-weight: 600; }
 .ab-prose mark {
-  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  background: color-mix(in oklab, var(--aip-accent) 14%, transparent);
   color: var(--ink); padding: 0 2px; font-weight: 500;
 }
-.ab-prose a.link { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.ab-prose a.link { color: var(--aip-accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 
 .ab-target-list {
   list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0; max-width: 64ch;
@@ -81,7 +81,7 @@ h1.ab-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
 .ab-target-list li:first-child { border-top: 1px solid var(--line-2); }
 .ab-target-list li:last-child { border-bottom: 1px solid var(--line-2); }
 .ab-target-list li .num {
-  font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: var(--accent); font-weight: 600;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: var(--aip-accent); font-weight: 600;
 }
 .ab-target-list li b { color: var(--ink); font-weight: 600; }
 
@@ -95,14 +95,14 @@ h1.ab-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
   padding: 24px 24px 22px; display: flex; flex-direction: column; gap: 10px; position: relative;
 }
 .ab-step .n {
-  font-family: var(--serif); font-style: italic; font-size: 36px; line-height: 1; color: var(--accent); font-weight: 400;
+  font-family: var(--serif); font-style: italic; font-size: 36px; line-height: 1; color: var(--aip-accent); font-weight: 400;
 }
 .ab-step h3 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.014em; }
 .ab-step p { margin: 0; font-size: 13.5px; line-height: 1.65; color: var(--ink-2); }
 .ab-step p b { color: var(--ink); font-weight: 600; }
 .ab-step .tail {
   margin-top: auto; padding-top: 12px; border-top: 1px dashed var(--line);
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; color: var(--muted);
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; color: var(--aip-muted);
 }
 
 .ab-cta { text-align: center; padding: clamp(28px, 4vw, 48px) 0; }

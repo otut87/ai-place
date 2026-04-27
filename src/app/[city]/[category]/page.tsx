@@ -502,7 +502,7 @@ export default async function ListingPage({ params }: Props) {
                     marginTop: 18,
                     fontFamily: 'var(--mono)',
                     fontSize: 11.5,
-                    color: 'var(--muted)',
+                    color: 'var(--aip-muted)',
                   }}
                 >
                   * 7~{places.length}위 {places.length - top6.length}곳은 향후 데이터셋 부록으로 공개 예정입니다.
@@ -553,7 +553,7 @@ export default async function ListingPage({ params }: Props) {
                           const p = s.topPlaces[i]
                           if (!p)
                             return (
-                              <td key={i} className="pick" style={{ color: 'var(--muted-2)' }}>
+                              <td key={i} className="pick" style={{ color: 'var(--aip-muted-2)' }}>
                                 —
                               </td>
                             )

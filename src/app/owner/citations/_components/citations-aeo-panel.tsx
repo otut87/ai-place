@@ -20,7 +20,7 @@ function tagForGrade(grade: AeoSnapshot['grade']): { label: string; cls: 'good' 
 function ringColorFor(cls: 'good' | 'warn' | 'bad'): string {
   if (cls === 'good') return 'var(--good)'
   if (cls === 'warn') return 'var(--warn)'
-  return 'var(--accent)'
+  return 'var(--aip-accent)'
 }
 
 function linkTextFor(cls: 'good' | 'warn' | 'bad'): string {

@@ -18,7 +18,7 @@
   font-family: var(--mono);
   font-size: 11.5px;
   letter-spacing: .04em;
-  color: var(--muted);
+  color: var(--aip-muted);
   text-transform: uppercase;
   padding-bottom: 14px;
   border-bottom: 1px dashed var(--line);
@@ -63,7 +63,7 @@ h1.biz-title {
   margin: 12px 0 14px;
 }
 h1.biz-title .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
-h1.biz-title .num { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+h1.biz-title .num { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--aip-accent); }
 
 .biz-lede {
   font-size: clamp(15.5px, 1.4vw, 17.5px);
@@ -73,7 +73,7 @@ h1.biz-title .num { font-family: var(--serif); font-style: italic; font-weight: 
   margin: 6px 0 18px;
 }
 .biz-lede mark {
-  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  background: color-mix(in oklab, var(--aip-accent) 18%, transparent);
   color: var(--ink);
   padding: 0 3px;
   border-radius: 2px;
@@ -110,7 +110,7 @@ h1.biz-title .num { font-family: var(--serif); font-style: italic; font-weight: 
 .kf-strip .kf dt {
   font-family: var(--mono);
   font-size: 10.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   text-transform: uppercase;
   letter-spacing: .1em;
 }
@@ -124,7 +124,7 @@ h1.biz-title .num { font-family: var(--serif); font-style: italic; font-weight: 
   letter-spacing: -.01em;
 }
 .kf-strip .kf .sub { font-family: var(--mono); font-size: 11px; color: var(--ink-2); margin-top: 2px; }
-.kf-strip .kf .accent-dd { color: var(--accent); }
+.kf-strip .kf .accent-dd { color: var(--aip-accent); }
 
 /* Side card */
 .side-card {
@@ -145,7 +145,7 @@ h1.biz-title .num { font-family: var(--serif); font-style: italic; font-weight: 
   font-size: 10.5px;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--aip-muted);
   margin: 0;
 }
 .side-card .row {
@@ -158,7 +158,7 @@ h1.biz-title .num { font-family: var(--serif); font-style: italic; font-weight: 
 }
 .side-card .row:first-of-type { border-top: none; padding-top: 4px; }
 .side-card .row .k {
-  color: var(--muted);
+  color: var(--aip-muted);
   font-family: var(--mono);
   font-size: 11.5px;
   text-transform: uppercase;
@@ -171,7 +171,7 @@ h1.biz-title .num { font-family: var(--serif); font-style: italic; font-weight: 
 .side-card .foot {
   font-family: var(--mono);
   font-size: 10.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   padding-top: 10px;
   border-top: 1px dashed var(--line);
   line-height: 1.55;
@@ -192,17 +192,17 @@ h1.biz-title .num { font-family: var(--serif); font-style: italic; font-weight: 
   position: absolute;
   top: -10px;
   left: 18px;
-  background: var(--accent);
+  background: var(--aip-accent);
   color: #fff;
   padding: 2px 10px;
   border-radius: 999px;
   font: 600 10.5px var(--mono);
   letter-spacing: .14em;
 }
-.why-card .q { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin: 4px 0 10px; }
-.why-card .q::before { content: "Q. "; color: var(--accent); font-weight: 600; }
+.why-card .q { font-family: var(--mono); font-size: 12.5px; color: var(--aip-muted); margin: 4px 0 10px; }
+.why-card .q::before { content: "Q. "; color: var(--aip-accent); font-weight: 600; }
 .why-card .a { font-size: clamp(15.5px, 1.4vw, 17.5px); line-height: 1.65; color: var(--ink); }
-.why-card .a::before { content: "A. "; color: var(--accent); font-family: var(--mono); font-weight: 600; font-size: .7em; }
+.why-card .a::before { content: "A. "; color: var(--aip-accent); font-family: var(--mono); font-weight: 600; font-size: .7em; }
 .why-card .a b { font-weight: 700; }
 .why-card .reasons {
   margin-top: 14px;
@@ -218,12 +218,12 @@ h1.biz-title .num { font-family: var(--serif); font-style: italic; font-weight: 
   font-family: var(--serif);
   font-style: italic;
   font-weight: 400;
-  color: var(--accent);
+  color: var(--aip-accent);
   font-size: 22px;
   line-height: 1;
 }
 .why-card .reason b { font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; }
-.why-card .reason span { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.why-card .reason span { font-family: var(--mono); font-size: 11px; color: var(--aip-muted); }
 
 /* ---------- TABS ---------- */
 .pd-tabs {
@@ -248,7 +248,7 @@ h1.biz-title .num { font-family: var(--serif); font-style: italic; font-weight: 
   text-decoration: none;
 }
 .pd-tabs a:hover { color: var(--ink); }
-.pd-tabs a.active { color: var(--ink); border-color: var(--accent); font-weight: 600; }
+.pd-tabs a.active { color: var(--ink); border-color: var(--aip-accent); font-weight: 600; }
 
 /* ---------- SECTIONS ---------- */
 section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid var(--line); scroll-margin-top: calc(var(--nav-h) + 56px); }
@@ -273,7 +273,7 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
   font-size: 10.5px;
   letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--aip-muted);
 }
 .pd-h .anchor::before { content: "§ "; }
 .pd-h .sub { font-size: 14.5px; color: var(--ink-2); margin-top: 6px; max-width: 56ch; }
@@ -292,7 +292,7 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
   font-size: 11px;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-weight: 500;
   text-align: left;
   padding: 12px 16px;
@@ -310,7 +310,7 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
 .svc-table .pro .desc {
   display: block;
   font-weight: 400;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-size: 11.5px;
   margin-top: 2px;
   font-family: var(--mono);
@@ -324,14 +324,14 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
   font-size: 13.5px;
   font-weight: 600;
 }
-.svc-table .price small { font-weight: 400; color: var(--muted); }
+.svc-table .price small { font-weight: 400; color: var(--aip-muted); }
 .svc-foot {
   padding: 12px 16px;
   background: var(--bg-2);
   border-top: 1px solid var(--line);
   font-family: var(--mono);
   font-size: 11.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
 }
 
 /* ---------- REVIEWS / KEYWORDS ---------- */
@@ -361,10 +361,10 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
 }
 .rev-card .meta { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .rev-card .meta b { font-size: 13.5px; font-weight: 600; }
-.rev-card .meta span { font-size: 11.5px; color: var(--muted); font-family: var(--mono); }
+.rev-card .meta span { font-size: 11.5px; color: var(--aip-muted); font-family: var(--mono); }
 .rev-card .stars { color: #e6c200; letter-spacing: 1px; font-size: 13px; }
 .rev-card p { font-size: 14px; line-height: 1.65; color: var(--ink-2); margin: 0 0 8px; }
-.rev-card .src { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.rev-card .src { font-family: var(--mono); font-size: 11px; color: var(--aip-muted); }
 
 .kw-card {
   background: var(--ink);
@@ -428,7 +428,7 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
   font-size: 11px;
   letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--aip-muted);
   font-weight: 500;
 }
 .loc-card .addr {
@@ -440,7 +440,7 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
 .loc-card .road {
   font-family: var(--mono);
   font-size: 11.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   margin: 0 0 14px;
 }
 .loc-card .ext-links {
@@ -477,7 +477,7 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
 }
 .hour-row:first-child { border-top: none; }
 .hour-row.today {
-  background: color-mix(in oklab, var(--accent) 8%, var(--card));
+  background: color-mix(in oklab, var(--aip-accent) 8%, var(--card));
   font-weight: 600;
 }
 .hour-row .d {
@@ -493,7 +493,7 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
   background: var(--bg-2);
   font-family: var(--mono);
   font-size: 11px;
-  color: var(--muted);
+  color: var(--aip-muted);
 }
 
 /* ---------- FAQ (accordion) ---------- */
@@ -520,7 +520,7 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
 .faq-list summary::-webkit-details-marker { display: none; }
 .faq-list summary::before {
   content: "Q.";
-  color: var(--accent);
+  color: var(--aip-accent);
   font-family: var(--mono);
   font-weight: 600;
   font-size: 11.5px;
@@ -529,7 +529,7 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
 .faq-list summary::after {
   content: "+";
   font-family: var(--mono);
-  color: var(--muted);
+  color: var(--aip-muted);
   font-size: 18px;
   line-height: 1;
   transition: transform .2s;
@@ -572,12 +572,12 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
 .sim .rank {
   font-family: var(--mono);
   font-size: 10.5px;
-  color: var(--muted);
+  color: var(--aip-muted);
   letter-spacing: .12em;
   text-transform: uppercase;
 }
 .sim h4 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.018em; }
-.sim .meta { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.sim .meta { font-family: var(--mono); font-size: 11.5px; color: var(--aip-muted); }
 .sim .meta b { color: var(--ink); font-weight: 600; }
 .sim .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 

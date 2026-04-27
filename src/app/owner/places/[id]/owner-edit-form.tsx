@@ -520,7 +520,7 @@ export function OwnerEditForm({
             <p className="hint">숫자만 입력하면 자동으로 하이픈이 붙습니다. AI 답변에 클릭 가능한 번호로 노출됩니다.</p>
             <input
               id="phone-input"
-              className="pe-inp mono"
+              className="pe-inp aip-mono"
               type="tel"
               inputMode="tel"
               autoComplete="tel"
@@ -1102,7 +1102,7 @@ function LinkField({ label, hint, value, onChange, placeholder, icon }: LinkFiel
         <span className="pfx">{icon}</span>
         <input
           type="url"
-          className="pe-inp mono"
+          className="pe-inp aip-mono"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}

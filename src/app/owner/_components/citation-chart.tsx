@@ -88,7 +88,7 @@ function Chart({
         preserveAspectRatio="none"
         style={{ width: '100%', height: 220, display: 'block' }}
       >
-        {/* grid + Y labels */}
+        {/* aip-grid + Y labels */}
         <g stroke="var(--line)" strokeWidth={1}>
           {yLabels.map((_, i) => {
             const y = PAD_T + (plotH * i) / yTicks

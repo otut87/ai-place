@@ -24,9 +24,9 @@ export function AeoGauge({ places, averageScore }: Props) {
       <div className="dash-panel">
         <div className="head">
           <h3>AEO 점수</h3>
-          <span className="chip muted">업체 등록 대기</span>
+          <span className="chip aip-muted">업체 등록 대기</span>
         </div>
-        <div style={{ padding: 24, color: 'var(--muted)', fontSize: 13.5, textAlign: 'center' }}>
+        <div style={{ padding: 24, color: 'var(--aip-muted)', fontSize: 13.5, textAlign: 'center' }}>
           업체를 등록하면 8룰 결정론 평가가 즉시 시작됩니다.
         </div>
       </div>
@@ -67,7 +67,7 @@ export function AeoGauge({ places, averageScore }: Props) {
             <circle cx={60} cy={60} r={r} fill="none" stroke="var(--bg-2)" strokeWidth={10} />
             <circle
               cx={60} cy={60} r={r} fill="none"
-              stroke="var(--accent)" strokeWidth={10}
+              stroke="var(--aip-accent)" strokeWidth={10}
               strokeLinecap="round"
               strokeDasharray={`${dash.toFixed(1)} ${circumference.toFixed(1)}`}
             />
@@ -84,7 +84,7 @@ export function AeoGauge({ places, averageScore }: Props) {
           {weakest.aeoDeficiencies[0] && (
             <>
               <br />
-              다음: <b style={{ color: 'var(--accent)' }}>{weakest.aeoDeficiencies[0]}</b>
+              다음: <b style={{ color: 'var(--aip-accent)' }}>{weakest.aeoDeficiencies[0]}</b>
             </>
           )}
         </div>
@@ -93,7 +93,7 @@ export function AeoGauge({ places, averageScore }: Props) {
       <hr className="rule" style={{ margin: '14px 0' }} />
 
       <div className="gauge-rules" aria-label={`${weakest.name} 8룰 평가`}>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
+        <div style={{ fontSize: 12, color: 'var(--aip-muted)', marginBottom: 4 }}>
           {weakest.name} 상세
         </div>
         {ruleRows.map((r) => (
@@ -105,7 +105,7 @@ export function AeoGauge({ places, averageScore }: Props) {
       </div>
 
       <div style={{ marginTop: 12, fontSize: 12 }}>
-        <Link href={`/owner/places/${weakest.id}`} style={{ color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
+        <Link href={`/owner/places/${weakest.id}`} style={{ color: 'var(--aip-accent)', fontFamily: 'var(--mono)' }}>
           → {weakest.name} 편집
         </Link>
       </div>

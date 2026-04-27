@@ -17,7 +17,7 @@
 .au-cat-group .cat-head h3 .it { font-family: var(--serif); font-style: italic; font-weight: 400; }
 .au-cat-group .cat-head .desc {
   display: block; margin-top: 4px;
-  font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .04em;
+  font-family: var(--mono); font-size: 11px; color: var(--aip-muted); letter-spacing: .04em;
 }
 .au-cat-group .cat-head .sum {
   font-family: var(--mono); font-size: 13px; color: var(--ink); font-weight: 600;
@@ -47,14 +47,14 @@
 .au-result .ck.fail .ic { color: #b03a2e; }
 .au-result .ck b { color: var(--ink); font-weight: 600; }
 .au-result .ck .pts {
-  font-family: var(--mono); font-size: 11.5px; color: var(--muted); white-space: nowrap;
+  font-family: var(--mono); font-size: 11.5px; color: var(--aip-muted); white-space: nowrap;
 }
 .au-result .ck .pts b { color: var(--ink); }
 .au-result .ck.fail .pts b { color: #b03a2e; }
 .au-result .ck .label-line { display: block; }
 .au-result .ck .ref {
   display: inline-block; margin-left: 6px;
-  font-family: var(--mono); font-size: 10px; color: var(--muted-2); letter-spacing: .04em;
+  font-family: var(--mono); font-size: 10px; color: var(--aip-muted-2); letter-spacing: .04em;
 }
 .au-result .ck .found {
   display: inline-block; margin-left: 6px;
@@ -78,7 +78,7 @@
 }
 .au-result .head-target {
   font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+  text-transform: uppercase; color: var(--aip-muted); margin-bottom: 6px;
 }
 .au-result .head-url {
   font-family: var(--mono); font-size: 14px; color: var(--ink); word-break: break-all;
@@ -86,7 +86,7 @@
 }
 .au-result .head-pages {
   margin-top: 6px;
-  font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .04em;
+  font-family: var(--mono); font-size: 11px; color: var(--aip-muted); letter-spacing: .04em;
 }
 .au-result .score-block {
   text-align: right;
@@ -94,15 +94,15 @@
 @media (max-width: 700px) { .au-result .score-block { text-align: left; } }
 .au-result .score-lab {
   font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--muted);
+  text-transform: uppercase; color: var(--aip-muted);
 }
 .au-result .score-big {
   font-size: 64px; font-weight: 700; letter-spacing: -.034em; line-height: 1;
   margin-top: 4px;
 }
-.au-result .score-big small { font-size: 22px; color: var(--muted-2); font-weight: 500; margin-left: 4px; }
+.au-result .score-big small { font-size: 22px; color: var(--aip-muted-2); font-weight: 500; margin-left: 4px; }
 .au-result .score-big.tone-great { color: var(--good); }
-.au-result .score-big.tone-ok { color: var(--accent); }
+.au-result .score-big.tone-ok { color: var(--aip-accent); }
 .au-result .score-big.tone-warn { color: var(--warn); }
 .au-result .score-big.tone-bad { color: #b03a2e; }
 .au-result .bucket {
@@ -116,7 +116,7 @@
 }
 .au-result .bench h4 {
   margin: 0 0 10px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--muted); font-weight: 500;
+  text-transform: uppercase; color: var(--aip-muted); font-weight: 500;
 }
 .au-result .bench-row {
   display: grid; grid-template-columns: 180px 1fr 50px; gap: 10px; align-items: center;
@@ -131,7 +131,7 @@
 }
 .au-result .bench-row .fill { height: 100%; transition: width .4s; }
 .au-result .bench-row .fill.tone-great { background: var(--good); }
-.au-result .bench-row .fill.tone-ok { background: var(--accent); }
+.au-result .bench-row .fill.tone-ok { background: var(--aip-accent); }
 .au-result .bench-row .fill.tone-warn { background: var(--warn); }
 .au-result .bench-row .fill.tone-bad { background: #b03a2e; }
 .au-result .bench-row .val {
@@ -139,7 +139,7 @@
 }
 .au-result .bench-note {
   margin-top: 8px;
-  font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .02em;
+  font-family: var(--mono); font-size: 11px; color: var(--aip-muted); letter-spacing: .02em;
 }
 
 /* compare callout (이전 진단 대비) */
@@ -155,11 +155,11 @@
 .au-callout.warn-callout { border-color: var(--warn); background: color-mix(in oklab, var(--warn) 10%, var(--card)); }
 .au-callout strong { color: var(--ink); font-weight: 600; }
 .au-callout .meta {
-  font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .04em;
+  font-family: var(--mono); font-size: 11px; color: var(--aip-muted); letter-spacing: .04em;
 }
 .au-callout details { margin-top: 6px; }
 .au-callout summary {
-  cursor: pointer; font-family: var(--mono); font-size: 11px; color: var(--accent);
+  cursor: pointer; font-family: var(--mono); font-size: 11px; color: var(--aip-accent);
   letter-spacing: .04em; text-transform: uppercase;
 }
 .au-callout details ul {
@@ -194,7 +194,7 @@
   color: #fff; font-size: 13px;
 }
 .au-lead .lead-card input::placeholder { color: rgba(255, 255, 255, .55); }
-.au-lead .lead-card input:focus { outline: none; border-color: var(--accent); }
+.au-lead .lead-card input:focus { outline: none; border-color: var(--aip-accent); }
 .au-lead .lead-card .actions {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
 }
@@ -203,7 +203,7 @@
 }
 .au-lead .lead-card button {
   height: 40px; padding: 0 16px; border-radius: var(--r-sm); border: none;
-  background: var(--accent); color: #fff; font: 600 13px var(--font);
+  background: var(--aip-accent); color: #fff; font: 600 13px var(--font);
   cursor: pointer; transition: filter .15s;
 }
 .au-lead .lead-card button:hover { filter: brightness(1.08); }
@@ -232,7 +232,7 @@
   margin: 0 0 6px; font-size: 16px; font-weight: 700; letter-spacing: -.014em;
 }
 .au-empty-preview .sub {
-  font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .04em;
+  font-family: var(--mono); font-size: 11px; color: var(--aip-muted); letter-spacing: .04em;
   margin-bottom: 14px;
 }
 .au-empty-preview .grid {
@@ -249,7 +249,7 @@
   padding: 2px 8px; border-radius: 999px; margin-bottom: 8px;
 }
 .au-empty-preview .col.geo .badge { background: color-mix(in oklab, var(--good) 14%, transparent); color: var(--good); }
-.au-empty-preview .col.aeo .badge { background: color-mix(in oklab, var(--accent) 14%, transparent); color: var(--accent); }
+.au-empty-preview .col.aeo .badge { background: color-mix(in oklab, var(--aip-accent) 14%, transparent); color: var(--aip-accent); }
 .au-empty-preview .col.seo .badge { background: var(--bg-2); color: var(--ink-2); }
 .au-empty-preview .col h3 {
   margin: 0 0 6px; font-size: 13.5px; font-weight: 700;
@@ -263,7 +263,7 @@
 }
 .au-empty-preview .foot {
   margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line);
-  font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .04em;
+  font-family: var(--mono); font-size: 11px; color: var(--aip-muted); letter-spacing: .04em;
 }
 .au-empty-preview .foot code {
   font-family: var(--mono); background: var(--bg); padding: 1px 6px; border-radius: 3px; color: var(--ink-2);

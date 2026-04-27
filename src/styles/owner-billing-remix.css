@@ -21,7 +21,7 @@
   display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: start;
 }
 .ob-page .ob-hero .hd .eyebrow {
-  font-family: var(--mono); font-size: 11px; color: var(--muted-2);
+  font-family: var(--mono); font-size: 11px; color: var(--aip-muted-2);
   text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px;
 }
 .ob-page .ob-hero .hd h1 {
@@ -42,7 +42,7 @@
 }
 .ob-page .ob-hero .hd .breakdown b { color: var(--ink); font-weight: 600; }
 .ob-page .ob-hero .hd .breakdown .total {
-  font-size: 15px; color: var(--accent); font-weight: 700;
+  font-size: 15px; color: var(--aip-accent); font-weight: 700;
 }
 
 /* 상태 chip — hero 우측 */
@@ -57,8 +57,8 @@
 }
 .ob-page .status-chip.active { background: color-mix(in oklab, var(--good) 14%, transparent); color: var(--good); }
 .ob-page .status-chip.active::before { background: var(--good); }
-.ob-page .status-chip.pending { background: var(--bg-2); color: var(--muted); }
-.ob-page .status-chip.pending::before { background: var(--muted-2); }
+.ob-page .status-chip.pending { background: var(--bg-2); color: var(--aip-muted); }
+.ob-page .status-chip.pending::before { background: var(--aip-muted-2); }
 .ob-page .status-chip.warn { background: color-mix(in oklab, var(--warn, #b45309) 14%, transparent); color: var(--warn, #b45309); }
 .ob-page .status-chip.warn::before { background: var(--warn, #b45309); }
 .ob-page .status-chip.danger { background: color-mix(in oklab, #c24b2f 12%, transparent); color: #9a2c00; }
@@ -107,13 +107,13 @@
 .ob-page .ob-state-banner.canceled {
   background: var(--bg-2);
   border: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--aip-muted);
 }
 .ob-page .ob-state-banner.canceled .ic {
-  background: var(--card); color: var(--muted-2);
+  background: var(--card); color: var(--aip-muted-2);
 }
 .ob-page .ob-state-banner.canceled .actions .primary {
-  background: var(--accent); color: #fff;
+  background: var(--aip-accent); color: #fff;
 }
 
 .ob-page .ob-state-banner.pending_cancellation {
@@ -141,7 +141,7 @@
   margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.005em;
 }
 .ob-page .ob-sec > .hd .sub {
-  font-size: 12.5px; color: var(--muted);
+  font-size: 12.5px; color: var(--aip-muted);
 }
 
 /* ========== CARD LIST (multi-card) ========== */
@@ -152,7 +152,7 @@
   padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px;
   background: var(--bg);
 }
-.ob-page .ob-card-row.primary { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 4%, var(--card)); }
+.ob-page .ob-card-row.primary { border-color: var(--aip-accent); background: color-mix(in oklab, var(--aip-accent) 4%, var(--card)); }
 .ob-page .ob-card-row .brand {
   width: 42px; height: 28px; border-radius: 5px;
   background: linear-gradient(135deg, #1a1a1a, #2a2a2a); color: #fff;
@@ -163,19 +163,19 @@
   font-family: var(--mono); font-size: 13px; color: var(--ink);
 }
 .ob-page .ob-card-row .meta {
-  font-size: 11.5px; color: var(--muted); font-family: var(--mono); margin-top: 2px;
+  font-size: 11.5px; color: var(--aip-muted); font-family: var(--mono); margin-top: 2px;
 }
 .ob-page .ob-card-row .meta b { color: var(--ink-2); font-weight: 500; }
 .ob-page .ob-card-row .badge-primary {
   display: inline-block; margin-left: 8px;
   padding: 1px 7px; border-radius: 999px;
-  background: color-mix(in oklab, var(--accent) 14%, transparent); color: var(--accent);
+  background: color-mix(in oklab, var(--aip-accent) 14%, transparent); color: var(--aip-accent);
   font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em;
 }
 .ob-page .ob-card-row .actions { display: flex; gap: 6px; }
 .ob-page .ob-card-row .actions button {
   padding: 5px 10px; border-radius: 6px;
-  background: transparent; color: var(--muted);
+  background: transparent; color: var(--aip-muted);
   border: 1px solid var(--line-2);
   font: 500 11.5px var(--font), system-ui, sans-serif; cursor: pointer;
   transition: border-color .15s, color .15s, background .15s;
@@ -198,8 +198,8 @@
   cursor: pointer; transition: border-color .15s, color .15s, background .15s;
 }
 .ob-page .ob-card-add:hover {
-  border-color: var(--accent); color: var(--accent);
-  background: color-mix(in oklab, var(--accent) 5%, transparent);
+  border-color: var(--aip-accent); color: var(--aip-accent);
+  background: color-mix(in oklab, var(--aip-accent) 5%, transparent);
 }
 
 /* ========== EMPTY STATE (카드 미등록) ========== */
@@ -214,7 +214,7 @@
   font-size: 22px;
 }
 .ob-page .ob-empty h4 { margin: 0; font-size: 15px; font-weight: 600; }
-.ob-page .ob-empty p { margin: 0; font-size: 13px; color: var(--muted); max-width: 42ch; line-height: 1.55; }
+.ob-page .ob-empty p { margin: 0; font-size: 13px; color: var(--aip-muted); max-width: 42ch; line-height: 1.55; }
 
 /* ========== PAYMENT HISTORY ========== */
 .ob-page .ob-history {
@@ -230,16 +230,16 @@
 .ob-page .ob-history .row .stat { font-family: var(--mono); font-size: 11px; }
 .ob-page .ob-history .row .stat.ok { color: var(--good); }
 .ob-page .ob-history .row .stat.fail { color: #9a2c00; }
-.ob-page .ob-history .row .msg { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ob-page .ob-history .row .msg { color: var(--aip-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ob-page .ob-history .row .amount { font-family: var(--mono); text-align: right; }
-.ob-page .ob-history .row .date { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.ob-page .ob-history .row .date { font-family: var(--mono); font-size: 11.5px; color: var(--aip-muted); }
 .ob-page .ob-history .row .receipt a {
-  color: var(--accent); text-decoration: none;
+  color: var(--aip-accent); text-decoration: none;
   font-family: var(--mono); font-size: 11px;
 }
 .ob-page .ob-history .row .receipt a:hover { text-decoration: underline; }
 .ob-page .ob-history .empty {
-  padding: 32px 0; text-align: center; color: var(--muted); font-size: 13px;
+  padding: 32px 0; text-align: center; color: var(--aip-muted); font-size: 13px;
 }
 
 @media (max-width: 720px) {
@@ -263,7 +263,7 @@
 .ob-page .ob-cancel-link {
   margin-top: 4px; text-align: center;
   padding: 14px; border-top: 1px solid var(--line);
-  font-size: 12px; color: var(--muted-2);
+  font-size: 12px; color: var(--aip-muted-2);
 }
-.ob-page .ob-cancel-link a { color: var(--muted); text-decoration: underline; }
+.ob-page .ob-cancel-link a { color: var(--aip-muted); text-decoration: underline; }
 .ob-page .ob-cancel-link a:hover { color: #c24b2f; }

@@ -159,7 +159,7 @@ function Hero({ state, isTest }: { state: OwnerBillingState; isTest: boolean }) 
           <div className="breakdown">
             <span>업체 <b>{activeCount}개</b> × {formatAmount(PLAN_AMOUNT_PER_PLACE)}</span>
             <span>=</span>
-            <span className="total">{formatAmount(expectedAmount)}<span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 4 }}>/월</span></span>
+            <span className="total">{formatAmount(expectedAmount)}<span style={{ fontSize: 11, color: 'var(--aip-muted)', marginLeft: 4 }}>/월</span></span>
           </div>
         ) : (
           <div className="breakdown">
@@ -175,7 +175,7 @@ function Hero({ state, isTest }: { state: OwnerBillingState; isTest: boolean }) 
       <div>
         <span className={`status-chip ${statusMeta.tone}`}>{statusMeta.label}</span>
         {s?.nextChargeAt && s.status !== 'canceled' && (
-          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--mono)', textAlign: 'right' }}>
+          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--aip-muted)', fontFamily: 'var(--mono)', textAlign: 'right' }}>
             다음 결제 {formatDate(s.nextChargeAt)}
           </div>
         )}

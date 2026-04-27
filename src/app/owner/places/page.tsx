@@ -95,7 +95,7 @@ export default async function OwnerPlacesPage() {
         <div>
           <p className="pl-hero-kicker">Owner · {places.length}곳 운영 중</p>
           <h1 className="pl-hero-h1">
-            내 <span className="serif">업체</span>를<br />
+            내 <span className="aip-serif">업체</span>를<br />
             한곳에서 관리하세요.
           </h1>
           <p className="pl-hero-lede">
@@ -115,7 +115,7 @@ export default async function OwnerPlacesPage() {
 
         <div className="pl-hero-stats">
           <div className="pl-hero-stat">
-            <div className="lbl"><i style={{ background: 'var(--accent-2)' }}></i> 등록된 업체</div>
+            <div className="lbl"><i style={{ background: 'var(--aip-accent-2)' }}></i> 등록된 업체</div>
             <div className="v">{places.length}<span className="u">곳</span></div>
             <div className="sub">
               공개 <b>{activeCount}</b>
@@ -135,7 +135,7 @@ export default async function OwnerPlacesPage() {
             </div>
           </div>
           <div className="pl-hero-stat">
-            <div className="lbl"><i style={{ background: 'var(--accent)' }}></i> AI 가독성 평균</div>
+            <div className="lbl"><i style={{ background: 'var(--aip-accent)' }}></i> AI 가독성 평균</div>
             <div className="v">
               {avgScore !== null ? avgScore : '—'}
               {avgScore !== null && <span className="u">/100</span>}
@@ -214,7 +214,7 @@ export default async function OwnerPlacesPage() {
                       </>
                     ) : (
                       <>
-                        <div className="score muted">—</div>
+                        <div className="score aip-muted">—</div>
                         <div className="bar"><i style={{ width: '0%' }}></i></div>
                         <div className="fix none">
                           {kind === 'active' ? '집계 대기' : '점수 집계 제외'}
@@ -274,7 +274,7 @@ export default async function OwnerPlacesPage() {
       <div className="biz-note">
         <div className="t">
           <b>요금 안내 —</b> 업체당 월 ₩{PLAN_AMOUNT_PER_PLACE.toLocaleString('ko-KR')} · 파일럿 30일 무료
-          <span className="mono">· 보관 처리한 업체는 결제 대상에서 제외됩니다</span>
+          <span className="aip-mono">· 보관 처리한 업체는 결제 대상에서 제외됩니다</span>
         </div>
         <Link className="cta" href="/owner/billing">결제 관리 →</Link>
       </div>

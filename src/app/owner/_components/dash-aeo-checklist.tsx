@@ -19,7 +19,7 @@ export function DashAeoChecklist({ places }: Props) {
           <h3>AEO 개선 체크리스트</h3>
           <div className="dash-total">기준 <b>100점</b></div>
         </div>
-        <div style={{ padding: 32, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+        <div style={{ padding: 32, textAlign: 'center', color: 'var(--aip-muted)', fontSize: 13 }}>
           업체 등록 후 체크리스트가 표시됩니다.
         </div>
       </div>

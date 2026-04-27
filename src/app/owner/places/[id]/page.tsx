@@ -184,10 +184,10 @@ export default async function OwnerPlaceEditPage({ params, searchParams }: Param
             <span className={`status ${chip.cls}`}>{chip.text}</span>
           </h1>
           <span className="slug">
-            <span className="dim">/{row.city}/{row.category}/</span>
+            <span className="aip-dim">/{row.city}/{row.category}/</span>
             {row.slug}
             {updated && (
-              <> <span className="dim">·</span> 최근 수정 {updated}</>
+              <> <span className="aip-dim">·</span> 최근 수정 {updated}</>
             )}
           </span>
         </div>

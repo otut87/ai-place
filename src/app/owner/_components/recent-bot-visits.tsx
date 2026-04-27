@@ -41,7 +41,7 @@ export function RecentBotVisits({ visits, measuring, measuringLabel }: Props) {
       <div className="head">
         <h3>최근 AI 봇 방문</h3>
         {visits.length > 0 && (
-          <span className="chip muted">최대 10건 · 30일 내</span>
+          <span className="chip aip-muted">최대 10건 · 30일 내</span>
         )}
       </div>
 
