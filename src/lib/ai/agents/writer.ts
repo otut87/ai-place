@@ -252,10 +252,52 @@ export async function writeBlog(input: WriterInput): Promise<WriterOutput> {
   return {
     title: draft.title,
     summary: draft.summary,
-    content: draft.content,
+    content: normalizeMarkdownHeadings(draft.content),
     tags: draft.tags,
     faqs: draft.faqs,
     tokensUsed: { input: response.usage.input_tokens, output: response.usage.output_tokens },
     latencyMs,
   }
+}
+
+/**
+ * LLM 응답 markdown 의 헤딩 위계 정규화.
+ *
+ * 페이지 렌더는 글 제목을 별도 H1 으로 출력하므로 본문 markdown 의 H1 은 제거.
+ * 또한 LLM 이 시스템 프롬프트의 `## 결론`을 무시하고 `### 결론`으로 한 단계
+ * 깊게 응답하는 경우가 관측됨 — 본문 최얕은 헤딩이 H2 가 되도록 일괄 승격.
+ *
+ * 예: H1/H3/H4 혼합 → H1 제거 → 최얕음 H3 → 모든 헤딩을 1단계 끌어올려 H2/H3.
+ *
+ * 코드블록 안의 `#` 은 헤딩이 아니므로 보존. 줄 시작 위치의 `#{1,6} ` 만 처리.
+ */
+export function normalizeMarkdownHeadings(content: string): string {
+  // 1) 코드블록(```) 영역 보호 — 영역마다 placeholder 로 치환 후 마지막에 복원.
+  const fences: string[] = []
+  const protectedContent = content.replace(/```[\s\S]*?```/g, match => {
+    fences.push(match)
+    return `FENCE_${fences.length - 1}`
+  })
+
+  // 2) 본문 선두/내부의 H1 제거 (페이지가 별도 H1 렌더).
+  const noH1 = protectedContent.replace(/^# .+$\n?/gm, '')
+
+  // 3) 최얕은 헤딩 레벨 탐색.
+  let shallowest = 7
+  for (const m of noH1.matchAll(/^(#{2,6}) /gm)) {
+    if (m[1].length < shallowest) shallowest = m[1].length
+  }
+
+  // 헤딩이 없거나 이미 H2 가 최얕음이면 변경 불필요.
+  let normalized = noH1
+  if (shallowest >= 3 && shallowest <= 6) {
+    const promoteBy = shallowest - 2
+    normalized = noH1.replace(/^(#{2,6}) /gm, (_full, hashes) => {
+      const newLen = Math.max(2, hashes.length - promoteBy)
+      return `${'#'.repeat(newLen)} `
+    })
+  }
+
+  // 4) 코드블록 복원.
+  return normalized.replace(/FENCE_(\d+)/g, (_full, idx) => fences[Number(idx)])
 }

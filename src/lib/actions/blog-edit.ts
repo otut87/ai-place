@@ -84,6 +84,8 @@ export async function saveBlogPost(input: SaveBlogInput): Promise<{ success: boo
   revalidatePath(`/admin/blog/${input.slug}/edit`)
   revalidatePath(`/blog/${input.slug}`)
   revalidatePath('/blog')
+  revalidatePath('/sitemap.xml')
+  revalidatePath('/feed.xml')
   return { success: true }
 }
 
@@ -115,6 +117,8 @@ export async function deleteBlogPost(slug: string): Promise<{ success: boolean; 
 
   revalidatePath('/admin/blog')
   revalidatePath('/blog')
+  revalidatePath('/sitemap.xml')
+  revalidatePath('/feed.xml')
   return { success: true }
 }
 
@@ -145,6 +149,8 @@ export async function deleteBlogPostById(id: string): Promise<{ success: boolean
 
   revalidatePath('/admin/blog')
   revalidatePath('/blog')
+  revalidatePath('/sitemap.xml')
+  revalidatePath('/feed.xml')
   return { success: true }
 }
 

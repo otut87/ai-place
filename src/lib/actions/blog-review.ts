@@ -23,6 +23,8 @@ export async function approveBlogPost(slug: string): Promise<{ success: boolean;
   revalidatePath('/admin/blog')
   revalidatePath(`/blog/${slug}`)
   revalidatePath('/blog')
+  revalidatePath('/sitemap.xml')
+  revalidatePath('/feed.xml')
   return { success: true }
 }
 
@@ -52,5 +54,7 @@ export async function rejectBlogPost({ slug, reason, note }: RejectBlogInput): P
 
   revalidatePath('/admin/review')
   revalidatePath('/admin/blog')
+  revalidatePath('/sitemap.xml')
+  revalidatePath('/feed.xml')
   return { success: true }
 }

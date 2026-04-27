@@ -1,8 +1,10 @@
 // AI Place — Blog Markdown 렌더링 + sanitization (T-010d)
 // 서버 측 markdown → HTML 변환. react-markdown 과 동일한 rehype-sanitize 사용.
 //
-// T-099: 페이지 헤더에 이미 H1 이 있으므로 본문 markdown 의 모든 heading 을 한 단계씩
-//        강등한다 (h1→h2, h2→h3, ..., h6 유지). 철학의 "H1은 페이지당 1개" 준수.
+// T-099 (최초): 페이지 헤더에 이미 H1 이 있으므로 본문 H1 을 H2 로 강등 — 페이지당 H1 하나 보장.
+// T-195 (수정): 기존 구현은 모든 헤딩을 +1 강등시켜 LLM 이 의도한 H2 가 H3 로 떠밀려
+//               헤딩 위계가 H1 → H3 점프하는 부작용 발생. H1 만 H2 로 변환하도록 좁힘 —
+//               H2~H6 은 LLM 출력 그대로 보존하여 SEO/AEO 위계 정합성 회복.
 //
 // 사용처:
 // - 블로그 글 상세 페이지 본문 렌더 (서버 컴포넌트)
@@ -18,18 +20,13 @@ import { visit } from 'unist-util-visit'
 import type { Element, Root } from 'hast'
 
 /**
- * rehype 플러그인 — 본문 heading 을 한 단계 강등.
- * h1→h2, h2→h3, h3→h4, h4→h5, h5→h6, h6→h6 (유지).
+ * rehype 플러그인 — 본문의 H1 만 H2 로 변환 (페이지당 H1 하나 보장).
+ * H2~H6 은 그대로 보존.
  */
-function rehypeDemoteHeadings() {
+function rehypeDemoteH1ToH2() {
   return (tree: Root) => {
     visit(tree, 'element', (node: Element) => {
-      const tag = node.tagName
-      if (tag === 'h1') node.tagName = 'h2'
-      else if (tag === 'h2') node.tagName = 'h3'
-      else if (tag === 'h3') node.tagName = 'h4'
-      else if (tag === 'h4') node.tagName = 'h5'
-      else if (tag === 'h5') node.tagName = 'h6'
+      if (node.tagName === 'h1') node.tagName = 'h2'
     })
   }
 }
@@ -37,7 +34,7 @@ function rehypeDemoteHeadings() {
 /**
  * Markdown → 안전한 HTML 문자열.
  * rehype-sanitize 의 default schema 사용 (script/iframe/on* 핸들러/javascript: 차단).
- * T-099: heading 한 단계 강등.
+ * T-195: H1 만 H2 로 변환 (T-099 의 무차별 +1 강등 제거).
  */
 // T-115: rehype-sanitize 가 table 요소를 허용하도록 스키마 확장.
 const tableSchema = {
@@ -55,7 +52,7 @@ export async function renderMarkdownToHtml(md: string): Promise<string> {
     .use(remarkParse)
     .use(remarkGfm) // T-115: Markdown 테이블 → <table> 강제
     .use(remarkRehype, { allowDangerousHtml: true })
-    .use(rehypeDemoteHeadings)
+    .use(rehypeDemoteH1ToH2)
     .use(rehypeSanitize, tableSchema)
     .use(rehypeStringify)
     .process(md)

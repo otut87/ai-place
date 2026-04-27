@@ -110,6 +110,8 @@ export async function GET(req: Request) {
   if (published.length > 0) {
     revalidatePath('/blog')
     revalidatePath('/admin/blog')
+    revalidatePath('/sitemap.xml')
+    revalidatePath('/feed.xml')
   }
 
   return NextResponse.json({

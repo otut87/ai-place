@@ -1,5 +1,9 @@
 import { getAllPlaces, getCities, getCategories } from '@/lib/data.supabase'
 
+// ISR — 1시간마다 자동 재생성. 블로그 발행 액션의
+// revalidatePath('/feed.xml') 로 on-demand 갱신도 함께 작동.
+export const revalidate = 3600
+
 export async function GET() {
   const places = await getAllPlaces()
   const cities = await getCities()
