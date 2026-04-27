@@ -94,6 +94,29 @@ describe('client cookie helpers — SSR 환경 (document 없음)', () => {
   })
 })
 
+describe('readCityCookieServer', () => {
+  it('next/headers cookies() get → value 반환', async () => {
+    vi.doMock('next/headers', () => ({
+      cookies: async () => ({
+        get: (name: string) => (name === 'aiplace-city' ? { value: 'cheonan' } : undefined),
+      }),
+    }))
+    const mod = await import('@/lib/geo/city-cookie')
+    expect(await mod.readCityCookieServer()).toBe('cheonan')
+    vi.doUnmock('next/headers')
+  })
+
+  it('쿠키 미설정 → "all" 폴백', async () => {
+    vi.doMock('next/headers', () => ({
+      cookies: async () => ({ get: () => undefined }),
+    }))
+    vi.resetModules()
+    const mod = await import('@/lib/geo/city-cookie')
+    expect(await mod.readCityCookieServer()).toBe('all')
+    vi.doUnmock('next/headers')
+  })
+})
+
 describe('상수', () => {
   it('CITY_COOKIE_MAX_AGE 는 30일 (초)', () => {
     expect(CITY_COOKIE_MAX_AGE).toBe(60 * 60 * 24 * 30)
