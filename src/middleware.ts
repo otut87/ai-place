@@ -8,6 +8,24 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { identifyBot, parseLocalPath } from '@/lib/seo/bot-detection'
+import { ipCityToSlug, readIpCityFromHeaders } from '@/lib/geo/ip-to-city'
+import { CITY_COOKIE_NAME, CITY_COOKIE_MAX_AGE, CITY_ALL } from '@/lib/geo/city-cookie'
+
+/**
+ * 첫 방문자에게 IP 기반 도시 추천 쿠키를 설정.
+ * 쿠키가 이미 있으면 건드리지 않음 — 사용자 선택 우선.
+ * IP 도시가 우리 service 도시와 매칭 안 되면 'all' (전국) 로 설정.
+ */
+function ensureCityCookie(request: NextRequest, response: NextResponse): void {
+  if (request.cookies.has(CITY_COOKIE_NAME)) return
+  const ipCity = readIpCityFromHeaders(name => request.headers.get(name))
+  const slug = ipCityToSlug(ipCity) ?? CITY_ALL
+  response.cookies.set(CITY_COOKIE_NAME, slug, {
+    path: '/',
+    maxAge: CITY_COOKIE_MAX_AGE,
+    sameSite: 'lax',
+  })
+}
 
 async function logBotVisitIfAny(request: NextRequest) {
   const ua = request.headers.get('user-agent')
@@ -45,11 +63,13 @@ async function logBotVisitIfAny(request: NextRequest) {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // 공개 페이지: 봇 방문만 로깅하고 통과
+  // 공개 페이지: 봇 방문 로깅 + IP 기반 city 쿠키 초기 설정 후 통과
   if (!pathname.startsWith('/admin') && !pathname.startsWith('/owner')) {
     // best-effort: 응답을 지연시키지 않도록 await 하지 않음
     logBotVisitIfAny(request).catch(() => undefined)
-    return NextResponse.next()
+    const res = NextResponse.next()
+    ensureCityCookie(request, res)
+    return res
   }
 
   // /admin/login은 공개

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { CityPicker } from './city-picker'
 
 const LINKS = [
   { href: '/directory', label: '디렉토리' },
@@ -46,6 +47,7 @@ export function HomeNav() {
           <Link className="logo" href="/">
             <span className="mark" /> AI Place
           </Link>
+          <CityPicker />
           <div className="links">
             {LINKS.map((l) => (
               <Link key={l.href} href={l.href}>

@@ -21,3 +21,103 @@
 .aip-root .flex.center { align-items: center }
 .aip-root .muted { color: var(--muted) }
 .aip-root .dim { color: var(--line-3) }
+
+/* ============================================================
+   City Picker (T-246) — 헤더 로고 옆 칩 + 드롭다운
+   ============================================================ */
+.city-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.city-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-2);
+  background: var(--card);
+  border-radius: 999px;
+  font: 500 12.5px var(--font);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+  white-space: nowrap;
+}
+.city-chip:hover { border-color: var(--ink); color: var(--ink); }
+.city-chip:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 25%, transparent);
+}
+.city-chip .ic { width: 13px; height: 13px; color: var(--accent); }
+.city-chip .caret { width: 11px; height: 11px; opacity: .7; }
+.city-chip .nm { letter-spacing: -.005em; font-weight: 600; color: var(--ink); }
+
+.city-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  min-width: 240px;
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .08), 0 1px 0 var(--line);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: cityMenuIn .15s ease-out;
+}
+@keyframes cityMenuIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.city-menu .item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px;
+  align-items: center;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: var(--font);
+  color: var(--ink);
+  text-decoration: none;
+  transition: background .12s;
+}
+.city-menu .item:hover { background: var(--bg-2); }
+.city-menu .item.active {
+  background: color-mix(in oklab, var(--accent) 10%, var(--card));
+}
+.city-menu .item .nm {
+  font-size: 13.5px; font-weight: 600; line-height: 1.4;
+}
+.city-menu .item .meta {
+  display: block;
+  grid-column: 1 / -1;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  letter-spacing: .04em;
+  margin-top: 2px;
+}
+.city-menu .item .check {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.city-menu .item.req .nm { color: var(--accent); }
+.city-menu .sep {
+  height: 1px;
+  background: var(--line);
+  margin: 4px 8px;
+}
+
+@media (max-width: 880px) {
+  .city-chip { padding: 5px 10px; font-size: 12px; }
+  .city-chip .ic { width: 12px; height: 12px; }
+}
