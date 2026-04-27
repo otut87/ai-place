@@ -1,35 +1,98 @@
-import { notFound } from "next/navigation"
-import type { Metadata } from "next"
-import Link from "next/link"
-import Image from "next/image"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
-import { PhoneButton } from "@/components/phone-button"
-import { Disclaimer } from "@/components/business/disclaimer"
-import { PlaceExternalLinks } from "@/components/business/place-external-links"
-import { PlaceReviewBadges } from "@/components/business/place-review-badges"
-import { PlaceReviewSummary } from "@/components/business/place-review-summary"
-import { ReportPlaceButton } from "@/components/business/report-place-button"
-import { formatRatingLine } from "@/lib/format/rating"
-import { formatHoursKo } from "@/lib/format/hours"
-import { normalizeAddress } from "@/lib/format/address"
-import { getPlaceBySlug, getPlaces, getCities, getCategories, getSchemaTypeForCategory, getSectorForCategory } from "@/lib/data.supabase"
-import { getBlogPostsByPlace } from "@/lib/blog/data.supabase"
-import { generateLocalBusiness, generateFAQPage, generateWebPage } from "@/lib/jsonld"
-import { generateBreadcrumbList } from "@/lib/seo"
-import { buildPlaceMetadata } from "@/lib/seo/page-meta"
-import { safeJsonLd } from "@/lib/utils"
-import { getPlaceDetails } from "@/lib/google-places"
+// /[city]/[category]/[slug] — 업체 상세 (AI Answer Document 리믹스).
+// 디자인 핸드오프: claude.ai/design P3-2gGfNJK0LMXfXG1qsNA, shinebeam.html
+// 데이터 모두 실 DB 바인딩 — 가짜 citation log/AI 인용 횟수·맵 SVG 미사용.
+
+import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import Image from 'next/image'
+import { Disclaimer } from '@/components/business/disclaimer'
+import { PlaceExternalLinks } from '@/components/business/place-external-links'
+import { ReportPlaceButton } from '@/components/business/report-place-button'
+import { PhoneButton } from '@/components/phone-button'
+import { HomeNav } from '@/app/_components/home/home-nav'
+import { SiteFooter, SITE_BRAND } from '@/components/site/site-footer'
+import { PlaceTabs } from './_components/place-tabs'
+import {
+  getPlaceBySlug,
+  getPlaces,
+  getCities,
+  getCategories,
+  getSchemaTypeForCategory,
+  getSectorForCategory,
+} from '@/lib/data.supabase'
+import { getBlogPostsByPlace } from '@/lib/blog/data.supabase'
+import { generateLocalBusiness, generateFAQPage, generateWebPage } from '@/lib/jsonld'
+import { generateBreadcrumbList } from '@/lib/seo'
+import { buildPlaceMetadata } from '@/lib/seo/page-meta'
+import { safeJsonLd } from '@/lib/utils'
+import { getPlaceDetails } from '@/lib/google-places'
+import { getSourcesForCategory } from '@/lib/listing/sources'
+import { formatHoursKo } from '@/lib/format/hours'
+import { normalizeAddress } from '@/lib/format/address'
+import type { Place } from '@/lib/types'
+import '@/styles/aip.css'
+import '@/styles/home-wrap.css'
+import '@/styles/place-detail-remix.css'
 
 interface Props {
   params: Promise<{ city: string; category: string; slug: string }>
+}
+
+const BASE_URL = 'https://aiplace.kr'
+const SLUG_PATTERN = /^[a-z0-9-]+$/
+
+const STAR_FULL = '★'
+const STAR_EMPTY = '☆'
+function stars(rating?: number): string {
+  if (rating == null) return STAR_EMPTY.repeat(5)
+  const full = Math.round(rating)
+  return STAR_FULL.repeat(full) + STAR_EMPTY.repeat(Math.max(0, 5 - full))
+}
+
+const KO_DAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+const KO_DAY_LABEL: Record<string, string> = { Mo: '월', Tu: '화', We: '수', Th: '목', Fr: '금', Sa: '토', Su: '일' }
+
+/** 도로명 주소에서 첫 시·구·군 토큰 추출 → 디스트릭트 라벨용. */
+function extractDistrict(address: string | undefined): string {
+  if (!address) return ''
+  const m = address.match(/(\S+(?:시|군))\s*(\S+(?:구|군))?/)
+  if (!m) return ''
+  return [m[1], m[2]].filter(Boolean).join(' ')
+}
+
+/** openingHours(["Mo-Fr 09:00-18:00", "Sa 09:00-13:00"]) → 요일별 표 */
+function buildHoursRows(openingHours: string[] | undefined): Array<{ day: string; label: string; isToday: boolean }> {
+  const todayIdx = new Date().getDay() // Sunday=0
+  const todayKey = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][todayIdx]
+  const map = new Map<string, string>()
+  for (const entry of openingHours ?? []) {
+    const m = entry.match(/^([A-Za-z]+(?:-[A-Za-z]+)?)\s+(.+)$/)
+    if (!m) continue
+    const span = m[1]
+    const time = m[2]
+    if (span.includes('-')) {
+      const [start, end] = span.split('-')
+      const startIdx = KO_DAYS.indexOf(start)
+      const endIdx = KO_DAYS.indexOf(end)
+      if (startIdx >= 0 && endIdx >= 0) {
+        for (let i = startIdx; i <= endIdx; i++) map.set(KO_DAYS[i], time)
+      }
+    } else {
+      map.set(span, time)
+    }
+  }
+  return KO_DAYS.map(d => ({
+    day: d,
+    label: map.get(d) ?? '휴무',
+    isToday: d === todayKey,
+  }))
 }
 
 export async function generateStaticParams() {
   const cities = await getCities()
   const categories = await getCategories()
   const params: Array<{ city: string; category: string; slug: string }> = []
-
   for (const city of cities) {
     for (const cat of categories) {
       const places = await getPlaces(city.slug, cat.slug)
@@ -41,17 +104,14 @@ export async function generateStaticParams() {
   return params
 }
 
-// HIGH 6-7: title에 도시+카테고리 포함, description 키워드 앞배치 (§9.1)
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { city, category, slug } = await params
   const place = await getPlaceBySlug(city, category, slug)
   if (!place) return {}
-
   const cities = await getCities()
   const categories = await getCategories()
   const cityObj = cities.find(c => c.slug === city)
   const catObj = categories.find(c => c.slug === category)
-
   return buildPlaceMetadata({
     place,
     cityName: cityObj?.name ?? city,
@@ -61,34 +121,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   })
 }
 
-const SLUG_PATTERN = /^[a-z0-9-]+$/
-
 export default async function ProfilePage({ params }: Props) {
   const { city, category, slug } = await params
   if (!SLUG_PATTERN.test(city) || !SLUG_PATTERN.test(category) || !SLUG_PATTERN.test(slug)) notFound()
 
-  const place = await getPlaceBySlug(city, category, slug)
-  const cities = await getCities()
-  const categories = await getCategories()
-
+  const [place, cities, categories] = await Promise.all([
+    getPlaceBySlug(city, category, slug),
+    getCities(),
+    getCategories(),
+  ])
   if (!place) notFound()
 
   const cityObj = cities.find(c => c.slug === city)
   const catObj = categories.find(c => c.slug === category)
+  if (!cityObj || !catObj) notFound()
 
-  const baseUrl = 'https://aiplace.kr'
-  const pageUrl = `${baseUrl}/${city}/${category}/${slug}`
+  const pageUrl = `${BASE_URL}/${city}/${category}/${slug}`
+  const sector = await getSectorForCategory(category)
+  const schemaType = await getSchemaTypeForCategory(category)
+  const sourcesConfig = getSourcesForCategory({ sectorSlug: sector?.slug })
 
-  // Google Places API — 원문 리뷰 5건 표시용 (ToS §5.2 준수: 캐시 금지, 매 렌더 재-fetch).
-  // Google API 는 ~300ms 로 빠르다. Haiku 요약 등 LLM 호출은 background 워커로 이관 (아래).
-  const googleData = place.googlePlaceId
-    ? await getPlaceDetails(place.googlePlaceId)
-    : null
-
-  // T-187: 방문 기반 lazy enqueue 제거 — 주 1회 일괄 refresh 크론(pipeline-enqueue-weekly)으로 대체.
-  // AI 원가 예측성 확보 + SaaS "월간 리포트" 약속 충족.
-  const reviewSummaries = place.reviewSummaries ?? []
-  const placeWithGoogleData = googleData
+  const googleData = place.googlePlaceId ? await getPlaceDetails(place.googlePlaceId) : null
+  const placeWithGoogleData: Place = googleData
     ? {
         ...place,
         rating: googleData.rating,
@@ -97,324 +151,581 @@ export default async function ProfilePage({ params }: Props) {
       }
     : place
 
-  // GEO: 역방향 링크 (이 업체를 참조하는 가이드/비교 페이지)
-  // 양방향 링크: 이 업체를 related_place_slugs 에 포함한 블로그 글
+  // 같은 카테고리·도시의 평점 상위 비슷한 업체 (자기 자신 제외)
+  const sameCategoryPlaces = await getPlaces(city, category)
+  const similarPlaces = [...sameCategoryPlaces]
+    .filter(p => p.slug !== place.slug && p.rating != null)
+    .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || (b.reviewCount ?? 0) - (a.reviewCount ?? 0))
+    .slice(0, 3)
+
   const relatedBlogPosts = await getBlogPostsByPlace(place.slug)
 
-  // CRITICAL 5: @id + mainEntityOfPage
-  const schemaType = await getSchemaTypeForCategory(category)
+  // 통계
+  const finalRating = googleData?.rating ?? place.rating
+  const finalReviewCount = googleData?.reviewCount ?? place.reviewCount
+  const totalServices = place.services?.length ?? 0
+  const startingPriceService = place.services?.find(s => s.priceRange)
+  const district = extractDistrict(place.address)
+  const docId = `aip-${city}-${category}-${slug}`
+  const lastUpdated = place.lastUpdated ?? new Date().toISOString().slice(0, 10)
+  const hoursRows = buildHoursRows(place.openingHours)
+
+  // WHY card 합성: description + strengths/recommendedFor 우선 노출
+  const whyReasons: Array<{ title: string; sub: string }> = []
+  if (place.strengths && place.strengths.length > 0) {
+    whyReasons.push({ title: place.strengths[0], sub: '핵심 강점' })
+    if (place.strengths[1]) whyReasons.push({ title: place.strengths[1], sub: '핵심 강점' })
+  }
+  if (place.recommendedFor && place.recommendedFor.length > 0) {
+    whyReasons.push({ title: place.recommendedFor[0], sub: '추천 대상' })
+  }
+  if (whyReasons.length < 3 && finalRating != null) {
+    whyReasons.push({
+      title: `★${finalRating.toFixed(1)} (리뷰 ${finalReviewCount ?? 0}건)`,
+      sub: 'Google·카카오 합산',
+    })
+  }
+
+  // 리뷰 키워드 카드 (있을 때만)
+  type KeywordRow = { word: string; count: number; negative?: boolean }
+  const keywordRows: KeywordRow[] = []
+  for (const summary of place.reviewSummaries ?? []) {
+    for (const theme of summary.positiveThemes ?? []) {
+      const existing = keywordRows.find(k => k.word === theme && !k.negative)
+      if (existing) existing.count += 1
+      else keywordRows.push({ word: theme, count: 1 })
+    }
+    for (const theme of summary.negativeThemes ?? []) {
+      const existing = keywordRows.find(k => k.word === theme && k.negative)
+      if (existing) existing.count += 1
+      else keywordRows.push({ word: theme, count: 1, negative: true })
+    }
+  }
+  keywordRows.sort((a, b) => Number(a.negative) - Number(b.negative) || b.count - a.count)
+
+  // JSON-LD
   const localBusinessJsonLd = generateLocalBusiness(placeWithGoogleData, pageUrl, schemaType)
   const faqJsonLd = place.faqs.length > 0 ? generateFAQPage(place.faqs) : null
-
-  // E-E-A-T: WebPage 래퍼 (author + publisher)
   const webPageJsonLd = generateWebPage({
     url: pageUrl,
-    name: `${place.name} - ${cityObj?.name} ${catObj?.name}`,
+    name: `${place.name} - ${cityObj.name} ${catObj.name}`,
     description: place.description,
     lastUpdated: place.lastUpdated,
   })
-
-  // BreadcrumbList JSON-LD — 4단계: 홈→대분류→소분류→업체
-  const sector = await getSectorForCategory(category)
   const breadcrumbJsonLd = generateBreadcrumbList([
-    { name: '홈', url: baseUrl },
-    ...(sector ? [{ name: `${cityObj?.name ?? city} ${sector.name}`, url: `${baseUrl}/${city}` }] : []),
-    { name: `${cityObj?.name ?? city} ${catObj?.name ?? category}`, url: `${baseUrl}/${city}/${category}` },
+    { name: '홈', url: BASE_URL },
+    ...(sector ? [{ name: `${cityObj.name} ${sector.name}`, url: `${BASE_URL}/${city}` }] : []),
+    { name: `${cityObj.name} ${catObj.name}`, url: `${BASE_URL}/${city}/${category}` },
     { name: place.name, url: pageUrl },
   ])
 
-  return (
-    <>
-      <Header />
+  const schemaBadges = [schemaType, faqJsonLd ? 'FAQPage' : null, 'WebPage', 'BreadcrumbList']
+    .filter(Boolean)
+    .join(' / ')
 
-      <main className="flex-1">
-        <article className="py-20 px-6">
-          <div className="mx-auto max-w-[800px]">
-            {/* T-105: Breadcrumb 5단계 (홈 › 도시+섹터 › 도시+카테고리 › 업체) — 카테고리 페이지와 계층 일관성 */}
-            <nav className="mb-8 text-sm text-[#6a6a6a]" aria-label="Breadcrumb">
-              <Link href="/" className="hover:text-[#008f6b]">홈</Link>
+  // Tabs (해당 데이터 있는 섹션만)
+  const tabs: Array<{ id: string; label: string }> = []
+  if (totalServices > 0) tabs.push({ id: 'services', label: '서비스·가격' })
+  if ((place.reviewSummaries ?? []).length > 0 || googleData?.reviews?.length) tabs.push({ id: 'reviews', label: '리뷰' })
+  tabs.push({ id: 'hours', label: '영업시간·위치' })
+  if (place.faqs.length > 0) tabs.push({ id: 'faq', label: 'FAQ' })
+  if (similarPlaces.length > 0) tabs.push({ id: 'similar', label: '비슷한 업체' })
+  tabs.push({ id: 'sources', label: '출처' })
+
+  return (
+    <div className="aip-root">
+      <HomeNav />
+
+      <main>
+        {/* ====================== HEAD ====================== */}
+        <header className="pd-head">
+          <div className="wrap">
+            <nav className="crumbs" aria-label="Breadcrumb">
+              <Link href="/">홈</Link>
+              <span className="sep">/</span>
+              <Link href="/directory">디렉토리</Link>
+              <span className="sep">/</span>
               {sector && (
                 <>
-                  <span className="mx-2">›</span>
-                  <Link href={`/${city}`} className="hover:text-[#008f6b]">{cityObj?.name} {sector.name}</Link>
+                  <span>
+                    {cityObj.name} {sector.name}
+                  </span>
+                  <span className="sep">/</span>
                 </>
               )}
-              <span className="mx-2">›</span>
-              <Link href={`/${city}/${category}`} className="hover:text-[#008f6b]">{cityObj?.name} {catObj?.name}</Link>
-              <span className="mx-2">›</span>
-              <span className="text-[#222222] font-medium">{place.name}</span>
+              <Link href={`/${city}/${category}`}>
+                {cityObj.name} {catObj.name}
+              </Link>
+              <span className="sep">/</span>
+              <span className="cur">{place.name}</span>
             </nav>
 
-            {/* T-098: Hero Image 또는 축약 정보 배너 (사진 없을 때 600px 빈 박스 제거) */}
-            {place.imageUrl ? (
-              <div className="aspect-[16/9] rounded-[20px] overflow-hidden bg-[#f2f2f2] mb-8 relative">
-                <Image src={place.imageUrl} alt={place.name} fill priority className="object-cover" sizes="(max-width: 820px) 100vw, 820px" />
-              </div>
-            ) : (
-              <div
-                aria-hidden="true"
-                className="h-24 rounded-[16px] bg-[#ececec] flex items-center justify-center text-[#8a8a8a] text-sm mb-8"
-              >
-                사진 준비 중
-              </div>
-            )}
-
-            {/* H1 + Rating (Google Places 데이터 우선, 없으면 수동 데이터) */}
-            <h1 className="text-[28px] font-bold text-[#222222] leading-[1.43]">
-              {place.name} — {cityObj?.name ?? city} {catObj?.name ?? category}
-            </h1>
-            {(googleData?.rating ?? place.rating) != null && (
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-base font-medium text-[#222222]">
-                  {formatRatingLine(
-                    googleData?.rating ?? place.rating ?? 0,
-                    googleData?.reviewCount ?? place.reviewCount ?? 0,
-                    googleData ? 'google' : 'mixed',
-                  )}
-                </span>
-              </div>
-            )}
-
-            {/* Phase 11: 소스별 리뷰 배지 (Google/Naver/Kakao) — 있으면 노출 */}
-            <PlaceReviewBadges
-              className="mt-2"
-              size="md"
-              place={{
-                googleRating: googleData?.rating ?? place.googleRating,
-                googleReviewCount: googleData?.reviewCount ?? place.googleReviewCount,
-                naverReviewCount: place.naverReviewCount,
-                kakaoRating: place.kakaoRating,
-                kakaoReviewCount: place.kakaoReviewCount,
-              }}
-            />
-
-            {/* GEO: Direct Answer Block — 추천형 문장 우선, 없으면 기존 description */}
-            <p className="mt-3 text-base text-[#222222] font-medium leading-relaxed">
-              {place.recommendationNote ?? place.description}
-            </p>
-
-            {/* CRITICAL 4: Last Updated (§4.2 Freshness) */}
-            {place.lastUpdated && (
-              <time dateTime={place.lastUpdated} className="mt-1 block text-xs text-[#6a6a6a]">최종 업데이트: {place.lastUpdated}</time>
-            )}
-
-            {/* CTA Buttons */}
-            <div className="mt-6 flex gap-3">
-              {place.phone && (
-                <PhoneButton phone={place.phone} businessName={place.name} />
-              )}
-              <Link
-                href={`/${city}/${category}`}
-                className="inline-flex h-12 px-6 items-center rounded-lg bg-[#222222] text-white font-medium hover:bg-[#333333] transition-colors"
-              >
-                목록으로
-              </Link>
+            <div className="pd-meta-line">
+              <span className="pill">AI Answer Document</span>
+              <span>
+                doc-id <b>{docId}</b>
+              </span>
+              <span>·</span>
+              <span>
+                last reviewed <b>{lastUpdated}</b>
+              </span>
+              <span>·</span>
+              <span>
+                schema <b>{schemaBadges}</b>
+              </span>
             </div>
 
-            {/* GEO: 추천 대상 + 핵심 강점 (GPT 리뷰 반영) */}
-            {(place.recommendedFor?.length || place.strengths?.length) && (
-              <section className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {place.recommendedFor && place.recommendedFor.length > 0 && (
-                  <div className="p-5 bg-[#f2f2f2] rounded-[14px]">
-                    <h2 className="text-[16px] font-semibold text-[#222222] mb-3">추천 대상</h2>
-                    <ul className="space-y-2">
-                      {place.recommendedFor.map(item => (
-                        <li key={item} className="flex items-start gap-2 text-sm text-[#222222]">
-                          <span className="text-[#008f6b] mt-0.5 shrink-0">✓</span>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {place.strengths && place.strengths.length > 0 && (
-                  <div className="p-5 bg-[#f2f2f2] rounded-[14px]">
-                    <h2 className="text-[16px] font-semibold text-[#222222] mb-3">핵심 강점</h2>
-                    <ul className="space-y-2">
-                      {place.strengths.map(item => (
-                        <li key={item} className="flex items-start gap-2 text-sm text-[#222222]">
-                          <span className="text-[#008f6b] mt-0.5 shrink-0">★</span>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </section>
-            )}
-
-            {/* 업체 유형 배지 */}
-            {place.placeType && (
-              <div className="mt-4">
-                <span className="inline-flex px-3 py-1 text-xs font-medium text-[#008f6b] bg-[#e6f7f2] border border-[#008f6b]/20 rounded-full">
-                  {place.placeType}
-                </span>
-              </div>
-            )}
-
-            {/* Info Section */}
-            <section id="info" className="mt-12 p-6 bg-[#f2f2f2] rounded-[14px]">
-              <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">기본 정보</h2>
-              {/* HIGH 8: Direct Answer Block under H2 */}
-              <p className="text-sm text-[#222222] mb-4">{place.description}</p>
-              <dl className="space-y-3">
-                <div className="flex gap-3">
-                  <dt className="text-sm font-medium text-[#6a6a6a] w-20 shrink-0">주소</dt>
-                  <dd className="text-sm text-[#222222]">{normalizeAddress(place.address)}</dd>
+            <div className="biz-head-grid">
+              <div>
+                <div className="biz-badges">
+                  <span className="chip">{catObj.name}</span>
+                  {district && <span className="chip">{district}</span>}
+                  {place.placeType && <span className="chip accent">{place.placeType}</span>}
                 </div>
-                {place.phone && (
-                  <div className="flex gap-3">
-                    <dt className="text-sm font-medium text-[#6a6a6a] w-20 shrink-0">전화</dt>
-                    <dd className="text-sm text-[#222222]">{place.phone}</dd>
+
+                {place.imageUrl && (
+                  <div
+                    style={{
+                      marginTop: 14,
+                      aspectRatio: '16 / 9',
+                      borderRadius: 'var(--r-lg)',
+                      overflow: 'hidden',
+                      background: 'var(--bg-2)',
+                      position: 'relative',
+                    }}
+                  >
+                    <Image
+                      src={place.imageUrl}
+                      alt={place.name}
+                      fill
+                      priority
+                      className="object-cover"
+                      sizes="(max-width: 980px) 100vw, 720px"
+                    />
                   </div>
                 )}
-                {place.openingHours && (
-                  <div className="flex gap-3">
-                    <dt className="text-sm font-medium text-[#6a6a6a] w-20 shrink-0">영업시간</dt>
-                    <dd className="text-sm text-[#222222]">{formatHoursKo(place.openingHours)}</dd>
+
+                <h1 className="biz-title">{place.name}</h1>
+
+                <p className="biz-lede">
+                  {place.recommendationNote ?? place.description ?? `${cityObj.name} ${catObj.name} 카테고리 등록 업체.`}
+                </p>
+
+                {/* Key facts 5개 */}
+                <dl className="kf-strip" aria-label="Key facts">
+                  <div className="kf">
+                    <dt>평점</dt>
+                    <dd>{finalRating != null ? finalRating.toFixed(1) : '—'}</dd>
+                    <span className="sub">/ 5.0</span>
                   </div>
-                )}
-              </dl>
+                  <div className="kf">
+                    <dt>리뷰</dt>
+                    <dd>{finalReviewCount ?? 0}</dd>
+                    <span className="sub">건 · Google·카카오 합산</span>
+                  </div>
+                  <div className="kf">
+                    <dt>주력 서비스</dt>
+                    <dd>{totalServices > 0 ? totalServices : '—'}</dd>
+                    <span className="sub">{totalServices > 0 ? '종 · 가격 표기' : '집계 중'}</span>
+                  </div>
+                  <div className="kf">
+                    <dt>{sourcesConfig.priceLabel}</dt>
+                    <dd className="accent-dd">{startingPriceService?.priceRange ? startingPriceService.priceRange : '문의'}</dd>
+                    <span className="sub">{startingPriceService?.name ?? '상담 후 확정'}</span>
+                  </div>
+                  <div className="kf">
+                    <dt>업데이트</dt>
+                    <dd style={{ fontSize: 18, lineHeight: 1.2 }}>{lastUpdated.slice(5).replace('-', '/')}</dd>
+                    <span className="sub">{lastUpdated.slice(0, 4)}년 갱신</span>
+                  </div>
+                </dl>
 
-              {/* Phase 11: 외부 플랫폼 링크 6종 — 있는 것만 */}
-              <PlaceExternalLinks place={place} className="mt-4" />
-            </section>
-
-            {/* Services */}
-            {place.services.length > 0 && (
-              <section id="services" className="mt-10">
-                <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">제공 서비스</h2>
-                {/* HIGH 8: Direct Answer Block — 표시폭 40~120 보장 (AEO Direct Answer) */}
-                <p className="text-sm text-[#222222] mb-4">{place.name}이(가) 제공하는 {place.services.length}개 서비스 목록입니다. 시술별 가격과 소요 시간은 상담 시 확인해 주세요.</p>
-                <div className="space-y-3">
-                  {place.services.map((svc) => (
-                    <div key={svc.name} className="flex items-center justify-between py-3 border-b border-[#c1c1c1]/50 last:border-0">
-                      <div>
-                        <div className="text-sm font-medium text-[#222222]">{svc.name}</div>
-                        {svc.description && (
-                          <div className="text-sm text-[#6a6a6a] mt-1">{svc.description}</div>
-                        )}
+                {/* WHY card */}
+                {(place.description || whyReasons.length > 0) && (
+                  <div className="why-card">
+                    <div className="q">
+                      &ldquo;{cityObj.name}에서 {catObj.name} 추천해줘&rdquo;
+                    </div>
+                    <div className="a">
+                      <b>{place.name}</b>
+                      {district && <> ({district})</>}은(는) {place.description ?? `${catObj.name} 카테고리 등록 업체입니다.`}
+                    </div>
+                    {whyReasons.length > 0 && (
+                      <div className="reasons">
+                        {whyReasons.slice(0, 3).map((r, idx) => (
+                          <div className="reason" key={idx}>
+                            <span className="num">{String(idx + 1).padStart(2, '0')}</span>
+                            <b>{r.title}</b>
+                            <span>{r.sub}</span>
+                          </div>
+                        ))}
                       </div>
-                      {svc.priceRange && (
-                        <div className="text-sm font-medium text-[#222222] shrink-0 ml-4">{svc.priceRange}</div>
-                      )}
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Side card */}
+              <aside className="side-card">
+                <p className="label">예약 · 문의</p>
+
+                {place.phone && (
+                  <div className="row">
+                    <span className="k">전화</span>
+                    <span className="v">
+                      <b>{place.phone}</b>
+                    </span>
+                  </div>
+                )}
+                <div className="row">
+                  <span className="k">주소</span>
+                  <span className="v">{normalizeAddress(place.address)}</span>
+                </div>
+                {place.openingHours && place.openingHours.length > 0 && (
+                  <div className="row">
+                    <span className="k">영업시간</span>
+                    <span className="v">{formatHoursKo(place.openingHours)}</span>
+                  </div>
+                )}
+
+                <div className="ctas">
+                  {place.phone && <PhoneButton phone={place.phone} businessName={place.name} />}
+                  <Link className="btn ghost" href="#hours">
+                    영업시간·위치
+                  </Link>
+                </div>
+
+                <div className="foot">
+                  last reviewed {lastUpdated}
+                  <br />
+                  source: Google Places + 업체 직접 제공
+                </div>
+              </aside>
+            </div>
+          </div>
+        </header>
+
+        <PlaceTabs tabs={tabs} />
+
+        {/* ====================== SERVICES ====================== */}
+        {totalServices > 0 && (
+          <section id="services" className="pd-section">
+            <div className="wrap">
+              <div className="pd-h">
+                <div>
+                  <h2>
+                    <span className="it">Services</span> · {sourcesConfig.priceLabel} {totalServices}종
+                  </h2>
+                  <p className="sub">
+                    업체가 직접 제공한 단가표. LLM이 가격 답변 시 그대로 인용 가능하도록 구조화돼 있습니다.
+                  </p>
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>§ services</div>
+              </div>
+
+              <div className="svc-shell">
+                <table className="svc-table">
+                  <thead>
+                    <tr>
+                      <th>서비스</th>
+                      <th>비고</th>
+                      <th>{sourcesConfig.priceLabel}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {place.services.map(svc => (
+                      <tr key={svc.name}>
+                        <td className="pro">
+                          {svc.name}
+                          {svc.description && <span className="desc">{svc.description}</span>}
+                        </td>
+                        <td style={{ color: 'var(--ink-2)', fontSize: 13 }}>
+                          {svc.description ? '' : '상담 후 안내'}
+                        </td>
+                        <td className="price">{svc.priceRange ?? <small>문의</small>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="svc-foot">
+                  출처 — 업체 직접 제공 · 실제 가격은 상담 후 확정
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ====================== REVIEWS ====================== */}
+        {((place.reviewSummaries?.length ?? 0) > 0 || (googleData?.reviews?.length ?? 0) > 0) && (
+          <section id="reviews" className="pd-section">
+            <div className="wrap">
+              <div className="pd-h">
+                <div>
+                  <h2>
+                    <span className="it">Reviews</span> · 리뷰 분석
+                  </h2>
+                  <p className="sub">
+                    Google·카카오 공식 리뷰를 키워드 단위로 요약했습니다. 네이버 플레이스 리뷰는 정책상 미노출.
+                  </p>
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>§ reviews</div>
+              </div>
+
+              <div className="rev-grid">
+                <div>
+                  {googleData?.reviews?.slice(0, 4).map((r, idx) => (
+                    <div className="rev-card" key={idx}>
+                      <div className="top">
+                        <span className="ava">·</span>
+                        <div className="meta">
+                          <b>익명</b>
+                          <span>{r.relativeTime}</span>
+                        </div>
+                        <span className="stars">{stars(r.rating)}</span>
+                      </div>
+                      <p>{r.text}</p>
+                      <div className="src">Google 지도</div>
                     </div>
                   ))}
                 </div>
-              </section>
-            )}
 
-            {/* Tags */}
-            {place.tags.length > 0 && (
-              <div className="mt-8 flex flex-wrap gap-2">
-                {place.tags.map(tag => (
-                  <span
-                    key={tag}
-                    className="px-2.5 py-1 text-xs font-medium text-[#222222] border border-[#c1c1c1] rounded-[14px]"
-                  >
-                    {tag}
-                  </span>
+                {keywordRows.length > 0 && (
+                  <aside className="kw-card">
+                    <h4>
+                      AI Review Summary
+                      <span className="lg">키워드 빈도 분석</span>
+                    </h4>
+                    <div className="kw-list">
+                      {keywordRows.slice(0, 8).map((k, idx) => (
+                        <div className={`kw${k.negative ? ' neg' : ''}`} key={idx}>
+                          <span className="w">{k.word}</span>
+                          <span className="n">
+                            {k.count}회{k.negative ? ' (단점)' : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="kw-foot">
+                      n={place.reviewSummaries?.length ?? 0} · 14일 갱신
+                      <br />
+                      method: 리뷰 요약 테마 빈도
+                    </div>
+                  </aside>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ====================== HOURS / LOCATION ====================== */}
+        <section id="hours" className="pd-section" style={{ background: 'var(--bg-2)' }}>
+          <div className="wrap">
+            <div className="pd-h">
+              <div>
+                <h2>
+                  <span className="it">Hours</span> · 영업시간 · 위치
+                </h2>
+                <p className="sub">{normalizeAddress(place.address)}</p>
+              </div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>§ hours</div>
+            </div>
+
+            <div className="loc-grid">
+              <div className="loc-card">
+                <h3>위치</h3>
+                <p className="addr">{place.name}</p>
+                <p className="road">{normalizeAddress(place.address)}</p>
+                <PlaceExternalLinks place={place} />
+                <div className="ext-links" style={{ display: 'none' }} aria-hidden />
+              </div>
+
+              <div className="hours">
+                {hoursRows.map(row => (
+                  <div key={row.day} className={`hour-row${row.isToday ? ' today' : ''}`}>
+                    <span className="d">
+                      {KO_DAY_LABEL[row.day]} {row.isToday ? '· 오늘' : ''}
+                    </span>
+                    <span style={{ color: row.label === '휴무' ? 'var(--muted)' : 'var(--ink)' }}>
+                      {row.label}
+                    </span>
+                  </div>
+                ))}
+                <div className="hour-foot">출처: 업체 등록 정보 · 공휴일 별도 공지</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ====================== FAQ ====================== */}
+        {place.faqs.length > 0 && (
+          <section id="faq" className="pd-section">
+            <div className="wrap" style={{ maxWidth: 820 }}>
+              <div className="pd-h">
+                <div>
+                  <h2>
+                    <span className="it">FAQ</span> · 자주 묻는 {place.faqs.length}가지
+                  </h2>
+                  <p className="sub">FAQPage 스키마로 마크업되어 LLM이 단답으로 추출 가능합니다.</p>
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>§ faq</div>
+              </div>
+
+              <div className="faq-list">
+                {place.faqs.map((faq, idx) => (
+                  <details key={idx} open={idx === 0}>
+                    <summary>{faq.question}</summary>
+                    <div className="ans">{faq.answer}</div>
+                  </details>
                 ))}
               </div>
-            )}
+            </div>
+          </section>
+        )}
 
-            {/* Phase 11: 플랫폼별 AI 리뷰 요약 — 긍정/부정 테마 + 패러프레이즈 인용 1건/소스 */}
-            <PlaceReviewSummary
-              summaries={reviewSummaries}
-              businessName={place.name}
-            />
+        {/* ====================== SIMILAR ====================== */}
+        {similarPlaces.length > 0 && (
+          <section id="similar" className="pd-section" style={{ background: 'var(--bg-2)' }}>
+            <div className="wrap">
+              <div className="pd-h">
+                <div>
+                  <h2>
+                    <span className="it">Similar</span> · 비슷한 {cityObj.name} {catObj.name}
+                  </h2>
+                  <p className="sub">같은 카테고리의 평점 상위 업체입니다.</p>
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>§ similar</div>
+              </div>
 
-            {/* Google 리뷰 원문 최대 5건 — Places API ToS §5 준수 (30일 캐시 금지, 빌드 시 매번 재-fetch) */}
-            {googleData && googleData.reviews.length > 0 && (
-              <section id="google-reviews" className="mt-12">
-                <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">
-                  Google 리뷰 원문
-                </h2>
-                <p className="text-sm text-[#222222] mb-4">
-                  Google 평점 {googleData.rating}점 · 총 후기 {googleData.reviewCount.toLocaleString('ko-KR')}건을 기반으로 최근 대표 리뷰 5건을 원문 그대로 인용했습니다.
-                </p>
-                <div className="space-y-4">
-                  {googleData.reviews.slice(0, 5).map((review, i) => (
-                    <div key={i} className="p-4 bg-[#f2f2f2] rounded-[14px]">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-medium text-[#222222]">
-                          {'★'.repeat(Math.round(review.rating))}{'☆'.repeat(5 - Math.round(review.rating))}
-                        </span>
-                        <span className="text-xs text-[#6a6a6a]">{review.relativeTime}</span>
+              <div className="sim-grid">
+                {similarPlaces.map((p, idx) => {
+                  const dist = extractDistrict(p.address)
+                  return (
+                    <Link className="sim" key={p.slug} href={`/${p.city}/${p.category}/${p.slug}`}>
+                      <span className="rank">평점 상위 {idx + 1}순위</span>
+                      <h4>{p.name}</h4>
+                      <div className="meta">
+                        {dist && `${dist} · `}★ <b>{p.rating?.toFixed(1) ?? '—'}</b> ({p.reviewCount ?? 0})
                       </div>
-                      <p className="text-sm text-[#222222] leading-relaxed line-clamp-3">{review.text}</p>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-3 text-xs text-[#6a6a6a]">출처: Google Places · 원문은 Google 지도에서 확인 가능합니다.</p>
-              </section>
-            )}
-
-            {/* FAQ */}
-            {place.faqs.length > 0 && (
-              <section id="faq" className="mt-12">
-                <h2 className="text-[20px] font-semibold text-[#222222] leading-[1.2] tracking-[-0.18px] mb-1">자주 묻는 질문</h2>
-                <p className="text-sm text-[#222222] mb-4">{place.name}에 대해 자주 묻는 질문 {place.faqs.length}개를 정리했습니다. 예약·영업시간·서비스 관련 답변입니다.</p>
-                <div className="divide-y divide-[#c1c1c1]/50">
-                  {place.faqs.map((faq) => (
-                    <details key={faq.question} className="group py-4">
-                      <summary className="flex items-center justify-between cursor-pointer list-none text-base font-medium text-[#222222]">
-                        {faq.question}
-                        <svg
-                          className="w-5 h-5 text-[#6a6a6a] shrink-0 ml-4 group-open:rotate-180 transition-transform"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </summary>
-                      <p className="mt-2 text-sm text-[#6a6a6a] leading-relaxed">{faq.answer}</p>
-                    </details>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* GEO: 양방향 링크 — 이 업체가 언급된 블로그 글 (T-010g) */}
-            {relatedBlogPosts.length > 0 && (
-              <section className="mt-12 pt-6 border-t border-[#c1c1c1]">
-                <h2 className="text-[16px] font-semibold text-[#222222] mb-3">관련 콘텐츠</h2>
-                <div className="flex flex-wrap gap-2">
-                  {relatedBlogPosts.map(post => (
-                    <Link
-                      key={post.slug}
-                      href={`/blog/${post.city}/${post.sector}/${post.slug}`}
-                      className="px-4 py-2 text-sm text-[#222222] bg-[#f2f2f2] border border-[#c1c1c1] rounded-lg hover:bg-[#e8e8e8] transition-colors"
-                    >
-                      {post.title}
+                      {p.tags && p.tags.length > 0 && (
+                        <div className="tags">
+                          {p.tags.slice(0, 3).map(t => (
+                            <span className="chip" key={t}>
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </Link>
-                  ))}
-                </div>
-              </section>
-            )}
+                  )
+                })}
+              </div>
 
-            {/* 업종별 면책 분기 (T-004) */}
+              <p style={{ marginTop: 16, fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--muted)' }}>
+                → {cityObj.name} {catObj.name} 전체 {sameCategoryPlaces.length}곳은{' '}
+                <Link href={`/${city}/${category}`} style={{ color: 'var(--accent)' }}>
+                  카테고리 페이지
+                </Link>
+                에서 확인.
+              </p>
+            </div>
+          </section>
+        )}
+
+        {/* ====================== RELATED BLOG POSTS ====================== */}
+        {relatedBlogPosts.length > 0 && (
+          <section className="pd-section">
+            <div className="wrap">
+              <div className="pd-h">
+                <div>
+                  <h2>
+                    <span className="it">Related</span> · 이 업체가 언급된 가이드·비교 글
+                  </h2>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {relatedBlogPosts.map(post => (
+                  <Link
+                    key={post.slug}
+                    href={`/blog/${post.city}/${post.sector}/${post.slug}`}
+                    style={{
+                      padding: '10px 16px',
+                      border: '1px solid var(--line-2)',
+                      borderRadius: 'var(--r-md)',
+                      background: 'var(--card)',
+                      fontSize: 13.5,
+                      color: 'var(--ink)',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {post.title}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ====================== DATA STAMP ====================== */}
+        <section id="sources" className="pd-section">
+          <div className="wrap">
+            <div className="pd-h">
+              <div>
+                <h2>
+                  <span className="it">Sources</span> · 데이터 출처와 방법론
+                </h2>
+                <p className="sub">LLM이 본 페이지를 인용할 때 함께 참조 가능하도록 출처를 명시합니다.</p>
+              </div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>§ sources</div>
+            </div>
+
+            <div className="stamp">
+              <div className="col">
+                <h3>Data Sources</h3>
+                <ul>
+                  {sourcesConfig.sources.map((src, idx) => (
+                    <li key={src.name}>
+                      <b>{src.name}</b> — {src.detail}
+                      {idx === 0 ? ` (최근 갱신 ${lastUpdated})` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="col">
+                <h3>Methodology</h3>
+                <ul>
+                  {sourcesConfig.methodology.map((line, idx) => (
+                    <li key={idx}>{line}</li>
+                  ))}
+                </ul>
+                <div className="meta">
+                  license: CC BY-NC 4.0 · 인용 시 출처 표기 권장
+                  <br />
+                  contact: {SITE_BRAND.email} · doc-id: {docId}
+                  <br />
+                  last reviewed: {lastUpdated}
+                </div>
+              </div>
+            </div>
+
             <Disclaimer sector={sector?.slug ?? ''} />
 
-            {/* 신고 — 잘못된 정보, 폐업, 스팸 등 (DB UUID 없는 seed 폴백은 노출 안 함) */}
             {place.id && (
-              <div className="mt-6 text-right">
+              <div style={{ marginTop: 16, textAlign: 'right' }}>
                 <ReportPlaceButton placeId={place.id} />
               </div>
             )}
           </div>
-        </article>
+        </section>
       </main>
 
-      <Footer currentCity={city} currentCategory={category} />
+      <SiteFooter currentCity={city} currentCategory={category} />
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(localBusinessJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(webPageJsonLd) }} />
-      {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }} />}
+      {faqJsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }} />
+      )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }} />
-      {/* T-008: 단독 AggregateRating JSON-LD 제거.
-           LocalBusiness 내부 aggregateRating(localBusinessJsonLd) 으로 충분하며,
-           단독 출력은 비표준이고 Rich Results Test 경고 유발. */}
-    </>
+    </div>
   )
 }
