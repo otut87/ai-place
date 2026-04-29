@@ -163,13 +163,15 @@ describe('checkRateLimit — dev fallback (Upstash env 미설정)', () => {
     expect(r.limit).toBe(999)
   })
 
-  it('프로덕션 환경 + UPSTASH_* 미설정 → success=true 이지만 console.error 경고', async () => {
+  it('프로덕션 환경 + UPSTASH_* 미설정 → success=false 로 hard-fail (T-259)', async () => {
     vi.stubEnv('NODE_ENV', 'production')
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { checkRateLimit } = await import('@/lib/security/rate-limit')
     const r = await checkRateLimit('203.0.113.3', 'diagnose')
-    expect(r.success).toBe(true)
-    // 프로덕션에서 미설정은 운영 실수 — 명시적 console.error 로 경고.
+    // T-259: 이전엔 fail-open(true) 였음. Codex consult #7 후속으로 production
+    // 미설정을 hard-fail 로 변경 — 운영 실수가 즉시 503 으로 노출되어야 함.
+    expect(r.success).toBe(false)
+    expect(r.limit).toBe(0)
     expect(errSpy).toHaveBeenCalled()
     errSpy.mockRestore()
   })

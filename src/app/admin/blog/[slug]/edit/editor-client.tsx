@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, Eye, FileText, LinkIcon, Calendar } from 'lucide-react'
 import { saveBlogPost, deleteBlogPostById, type SaveBlogInput } from '@/lib/actions/blog-edit'
-import { renderMarkdown } from '@/lib/admin/blog-editor'
+import { SafeMarkdown } from '@/components/safe-markdown'
 import { QualityPanel } from '@/components/admin/blog/quality-panel'
 import { Trash2, ExternalLink } from 'lucide-react'
 import { useToast } from '@/components/admin/toast'
@@ -236,7 +236,7 @@ export function BlogEditorClient({
             <Eye className="h-3 w-3" /> 프리뷰
           </div>
           <div className="flex-1 overflow-y-auto p-5">
-            <article className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }} />
+            <SafeMarkdown className="prose prose-sm max-w-none">{content}</SafeMarkdown>
           </div>
 
           {/* T-131: 관련 업체 체크박스 */}

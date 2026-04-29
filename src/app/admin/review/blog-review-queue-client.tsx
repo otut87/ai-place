@@ -7,7 +7,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminLink } from '@/components/admin/admin-link'
 import { approveBlogPost, rejectBlogPost } from '@/lib/actions/blog-review'
-import { renderMarkdown } from '@/lib/admin/blog-editor'
+import { SafeMarkdown } from '@/components/safe-markdown'
 import { useToast } from '@/components/admin/toast'
 import { Check, X, Pencil } from 'lucide-react'
 import { REJECT_REASONS, rejectReasonLabel, type RejectReason } from '@/lib/admin/review-queue'
@@ -115,10 +115,9 @@ export function BlogReviewQueueClient({
 
             <div className="flex min-h-0 flex-1">
               <div className="min-w-0 flex-1 overflow-y-auto bg-[#fafafa] p-6">
-                <article
-                  className="prose prose-sm max-w-none rounded-lg bg-white p-6"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(current.content) }}
-                />
+                <SafeMarkdown className="prose prose-sm max-w-none rounded-lg bg-white p-6">
+                  {current.content}
+                </SafeMarkdown>
               </div>
 
               <aside className="w-80 shrink-0 border-l border-[#e7e7e7] bg-white p-4">

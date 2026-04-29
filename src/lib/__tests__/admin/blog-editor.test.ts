@@ -1,53 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderMarkdown } from '@/lib/admin/blog-editor'
 
-describe('renderMarkdown', () => {
-  it('헤딩 변환', () => {
-    expect(renderMarkdown('# 제목')).toContain('<h1>제목</h1>')
-    expect(renderMarkdown('### h3')).toContain('<h3>h3</h3>')
-  })
-
-  it('볼드/이탤릭', () => {
-    expect(renderMarkdown('**강조** *약강조*')).toContain('<strong>강조</strong>')
-    expect(renderMarkdown('**강조** *약강조*')).toContain('<em>약강조</em>')
-  })
-
-  it('링크 변환', () => {
-    const r = renderMarkdown('[텍스트](https://example.com)')
-    expect(r).toContain('<a href="https://example.com">텍스트</a>')
-  })
-
-  it('인라인 코드', () => {
-    expect(renderMarkdown('`inline`')).toContain('<code>inline</code>')
-  })
-
-  it('코드블록', () => {
-    const r = renderMarkdown('```\nconsole.log(1)\n```')
-    expect(r).toContain('<pre><code>')
-  })
-
-  it('코드블록 내 HTML 이스케이프', () => {
-    const r = renderMarkdown('```\n<script>alert(1)</script>\n```')
-    expect(r).toContain('&lt;script&gt;')
-    expect(r).not.toContain('<script>alert')
-  })
-
-  it('script 태그 제거', () => {
-    const r = renderMarkdown('<script>alert(1)</script>\n\n본문')
-    expect(r).not.toContain('<script>')
-  })
-
-  it('on* 속성 제거', () => {
-    const r = renderMarkdown('<div onclick="alert(1)">x</div>')
-    expect(r).not.toContain('onclick')
-  })
-
-  it('단락 변환 (연속 빈 줄)', () => {
-    const r = renderMarkdown('첫 문단\n\n두번째 문단')
-    expect(r).toContain('<p>첫 문단</p>')
-    expect(r).toContain('<p>두번째 문단</p>')
-  })
-})
+// T-259: renderMarkdown 자체 sanitizer 제거됨 (Codex consult #4 후속). 클라이언트
+// 미리보기는 SafeMarkdown (react-markdown + rehype-sanitize) 으로 일원화. DB
+// 함수 (listDraftTopics, loadBlogPostForEdit, suggestInternalLinks) 만 여기서 검증.
 
 // DB 함수 스모크
 const mockLimit = vi.fn()
@@ -199,26 +154,6 @@ describe('suggestInternalLinks', () => {
     }))
     const { suggestInternalLinks } = await import('@/lib/admin/blog-editor')
     expect(await suggestInternalLinks('dermatology', '')).toEqual([])
-  })
-})
-
-describe('renderMarkdown (추가 커버리지)', () => {
-  it('h2/h4/h5/h6 도 렌더된다', () => {
-    expect(renderMarkdown('## h2')).toContain('<h2>h2</h2>')
-    expect(renderMarkdown('#### h4')).toContain('<h4>h4</h4>')
-    expect(renderMarkdown('##### h5')).toContain('<h5>h5</h5>')
-    expect(renderMarkdown('###### h6')).toContain('<h6>h6</h6>')
-  })
-
-  it('코드블록 안의 & < > 는 엔티티로 이스케이프', () => {
-    const r = renderMarkdown('```\nA & <B>\n```')
-    expect(r).toContain('&amp;')
-    expect(r).toContain('&lt;B&gt;')
-  })
-
-  it('줄바꿈 하나는 <br/> 로', () => {
-    const r = renderMarkdown('1행\n2행')
-    expect(r).toContain('1행<br/>2행')
   })
 })
 

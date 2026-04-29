@@ -116,36 +116,8 @@ export async function suggestInternalLinks(
   return out.slice(0, limit)
 }
 
-/** 간단 마크다운 → HTML. 보안: script 태그 제거. */
-export function renderMarkdown(md: string): string {
-  let html = md
-    // 코드블록 먼저 보호
-    .replace(/```([\s\S]*?)```/g, (_, code) => `<pre><code>${escapeHtml(code as string)}</code></pre>`)
-    // 헤딩
-    .replace(/^######\s+(.+)$/gm, '<h6>$1</h6>')
-    .replace(/^#####\s+(.+)$/gm, '<h5>$1</h5>')
-    .replace(/^####\s+(.+)$/gm, '<h4>$1</h4>')
-    .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
-    .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
-    .replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
-    // 볼드·이탤릭
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    // 링크
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    // 인라인 코드
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // 단락 (연속 빈 줄)
-    .split(/\n{2,}/)
-    .map(block => block.startsWith('<') ? block : `<p>${block.replace(/\n/g, '<br/>')}</p>`)
-    .join('\n')
-
-  // script 태그 및 on* 속성 제거 (단순 sanitization)
-  html = html.replace(/<script[\s\S]*?<\/script>/gi, '')
-  html = html.replace(/\son[a-z]+="[^"]*"/gi, '')
-  return html
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
+// T-259 (Codex consult #4): 자체 regex sanitizer 가 stored XSS 통로였음
+// (`[](javascript:)`, single-quoted on-handler, `<` 시작 raw block, bold/em
+// inner HTML 모두 통과). 클라이언트 미리보기는 src/components/safe-markdown.tsx
+// 의 SafeMarkdown 컴포넌트(react-markdown + rehype-sanitize)로 일원화. 서버
+// 측은 src/lib/blog/markdown.ts:renderMarkdownToHtml 그대로.

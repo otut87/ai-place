@@ -8,6 +8,11 @@ vi.mock('@/lib/supabase/admin-client', () => ({
   getAdminClient: vi.fn(() => ({ from: mockFrom })),
 }))
 
+// T-259: listAuditForPlace 가 requireAuthForAction() 호출. 테스트는 admin 통과 가정.
+vi.mock('@/lib/auth', () => ({
+  requireAuthForAction: vi.fn(async () => ({ id: 'admin-test', email: 'methoddesign7@gmail.com' })),
+}))
+
 beforeEach(() => {
   mockInsert.mockReset()
   mockSelect.mockReset()
