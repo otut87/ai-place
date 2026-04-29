@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "build": "npm run harness:check && next build && npx tsx scripts/validate-pages.ts",
+    "build": "npx tsx scripts/check-prod-env.ts && npm run harness:check && next build && npx tsx scripts/validate-pages.ts",
     "build:only": "next build",
     "start": "next start",
     "lint": "eslint",

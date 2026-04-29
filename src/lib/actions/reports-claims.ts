@@ -37,7 +37,7 @@ async function checkRateLimit(
   admin: ReturnType<typeof getAdminClient>,
   table: 'place_reports' | 'ownership_claims',
   key: string,
-  keyCol: 'reporter_ip' | 'claimant_user_id',
+  keyCol: 'reporter_ip' | 'reporter_user_id' | 'claimant_user_id',
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!admin) return { ok: true }
   const since15 = new Date(Date.now() - 15 * 60 * 1000).toISOString()
@@ -74,9 +74,13 @@ export async function submitReport(input: SubmitReportInput): Promise<ActionResu
 
   const user = await getUser()
   const ip = await clientIp()
-  const limitKey = user?.id ?? ip
 
-  const rate = await checkRateLimit(admin, 'place_reports', limitKey, 'reporter_ip')
+  // T-259 (Codex consult #3): 로그인 사용자는 reporter_user_id 로 조회/저장 (column
+  // 일치). 이전 구현은 limit key 를 user.id 로 합성하면서 조회는 reporter_ip 컬럼을
+  // 봤기 때문에 카운트가 영원히 0 이었음 — 로그인 유저는 RL 우회 가능했음.
+  const rate = user
+    ? await checkRateLimit(admin, 'place_reports', user.id, 'reporter_user_id')
+    : await checkRateLimit(admin, 'place_reports', ip, 'reporter_ip')
   if (!rate.ok) return { success: false, error: rate.error }
 
   const { data: inserted, error } = await admin

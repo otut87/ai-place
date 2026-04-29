@@ -69,9 +69,12 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult> {
   const limiter = kind === 'diagnose' ? diagnoseLimiter : formLimiter
   if (!limiter) {
-    // dev fallback: 환경변수 미설정 → 통과 (production 에 반드시 UPSTASH_* 필수).
+    // T-259 (Codex consult #7 후속): production fail-open 제거. UPSTASH/KV env
+    // 누락이 silent pass 가 아닌 hard-block 으로 노출되어야 한다 — 30초 안에 발견.
+    // dev/test 는 그대로 통과 (개발 환경 호환).
     if (process.env.NODE_ENV === 'production') {
-      console.error(`[rate-limit] UPSTASH_REDIS_* unset in production — bypassing limit (kind=${kind}). 배포 전 설정 필수.`)
+      console.error(`[rate-limit] UPSTASH_REDIS_* / KV_REST_API_* unset in production — blocking (kind=${kind}).`)
+      return { success: false, remaining: 0, reset: Date.now() + 60_000, limit: 0 }
     }
     return { success: true, remaining: 999, reset: 0, limit: 999 }
   }
