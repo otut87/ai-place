@@ -5,6 +5,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export function CheckForm({ initialUrl }: { initialUrl: string }) {
   const router = useRouter()
@@ -55,7 +56,7 @@ export function CheckForm({ initialUrl }: { initialUrl: string }) {
       </div>
       <p className="meta-note">
         진단 후 점수 추이 비교를 위해 도메인+경로(쿼리/토큰 제외)와 점수만 저장합니다. 자세한 항목은{' '}
-        <a href="/privacy" className="underline">개인정보처리방침</a>.
+        <Link href="/privacy" className="underline">개인정보처리방침</Link>.
       </p>
     </form>
   )
