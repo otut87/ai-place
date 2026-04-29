@@ -16,7 +16,7 @@ const CITIES: Array<{ slug: string; name: string }> = [
   { slug: 'asan', name: '아산' },
 ]
 
-const SUPPORT_EMAIL = 'support@dedo.kr'
+const SUPPORT_EMAIL = 'support@aiplace.kr'
 
 // useSyncExternalStore 용 — 쿠키 변경을 외부에서 통지받지 않으므로 subscribe 는 no-op.
 // CityPicker 내부에서 쿠키를 set 한 직후엔 setLocalOverride 로 즉시 반영.

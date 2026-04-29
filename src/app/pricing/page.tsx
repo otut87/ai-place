@@ -125,7 +125,7 @@ export default function PricingPage() {
               <span>·</span>
               <span>plans <b>2</b></span>
               <span>·</span>
-              <span>VAT <b>별도</b></span>
+              <span>VAT <b>포함</b></span>
             </div>
 
             <h1 className="pr-title">

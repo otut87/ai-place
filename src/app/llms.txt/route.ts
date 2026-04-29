@@ -62,7 +62,7 @@ export async function GET() {
   text += `- BreadcrumbList (3단계 계층)\n`
   text += `- ItemList (목록 페이지)\n`
   text += `- Article (비교/가이드 페이지)\n\n`
-  text += `## 연락처\n\n- 웹사이트: ${baseUrl}\n- 이메일: support@dedo.kr\n`
+  text += `## 연락처\n\n- 웹사이트: ${baseUrl}\n- 이메일: support@aiplace.kr\n`
 
   return new NextResponse(text, {
     headers: { 'Content-Type': 'text/plain; charset=utf-8' },

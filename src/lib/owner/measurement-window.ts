@@ -13,7 +13,8 @@ export const MEASUREMENT_WINDOW_DAYS = 15
  * - D<15 라도 "측정 중" 배너/오버레이 우회
  * - 환경변수 OWNER_MEASURING_BYPASS_EMAILS(콤마 구분)로 확장 가능
  */
-const DEFAULT_BYPASS_EMAILS = ['support@dedo.kr']
+// T-259 (Q5): admin allowlist 와 동일하게 dedo 운영 계정 + aiplace 신규 도메인 둘 다 등록.
+const DEFAULT_BYPASS_EMAILS = ['support@dedo.kr', 'support@aiplace.kr']
 
 function getBypassEmails(): Set<string> {
   const env = process.env.OWNER_MEASURING_BYPASS_EMAILS ?? ''

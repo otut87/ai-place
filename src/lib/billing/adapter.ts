@@ -26,7 +26,7 @@ export interface ChargeOnceInput {
   customerKey: string
   orderId: string                  // 멱등키 (DB 유니크)
   orderName: string                // '2026-04 AI Place 월 구독'
-  amount: number                   // 원 단위 (33000)
+  amount: number                   // 원 단위 (예: 14900 — 활성 업체 1개)
   customerEmail?: string
   customerName?: string
 }

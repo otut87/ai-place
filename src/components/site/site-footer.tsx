@@ -21,7 +21,7 @@ export interface SiteFooterProps {
 export const SITE_BRAND = {
   name: 'AI Place',
   tagline: 'AI 검색에서 추천되는 로컬 업체 디렉토리.',
-  email: 'support@dedo.kr',
+  email: 'support@aiplace.kr',
   bizRegNo: '742-21-00642',
   address: '충남 천안시 서북구 쌍용11길 33',
   publisher: '디두(dedo)',

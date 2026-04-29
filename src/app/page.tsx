@@ -687,7 +687,7 @@ export default async function HomePage() {
             </div>
             <div className="fine">
               <span><b>대응 시간</b> · 평일 10:00 – 18:00</span>
-              <span><b>이메일</b> · support@dedo.kr</span>
+              <span><b>이메일</b> · support@aiplace.kr</span>
               <span><b>주소</b> · 충남 천안시 서북구 쌍용11길 33</span>
             </div>
           </div>

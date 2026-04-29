@@ -21,7 +21,7 @@ export interface ChargeSubscriptionInput {
   customerKey: string
   customerName: string
   customerEmail?: string
-  amount?: number                          // 기본 33000
+  amount?: number                          // 기본 14900 (PLAN_AMOUNT_PER_PLACE)
   retriedCount: number                     // 현재까지 몇 번 재시도했는지 (0 = 첫 시도)
   now?: Date
 }
