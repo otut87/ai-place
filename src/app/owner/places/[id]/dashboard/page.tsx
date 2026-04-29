@@ -15,6 +15,7 @@ import { getAdminClient } from '@/lib/supabase/admin-client'
 import { loadAeoSnapshotsForPlaces } from '@/lib/owner/aeo-snapshot'
 import { getOwnerDailyTrend, listOwnerBotVisits, dailyRowToChartCounts, type OwnerBotVisit } from '@/lib/owner/bot-stats'
 import { calcCompletionItems, sumCompletion } from '@/lib/owner/place-completion'
+import { canOwnerEdit } from '@/lib/owner/permissions'
 import { CrawlerTrendChart } from './_components/crawler-trend-chart'
 import { CitationTestButton } from './citation-test-button'
 import { hasActiveSubscription, checkCitationTestRateLimit } from '@/lib/diagnostic/citation-test'
@@ -76,7 +77,7 @@ export default async function OwnerPlaceDashboardPage({ params }: Props) {
     .from('places')
     .select([
       'id, slug, name, name_en, city, category, status, updated_at,',
-      'customer_id, description, address, phone, opening_hours,',
+      'customer_id, owner_id, owner_email, description, address, phone, opening_hours,',
       'tags, recommended_for, strengths, services, faqs, images,',
       'naver_place_url, kakao_map_url, google_business_url,',
       'homepage_url, blog_url, instagram_url',
@@ -89,6 +90,7 @@ export default async function OwnerPlaceDashboardPage({ params }: Props) {
     id: string; slug: string; name: string; name_en: string | null
     city: string; category: string; status: string; updated_at: string | null
     customer_id: string | null
+    owner_id: string | null; owner_email: string | null
     description: string | null; address: string; phone: string | null
     opening_hours: string[] | null
     tags: string[] | null; recommended_for: string[] | null; strengths: string[] | null
@@ -97,16 +99,12 @@ export default async function OwnerPlaceDashboardPage({ params }: Props) {
     homepage_url: string | null; blog_url: string | null; instagram_url: string | null
   }
 
-  // 소유권 검증
-  if (place.customer_id) {
-    const { data: customer } = await admin
-      .from('customers')
-      .select('user_id')
-      .eq('id', place.customer_id)
-      .maybeSingle()
-    if (!customer || (customer as { user_id: string }).user_id !== user.id) {
-      return <div className="pd-page"><p className="mx-auto max-w-2xl p-6 text-sm text-[#6a6a6a]">이 업체에 대한 권한이 없습니다.</p></div>
-    }
+  // T-259: 소유권 검증을 owner permission 모델(canOwnerEdit) 로 단일화.
+  // 이전 구현은 customer_id NULL 일 때 통과(IDOR). 다른 owner action(owner-places.ts 등)이
+  // 이미 owner_id → owner_email 우선순위로 검증하므로 dashboard 만 customer_id 강제하면
+  // (a) unclaimed place(owner_id/email NULL) 가 아무 user 에게 노출 + (b) 정상 owner 와 규칙 불일치.
+  if (!canOwnerEdit({ owner_id: place.owner_id, owner_email: place.owner_email }, { userId: user.id, email: user.email })) {
+    return <div className="pd-page"><p className="mx-auto max-w-2xl p-6 text-sm text-[#6a6a6a]">이 업체에 대한 권한이 없습니다.</p></div>
   }
 
   const publicUrl = `/${place.city}/${place.category}/${place.slug}`

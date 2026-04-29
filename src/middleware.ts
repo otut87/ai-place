@@ -10,6 +10,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { identifyBot, parseLocalPath } from '@/lib/seo/bot-detection'
 import { ipCityToSlug, readIpCityFromHeaders } from '@/lib/geo/ip-to-city'
 import { CITY_COOKIE_NAME, CITY_COOKIE_MAX_AGE, CITY_ALL } from '@/lib/geo/city-cookie'
+import { isAdminEmail } from '@/lib/auth/admin-emails'
 
 /**
  * 첫 방문자에게 IP 기반 도시 추천 쿠키를 설정.
@@ -108,6 +109,12 @@ export async function middleware(request: NextRequest) {
     const loginUrl = new URL(isOwnerRoute ? '/login' : '/admin/login', request.url)
     if (isOwnerRoute) loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // T-259: /admin allowlist enforcement — owner 이메일이 /admin URL을 직접 입력해도 차단.
+  // /admin/login 은 위 line 76 에서 이미 통과시켰음 (모두 접근 가능).
+  if (!isOwnerRoute && !isAdminEmail(user.email)) {
+    return NextResponse.redirect(new URL('/admin/login', request.url))
   }
 
   return response

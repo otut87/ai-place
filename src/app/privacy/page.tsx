@@ -45,6 +45,16 @@ export default function PrivacyPage() {
             </ul>
           </Section>
 
+          <Section title="1-1. 익명 진단(/check) 데이터">
+            로그인 없이 사용 가능한 사이트 진단 페이지(<code>/check</code>)에서는 다음 항목만 저장합니다:
+            <ul>
+              <li>도메인 + 경로 (예: <code>https://example.com/about</code>) — <strong>쿼리 문자열·해시·토큰 제거 후 저장</strong></li>
+              <li>진단 점수와 항목별 통과/실패 상태 (개인 식별 불가)</li>
+              <li>User-Agent 200자 이내 (악용 추적용, 단독으론 식별 불가)</li>
+            </ul>
+            저장하지 않는 것: 사용자 IP, 로그인 세션, URL 쿼리·토큰·이메일·내부 식별자. 개인이 식별될 수 있는 정보가 포함되지 않으므로 「개인정보 보호법」상 개인정보에 해당하지 않습니다.
+          </Section>
+
           <Section title="2. 개인정보의 수집 및 이용 목적">
             <ul>
               <li>회원 가입 및 본인 확인, 서비스 제공·운영</li>

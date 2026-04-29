@@ -3,8 +3,12 @@
 // T-056 — citation_results 쓰기/조회 서버 액션.
 // 작성: scripts/baseline-test.ts 가 runId 단위로 batchInsert.
 // 조회: /admin/citations 페이지가 최신 N일 구간을 요청.
+//
+// T-259: listRecentCitations 가 'use server' export 였으나 인증 체크 누락
+// (Codex consult review #5). admin client 직접 사용으로 RLS 도 우회. 이중 방어.
 
 import { getAdminClient } from '@/lib/supabase/admin-client'
+import { requireAuthForAction } from '@/lib/auth'
 import type { AIEngine, CitationRow } from '@/lib/citations/aggregate'
 
 export interface CitationInsert {
@@ -48,6 +52,7 @@ export async function insertCitations(rows: CitationInsert[]): Promise<{ success
 }
 
 export async function listRecentCitations(days = 30, limit = 1000): Promise<CitationRow[]> {
+  await requireAuthForAction()
   const supabase = getAdminClient()
   if (!supabase) return []
 

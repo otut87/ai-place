@@ -69,8 +69,10 @@ export async function runPublicDiagnosticAction(url: string): Promise<ScanResult
         : undefined,
     }
     await saveDiagnosticRun({ result, triggeredBy: 'public', userAgent: ua })
-  } catch {
-    // 이력 기능 실패해도 진단 결과는 반환
+  } catch (err) {
+    // T-259: silent failure 였음. observability(R7) 도입 전까진 console 이 유일한 신호.
+    // 이력 저장 실패해도 진단 결과는 반환 (UX 차단 방지).
+    console.error('[diagnose] history pipeline failed', err instanceof Error ? err.message : err)
   }
   return { ...result, compare }
 }

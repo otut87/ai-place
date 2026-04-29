@@ -1,8 +1,12 @@
 // AI Place — Auth Helpers
 // Supabase Auth를 통한 admin 인증. /admin/* 경로 보호용.
+//
+// T-259: ADMIN_EMAILS 는 src/lib/auth/admin-emails.ts (edge-runtime safe) 의 단일 source.
+// middleware 도 동일 모듈에서 import 하므로 두 곳 동기화 필요 없음.
 
 import { createServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { isAdminEmail } from '@/lib/auth/admin-emails'
 
 /** 현재 세션의 유저를 반환. 미인증 시 null. */
 export async function getUser() {
@@ -11,16 +15,10 @@ export async function getUser() {
   return user
 }
 
-// Admin 허용 이메일 목록
-const ADMIN_EMAILS = [
-  'methoddesign7@gmail.com',
-  'support@dedo.kr',
-]
-
 /** 인증 필수 + admin role 확인. 미인증/비admin 시 /admin/login으로 리다이렉트. */
 export async function requireAuth() {
   const user = await getUser()
-  if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) {
+  if (!user || !isAdminEmail(user.email)) {
     redirect('/admin/login')
   }
   return user
@@ -30,7 +28,7 @@ export async function requireAuth() {
  *  middleware가 이미 /admin/* 보호 중이므로 이중 방어용. */
 export async function requireAuthForAction() {
   const user = await getUser()
-  if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) {
+  if (!user || !isAdminEmail(user.email)) {
     throw new Error('UNAUTHORIZED')
   }
   return user

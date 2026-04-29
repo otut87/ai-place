@@ -1,6 +1,27 @@
 // T-160·T-161 — 진단 이력 저장 + 이전 결과 조회.
+//
+// T-259 (Codex consult #6): 저장 URL 에 query/fragment 가 그대로 남으면 사용자가
+// 토큰/이메일/내부 host 를 입력했을 때 PII 가 DB 에 누적된다. saveDiagnosticRun 은
+// origin + pathname 만 저장하고, parse 실패하면 저장 자체를 skip 하여 신뢰 카피와 정합.
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import type { ScanResult } from './scan-site'
+
+/**
+ * 진단 URL 을 안전 형태(`origin + pathname`)로 줄임.
+ * - query string / fragment 제거 → 토큰·이메일·내부 식별자 누출 차단
+ * - parse 실패 시 null (호출 측이 저장 자체를 skip 해야 안전)
+ * - URL 길이는 origin+pathname 으로 자연 cap (500자 제한이 입력 단에서 적용)
+ *
+ * 예) https://example.com/path?token=abc#frag → https://example.com/path
+ */
+export function sanitizeDiagnosticUrl(raw: string): string | null {
+  try {
+    const u = new URL(raw)
+    return `${u.origin}${u.pathname}`
+  } catch {
+    return null
+  }
+}
 
 export interface DiagnosticRunRow {
   id: string
@@ -27,14 +48,17 @@ export async function saveDiagnosticRun(opts: {
 }): Promise<string | null> {
   const { result, triggeredBy, customerId, userAgent } = opts
   if (result.error) return null
+  // T-259: query/fragment 제거. parse 실패 시 저장 skip (사용자에게 약속한 익명성 유지).
+  const sanitizedUrl = sanitizeDiagnosticUrl(result.url)
+  if (!sanitizedUrl) return null
   const admin = getAdminClient()
   if (!admin) return null
   try {
-    const origin = new URL(result.url).origin
+    const origin = new URL(sanitizedUrl).origin
     const { data, error } = await admin
       .from('diagnostic_runs')
       .insert({
-        url: result.url,
+        url: sanitizedUrl,
         origin,
         score: result.score,
         checks: result.checks,

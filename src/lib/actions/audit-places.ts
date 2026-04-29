@@ -2,8 +2,12 @@
 
 // T-055 — 업체 감사 로그 append + 조회.
 // 어드민 인라인 편집·일괄 액션에서 변경 직전 upstream 에서 호출.
+//
+// T-259: listAuditForPlace 인증 체크 누락 (Codex consult review #5). recordAudit/
+// recordUpdateDiffs 는 owner self-service 도 호출하므로 admin 강제 X.
 
 import { getAdminClient } from '@/lib/supabase/admin-client'
+import { requireAuthForAction } from '@/lib/auth'
 import {
   diffUpdate,
   normalizeActorType,
@@ -85,8 +89,9 @@ export async function recordUpdateDiffs(
   return { success: true, recorded: diffs.length }
 }
 
-/** place_id 기준 최근 N개 조회. */
+/** place_id 기준 최근 N개 조회 (admin only). */
 export async function listAuditForPlace(placeId: string, limit = 50): Promise<AuditLogEntry[]> {
+  await requireAuthForAction()
   const supabase = getAdminClient()
   if (!supabase) return []
   const { data, error } = await supabase

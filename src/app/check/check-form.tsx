@@ -49,10 +49,14 @@ export function CheckForm({ initialUrl }: { initialUrl: string }) {
 
       <div className="meta-strip">
         <span>예상 소요 <b>30초</b></span>
-        <span>저장하지 않음 <span className="ac">●</span></span>
+        <span>익명 저장 <span className="ac">●</span></span>
         <span>로그인 <b>불필요</b></span>
         <span>API 비용 <b>0원</b></span>
       </div>
+      <p className="meta-note">
+        진단 후 점수 추이 비교를 위해 도메인+경로(쿼리/토큰 제외)와 점수만 저장합니다. 자세한 항목은{' '}
+        <a href="/privacy" className="underline">개인정보처리방침</a>.
+      </p>
     </form>
   )
 }
