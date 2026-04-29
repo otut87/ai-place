@@ -588,11 +588,20 @@ section.pd-section { padding: clamp(40px, 5vw, 64px) 0; border-top: 1px solid va
   border-radius: var(--r-lg);
   overflow: hidden;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* minmax(0, 1fr) — mono ID/이메일 등 긴 토큰이 컬럼 min-content 를 밀어
+     wrap 밖으로 그리드가 튀어나가는 현상 차단. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 0;
+  width: 100%;
+  max-width: 100%;
 }
-@media (max-width: 780px) { .stamp { grid-template-columns: 1fr; } }
-.stamp .col { padding: 24px 26px; }
+@media (max-width: 780px) { .stamp { grid-template-columns: minmax(0, 1fr); } }
+.stamp .col {
+  padding: 24px 26px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 .stamp .col + .col { border-left: 1px solid rgba(255, 255, 255, .08); }
 @media (max-width: 780px) {
   .stamp .col + .col { border-left: none; border-top: 1px solid rgba(255, 255, 255, .08); }

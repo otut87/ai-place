@@ -22,6 +22,9 @@ export interface PlaceDetailsResult {
     text: string
     rating: number
     relativeTime: string
+    authorName?: string
+    authorUri?: string
+    authorPhotoUri?: string
   }>
   photoRefs: string[]
   googleMapsUri?: string
@@ -29,7 +32,9 @@ export interface PlaceDetailsResult {
 
 /** Place Details API (New) 호출 */
 export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResult | null> {
-  const fields = 'displayName,rating,userRatingCount,reviews,photos,googleMapsUri,nationalPhoneNumber,websiteUri,regularOpeningHours,editorialSummary'
+  // reviews.authorAttribution — Places ToS 상 리뷰 작성자명 노출 시
+  // 함께 표시해야 함. authorAttribution 누락 시 모든 리뷰가 "익명" 으로 렌더됨.
+  const fields = 'displayName,rating,userRatingCount,reviews,reviews.authorAttribution,photos,googleMapsUri,nationalPhoneNumber,websiteUri,regularOpeningHours,editorialSummary'
   const url = `${BASE_URL}/places/${placeId}?fields=${fields}&languageCode=ko`
 
   try {
@@ -67,10 +72,18 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResu
       websiteUri: data.websiteUri ?? undefined,
       openingHours: data.regularOpeningHours?.weekdayDescriptions ?? undefined,
       editorialSummary: data.editorialSummary?.text ?? undefined,
-      reviews: (data.reviews ?? []).map((r: { text?: { text?: string }; rating?: number; relativePublishTimeDescription?: string }) => ({
+      reviews: (data.reviews ?? []).map((r: {
+        text?: { text?: string }
+        rating?: number
+        relativePublishTimeDescription?: string
+        authorAttribution?: { displayName?: string; uri?: string; photoUri?: string }
+      }) => ({
         text: r.text?.text ?? '',
         rating: r.rating ?? 0,
         relativeTime: r.relativePublishTimeDescription ?? '',
+        authorName: r.authorAttribution?.displayName,
+        authorUri: r.authorAttribution?.uri,
+        authorPhotoUri: r.authorAttribution?.photoUri,
       })),
       photoRefs: (data.photos ?? []).map((p: { name?: string }) => p.name ?? ''),
       googleMapsUri: data.googleMapsUri ?? undefined,

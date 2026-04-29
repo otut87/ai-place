@@ -475,20 +475,49 @@ export default async function ProfilePage({ params }: Props) {
 
               <div className="rev-grid">
                 <div>
-                  {googleData?.reviews?.slice(0, 4).map((r, idx) => (
-                    <div className="rev-card" key={idx}>
-                      <div className="top">
-                        <span className="ava">·</span>
-                        <div className="meta">
-                          <b>익명</b>
-                          <span>{r.relativeTime}</span>
+                  {googleData?.reviews?.slice(0, 4).map((r, idx) => {
+                    // Places ToS — 작성자 표시명·프로필 URI 가 오면 그대로 노출,
+                    // 누락된 경우(드물게 익명 리뷰)에 한해 "익명" 폴백.
+                    const displayName = r.authorName?.trim() || '익명'
+                    const initial = displayName.slice(0, 1)
+                    return (
+                      <div className="rev-card" key={idx}>
+                        <div className="top">
+                          {r.authorPhotoUri ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              className="ava"
+                              src={r.authorPhotoUri}
+                              alt={displayName}
+                              width={32}
+                              height={32}
+                              style={{ borderRadius: '50%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <span className="ava">{initial}</span>
+                          )}
+                          <div className="meta">
+                            {r.authorUri ? (
+                              <a
+                                href={r.authorUri}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ fontWeight: 700 }}
+                              >
+                                {displayName}
+                              </a>
+                            ) : (
+                              <b>{displayName}</b>
+                            )}
+                            <span>{r.relativeTime}</span>
+                          </div>
+                          <span className="stars">{stars(r.rating)}</span>
                         </div>
-                        <span className="stars">{stars(r.rating)}</span>
+                        <p>{r.text}</p>
+                        <div className="src">Google 지도</div>
                       </div>
-                      <p>{r.text}</p>
-                      <div className="src">Google 지도</div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 {keywordRows.length > 0 && (
