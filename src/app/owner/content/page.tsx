@@ -10,6 +10,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { requireOwnerUser } from '@/lib/owner/auth'
+import { hasActiveBillingKey } from '@/lib/actions/owner-billing'
 import { listOwnerPlaces } from '@/lib/actions/owner-places'
 import { loadOwnerContent, type ContentTabKey } from '@/lib/owner/content-mentions'
 import { getOwnerByPathSummary } from '@/lib/owner/bot-stats'
@@ -42,6 +43,29 @@ export default async function OwnerContentPage({ searchParams }: Params) {
   const user = await requireOwnerUser()
   const { type } = await searchParams
   const active = parseType(type)
+
+  // T-259 R6 follow-up — 카드 미등록 owner 는 콘텐츠 발행이 시작되지 않으므로 페이지 진입 차단.
+  //   blog enqueue cron 이 status='active' places 만 대상이라 cascade 로 빈 상태가 되지만,
+  //   "왜 콘텐츠가 없지?" 가 아닌 명확한 카드 등록 안내가 필요.
+  const hasCard = await hasActiveBillingKey(user.id)
+  if (!hasCard) {
+    return (
+      <div className="content-page">
+        <div className="crumb">
+          <Link href="/owner">← 대시보드</Link>
+          <span>/</span>
+          <span>콘텐츠</span>
+        </div>
+        <EmptyState
+          eyebrow="🔒 카드 등록이 필요합니다"
+          title={<>콘텐츠 자동 발행은 <em>카드 등록</em> 후 시작됩니다</>}
+          description="업체당 월 5편의 블로그(비교 · 가이드 · 키워드 포함)가 자동 발행되며, 본문 언급 시마다 이 목록에 추가됩니다. 30일 파일럿 동안은 무료, 이후 14,900원/월 자동 결제."
+          action={{ href: '/owner/billing', label: '카드 등록 →', variant: 'accent' }}
+          secondaryAction={{ href: '/owner', label: '대시보드로 돌아가기', variant: 'ghost' }}
+        />
+      </div>
+    )
+  }
 
   const ownerPlaces = await listOwnerPlaces()
   const placeIds = ownerPlaces.map((p) => p.id)

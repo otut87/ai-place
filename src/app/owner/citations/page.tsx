@@ -5,6 +5,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { requireOwnerUser } from '@/lib/owner/auth'
+import { hasActiveBillingKey } from '@/lib/actions/owner-billing'
 import { listOwnerPlaces } from '@/lib/actions/owner-places'
 import {
   getOwnerBotSummary, getOwnerDailyTrend, getOwnerByPathSummary, listOwnerBotVisits,
@@ -35,6 +36,28 @@ interface Params {
 export default async function OwnerCitationsPage({ searchParams }: Params) {
   const user = await requireOwnerUser()
   const sp = await searchParams
+
+  // T-259 R6 follow-up — 카드 미등록 owner 는 AI 인용 데이터에 접근 불가.
+  //   파일럿 자체가 카드 등록 시점부터 시작이고, 그 전까진 봇 방문 데이터도 의미 없음.
+  const hasCard = await hasActiveBillingKey(user.id)
+  if (!hasCard) {
+    return (
+      <div className="cit-page">
+        <div className="crumb">
+          <Link href="/owner">← 대시보드</Link>
+          <span>/</span>
+          <span>AI 인용</span>
+        </div>
+        <EmptyState
+          eyebrow="🔒 카드 등록이 필요합니다"
+          title={<>AI 인용 현황은 <em>카드 등록</em> 후 확인할 수 있어요</>}
+          description="카드 등록 시점부터 AI 봇 방문(GPTBot · ClaudeBot · PerplexityBot 등)이 추적됩니다. 30일 파일럿 동안은 무료, 이후 14,900원/월 자동 결제."
+          action={{ href: '/owner/billing', label: '카드 등록 →', variant: 'accent' }}
+          secondaryAction={{ href: '/owner', label: '대시보드로 돌아가기', variant: 'ghost' }}
+        />
+      </div>
+    )
+  }
 
   const ownerPlaces = await listOwnerPlaces()
   const selectedPlaceId = sp.place && ownerPlaces.some((p) => p.id === sp.place) ? sp.place : null
