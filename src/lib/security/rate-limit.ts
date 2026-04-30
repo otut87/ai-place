@@ -80,6 +80,18 @@ const externalSearchLimiter = (() => {
   })
 })()
 
+// T-259 S6 — 민감 조회 (find-email-by-phone 등 enumeration 표적). 분당 3회 / IP.
+const sensitiveLookupLimiter = (() => {
+  const r = getRedis()
+  if (!r) return null
+  return new Ratelimit({
+    redis: r,
+    limiter: Ratelimit.slidingWindow(3, '60 s'),
+    analytics: true,
+    prefix: 'aip:rl:sensitive_lookup',
+  })
+})()
+
 /**
  * Rate limit 체크 — Upstash sliding window 기반.
  * Upstash 미설정 시 dev/test 는 always success, production 은 hard-block.
@@ -90,16 +102,18 @@ const externalSearchLimiter = (() => {
  *   - 'form' (분당 10회) — /signup·/lead 등 폼 (IP 키)
  *   - 'ai_generate' (분당 5회) — Anthropic 등록 콘텐츠/추천 생성 (user.id 키)
  *   - 'external_search' (분당 30회) — Google/Naver 검색·enrich (user.id 키)
+ *   - 'sensitive_lookup' (분당 3회) — find-email-by-phone 등 enumeration 표적 (IP 키)
  */
 export async function checkRateLimit(
   key: string,
-  kind: 'diagnose' | 'form' | 'ai_generate' | 'external_search',
+  kind: 'diagnose' | 'form' | 'ai_generate' | 'external_search' | 'sensitive_lookup',
 ): Promise<RateLimitResult> {
   const limiter =
     kind === 'diagnose' ? diagnoseLimiter
     : kind === 'form' ? formLimiter
     : kind === 'ai_generate' ? aiGenerateLimiter
-    : externalSearchLimiter
+    : kind === 'external_search' ? externalSearchLimiter
+    : sensitiveLookupLimiter
   if (!limiter) {
     // T-259 (Codex consult #7 후속): production fail-open 제거. UPSTASH/KV env
     // 누락이 silent pass 가 아닌 hard-block 으로 노출되어야 한다 — 30초 안에 발견.

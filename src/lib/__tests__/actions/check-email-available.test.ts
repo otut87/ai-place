@@ -10,11 +10,25 @@ vi.mock('@/lib/supabase/admin-client', () => ({
   getAdminClient: vi.fn(() => ({ from: mockFrom })),
 }))
 
+vi.mock('next/headers', () => ({
+  headers: async () => ({ get: () => null }),
+}))
+const { mockCheckRateLimit } = vi.hoisted(() => ({
+  mockCheckRateLimit: vi.fn(async () => ({
+    success: true, remaining: 999, reset: 0, limit: 999,
+  })),
+}))
+vi.mock('@/lib/security/rate-limit', () => ({
+  checkRateLimit: mockCheckRateLimit,
+  clientIpFromHeaders: () => '203.0.113.1',
+}))
+
 beforeEach(() => {
   mockMaybeSingle.mockReset().mockResolvedValue({ data: null, error: null })
   mockEq.mockClear()
   mockSelect.mockClear()
   mockFrom.mockClear()
+  mockCheckRateLimit.mockReset().mockResolvedValue({ success: true, remaining: 999, reset: 0, limit: 999 })
 })
 
 describe('checkEmailAvailableAction', () => {
@@ -71,5 +85,29 @@ describe('checkEmailAvailableAction', () => {
     const { checkEmailAvailableAction } = await import('@/lib/actions/check-email-available')
     await checkEmailAvailableAction('  Upper@TEST.COM  ')
     expect(mockEq).toHaveBeenCalledWith('email', 'upper@test.com')
+  })
+
+  // T-259 S6 — IP 기반 rate-limit (form, 분당 10회).
+  it('rate-limit 초과 → status=rate_limited (DB 조회 안 함)', async () => {
+    mockCheckRateLimit.mockResolvedValueOnce({
+      success: false, remaining: 0, reset: Date.now() + 30_000, limit: 10,
+    })
+    const { checkEmailAvailableAction } = await import('@/lib/actions/check-email-available')
+    const r = await checkEmailAvailableAction('foo@test.com')
+    expect(r.status).toBe('rate_limited')
+    if (r.status === 'rate_limited') expect(r.retryAfterSec).toBeGreaterThan(0)
+    expect(mockFrom).not.toHaveBeenCalled()
+  })
+
+  it('rate-limit 은 invalid 검증 후에 호출 (포맷 거절 우선)', async () => {
+    const { checkEmailAvailableAction } = await import('@/lib/actions/check-email-available')
+    await checkEmailAvailableAction('not-an-email')
+    expect(mockCheckRateLimit).not.toHaveBeenCalled()
+  })
+
+  it('rate-limit kind = form (분당 10회)', async () => {
+    const { checkEmailAvailableAction } = await import('@/lib/actions/check-email-available')
+    await checkEmailAvailableAction('valid@test.com')
+    expect(mockCheckRateLimit).toHaveBeenCalledWith('203.0.113.1', 'form')
   })
 })

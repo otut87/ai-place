@@ -6,9 +6,12 @@
 //
 // 보안 노트:
 // - 이메일은 마스킹 처리 (user 의 앞 2글자 + *** + 도메인)
-// - 존재 여부로 전화번호 enumeration 되는 건 불가피 — 향후 rate-limit 도입 (TODO)
+// - T-259 S6: enumeration 차단을 위해 IP 기반 rate-limit (분당 3회) 적용.
+//   초과 시 generic error 반환하여 정상/실패 응답 구분 어렵게 함.
 
+import { headers } from 'next/headers'
 import { getAdminClient } from '@/lib/supabase/admin-client'
+import { checkRateLimit, clientIpFromHeaders } from '@/lib/security/rate-limit'
 
 export type FindEmailResult =
   | { success: true; maskedEmail: string }
@@ -46,6 +49,15 @@ export async function findEmailByPhoneAction(rawPhone: string): Promise<FindEmai
   const digits = normalizeDigits(rawPhone)
   if (digits.length < 9 || digits.length > 15) {
     return { success: false, error: '올바른 휴대폰 번호를 입력해 주세요.' }
+  }
+
+  // T-259 S6 — IP 기반 rate-limit. enumeration (휴대폰 번호 brute-force) 표적이므로 분당 3회로 좁힘.
+  const h = await headers()
+  const ip = clientIpFromHeaders(name => h.get(name))
+  const rl = await checkRateLimit(ip, 'sensitive_lookup')
+  if (!rl.success) {
+    const seconds = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000))
+    return { success: false, error: `요청이 너무 많습니다. ${seconds}초 후 다시 시도해 주세요.` }
   }
 
   const admin = getAdminClient()

@@ -11,11 +11,26 @@ vi.mock('@/lib/supabase/admin-client', () => ({
   getAdminClient: vi.fn(() => ({ from: mockFrom })),
 }))
 
+// T-259 S6 — next/headers + rate-limit mock. 기본은 통과 (success=true).
+vi.mock('next/headers', () => ({
+  headers: async () => ({ get: () => null }),
+}))
+const { mockCheckRateLimit } = vi.hoisted(() => ({
+  mockCheckRateLimit: vi.fn(async () => ({
+    success: true, remaining: 999, reset: 0, limit: 999,
+  })),
+}))
+vi.mock('@/lib/security/rate-limit', () => ({
+  checkRateLimit: mockCheckRateLimit,
+  clientIpFromHeaders: () => '203.0.113.1',
+}))
+
 beforeEach(() => {
   mockMaybeSingle.mockReset().mockResolvedValue({ data: null, error: null })
   mockEq.mockClear()
   mockSelect.mockClear()
   mockFrom.mockClear()
+  mockCheckRateLimit.mockReset().mockResolvedValue({ success: true, remaining: 999, reset: 0, limit: 999 })
 })
 
 describe('findEmailByPhoneAction', () => {
@@ -114,5 +129,30 @@ describe('findEmailByPhoneAction', () => {
     const calledValues = mockEq.mock.calls.map((c) => c[1])
     expect(calledValues).toContain('0112345678')
     expect(calledValues).toContain('011-234-5678')
+  })
+
+  // T-259 S6 — IP 기반 rate-limit (sensitive_lookup, 분당 3회).
+  it('rate-limit 초과 시 DB 조회 안 함 + 친절 에러', async () => {
+    mockCheckRateLimit.mockResolvedValueOnce({
+      success: false, remaining: 0, reset: Date.now() + 30_000, limit: 3,
+    })
+    const { findEmailByPhoneAction } = await import('@/lib/actions/find-email')
+    const r = await findEmailByPhoneAction('010-1234-5678')
+    expect(r.success).toBe(false)
+    if (!r.success) expect(r.error).toContain('요청이 너무 많습니다')
+    expect(mockFrom).not.toHaveBeenCalled()
+  })
+
+  it('rate-limit 키는 sensitive_lookup kind', async () => {
+    const { findEmailByPhoneAction } = await import('@/lib/actions/find-email')
+    await findEmailByPhoneAction('010-1234-5678')
+    expect(mockCheckRateLimit).toHaveBeenCalledWith('203.0.113.1', 'sensitive_lookup')
+  })
+
+  it('짧은 번호는 rate-limit 검사 전에 거절 (validation 우선)', async () => {
+    const { findEmailByPhoneAction } = await import('@/lib/actions/find-email')
+    const r = await findEmailByPhoneAction('123')
+    expect(r.success).toBe(false)
+    expect(mockCheckRateLimit).not.toHaveBeenCalled()
   })
 })
