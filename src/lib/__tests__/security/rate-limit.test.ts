@@ -176,3 +176,93 @@ describe('checkRateLimit — dev fallback (Upstash env 미설정)', () => {
     errSpy.mockRestore()
   })
 })
+
+describe('checkRateLimit — T-259 S2 신규 kind (ai_generate / external_search)', () => {
+  it('ai_generate kind 라우팅 — limit=5 (분당 5회)', async () => {
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://fake.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'fake-token')
+
+    vi.doMock('@upstash/redis', () => ({
+      Redis: class { constructor(_opts: unknown) { void _opts } },
+    }))
+    vi.doMock('@upstash/ratelimit', () => ({
+      Ratelimit: class {
+        static slidingWindow(n: number, _w: string) { void _w; return { limit: n } as unknown }
+        constructor(_opts: unknown) { void _opts }
+        async limit(_key: string) {
+          void _key
+          return { success: true, remaining: 4, reset: Date.now() + 60_000, limit: 5 }
+        }
+      },
+    }))
+
+    const { checkRateLimit } = await import('@/lib/security/rate-limit')
+    const r = await checkRateLimit('user-id-abc', 'ai_generate')
+    expect(r.success).toBe(true)
+    expect(r.limit).toBe(5)
+    expect(r.remaining).toBe(4)
+  })
+
+  it('external_search kind 라우팅 — limit=30 (분당 30회)', async () => {
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://fake.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'fake-token')
+
+    const observedLimits: number[] = []
+    vi.doMock('@upstash/redis', () => ({
+      Redis: class { constructor(_opts: unknown) { void _opts } },
+    }))
+    vi.doMock('@upstash/ratelimit', () => ({
+      Ratelimit: class {
+        static slidingWindow(n: number, _w: string) { void _w; observedLimits.push(n); return { limit: n } as unknown }
+        constructor(_opts: unknown) { void _opts }
+        async limit(_key: string) {
+          void _key
+          return { success: true, remaining: 29, reset: Date.now() + 60_000, limit: 30 }
+        }
+      },
+    }))
+
+    const { checkRateLimit } = await import('@/lib/security/rate-limit')
+    const r = await checkRateLimit('user-id-xyz', 'external_search')
+    expect(r.success).toBe(true)
+    expect(r.limit).toBe(30)
+    // limiter 4종(diagnose=5, form=10, ai_generate=5, external_search=30) 모두 모듈 평가 시점에 등록.
+    expect(observedLimits).toContain(30)
+    expect(observedLimits).toContain(5)
+    expect(observedLimits).toContain(10)
+  })
+
+  it('ai_generate 초과 시 success=false', async () => {
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://fake.upstash.io')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'fake-token')
+
+    vi.doMock('@upstash/redis', () => ({
+      Redis: class { constructor(_opts: unknown) { void _opts } },
+    }))
+    vi.doMock('@upstash/ratelimit', () => ({
+      Ratelimit: class {
+        static slidingWindow(n: number, _w: string) { void _w; return { limit: n } as unknown }
+        constructor(_opts: unknown) { void _opts }
+        async limit(_key: string) {
+          void _key
+          return { success: false, remaining: 0, reset: Date.now() + 45_000, limit: 5 }
+        }
+      },
+    }))
+
+    const { checkRateLimit } = await import('@/lib/security/rate-limit')
+    const r = await checkRateLimit('user-id-abuser', 'ai_generate')
+    expect(r.success).toBe(false)
+    expect(r.remaining).toBe(0)
+  })
+
+  it('production + UPSTASH 미설정 → ai_generate 도 hard-fail', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { checkRateLimit } = await import('@/lib/security/rate-limit')
+    const r = await checkRateLimit('user-id-abc', 'ai_generate')
+    expect(r.success).toBe(false)
+    expect(r.limit).toBe(0)
+    errSpy.mockRestore()
+  })
+})

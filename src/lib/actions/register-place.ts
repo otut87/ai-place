@@ -11,6 +11,13 @@ import { searchPlaceByText, getPlaceDetails } from '@/lib/google-places'
 import type { PlaceSearchResult } from '@/lib/google-places'
 import { naverLocalSearch } from '@/lib/search/naver-local'
 import { createServerClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/security/rate-limit'
+
+// T-259 S2 — 외부 API/AI 호출 비용 차단. user.id 별 분당 한도 초과 시 거부.
+function rateLimitErrorResult(reset: number): { success: false; error: string } {
+  const seconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000))
+  return { success: false, error: `요청이 너무 많습니다. ${seconds}초 후 다시 시도해 주세요.` }
+}
 
 export interface RegisterPlaceInput {
   // Step 1: 기본 정보
@@ -60,7 +67,10 @@ export type ActionResult<T = void> =
 
 /** Step 1: 업체명으로 Google Places 검색 */
 export async function searchPlace(query: string, city: string): Promise<ActionResult<PlaceSearchResult[]>> {
-  await requireAuth()
+  const user = await requireAuth()
+
+  const rl = await checkRateLimit(user.id, 'external_search')
+  if (!rl.success) return rateLimitErrorResult(rl.reset)
 
   const results = await searchPlaceByText(`${query} ${city}`)
   if (!results) {
@@ -105,7 +115,10 @@ export interface NaverCandidate {
 export async function searchPlaceByNaver(
   query: string,
 ): Promise<ActionResult<NaverCandidate[]>> {
-  await requireLoggedInForAction()
+  const user = await requireLoggedInForAction()
+
+  const rl = await checkRateLimit(user.id, 'external_search')
+  if (!rl.success) return rateLimitErrorResult(rl.reset)
 
   const { detectCategory } = await import('@/lib/classification/category-detector')
   const { cityFromAddress } = await import('@/lib/address/sigungu-to-city')
@@ -234,7 +247,10 @@ export async function enrichFromGoogle(input: {
   reviews?: Array<{ text: string; rating: number }>
   photoRefs?: string[]
 }>> {
-  await requireLoggedInForAction()
+  const user = await requireLoggedInForAction()
+
+  const rl = await checkRateLimit(user.id, 'external_search')
+  if (!rl.success) return rateLimitErrorResult(rl.reset)
 
   // Google Text Search — "상호명 주소" 형태로 정밀도↑
   const textQuery = `${input.name} ${input.address}`.trim()
@@ -355,7 +371,10 @@ export async function generatePlaceContent(input: {
   tags: string[]
   qualityScore: number
 }>> {
-  await requireLoggedInForAction()
+  const user = await requireLoggedInForAction()
+
+  const rl = await checkRateLimit(user.id, 'ai_generate')
+  if (!rl.success) return rateLimitErrorResult(rl.reset)
 
   const { z } = await import('zod')
   const Anthropic = (await import('@anthropic-ai/sdk')).default
@@ -565,7 +584,10 @@ export async function generateRecommendation(input: {
   placeType: string
   recommendationNote: string
 }>> {
-  await requireAuth()
+  const user = await requireAuth()
+
+  const rl = await checkRateLimit(user.id, 'ai_generate')
+  if (!rl.success) return rateLimitErrorResult(rl.reset)
 
   const { z } = await import('zod')
   const Anthropic = (await import('@anthropic-ai/sdk')).default

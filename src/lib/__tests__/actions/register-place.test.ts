@@ -11,6 +11,16 @@ vi.mock('@/lib/auth', () => ({
   requireLoggedInForAction: vi.fn().mockResolvedValue({ id: 'u1', email: 'test@test.com' }),
 }))
 
+const { mockCheckRateLimit } = vi.hoisted(() => ({
+  mockCheckRateLimit: vi.fn(async () => ({
+    success: true, remaining: 999, reset: 0, limit: 999,
+  })),
+}))
+vi.mock('@/lib/security/rate-limit', () => ({
+  checkRateLimit: mockCheckRateLimit,
+  clientIpFromHeaders: () => 'unknown',
+}))
+
 const { mockNaverLocalSearch, mockDetectCategory } = vi.hoisted(() => ({
   mockNaverLocalSearch: vi.fn(),
   mockDetectCategory: vi.fn(),
@@ -59,6 +69,9 @@ beforeEach(() => {
   mockDetectCategory.mockReset()
   mockSearchByText.mockReset()
   mockGetPlaceDetails.mockReset()
+  mockCheckRateLimit.mockReset()
+  // 기본은 통과 (테스트마다 별도 차단 시나리오에서만 reset 후 mockResolvedValueOnce).
+  mockCheckRateLimit.mockResolvedValue({ success: true, remaining: 999, reset: 0, limit: 999 })
 })
 
 describe('searchPlaceByNaver (Phase 11 — 단일 소스)', () => {
@@ -194,5 +207,56 @@ describe('searchPlace (legacy Google 단일 — 유지)', () => {
     const result = await searchPlace('x', '천안')
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toContain('Google Places')
+  })
+})
+
+// T-259 S2 — rate limit 거부 시 외부 API 호출 차단.
+describe('rate-limit 차단 (T-259 S2)', () => {
+  it('searchPlaceByNaver: ratelimit 초과 시 외부 API 호출 안 함', async () => {
+    mockCheckRateLimit.mockResolvedValueOnce({
+      success: false, remaining: 0, reset: Date.now() + 30_000, limit: 30,
+    })
+    const { searchPlaceByNaver } = await import('@/lib/actions/register-place')
+    const result = await searchPlaceByNaver('차앤박')
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toContain('요청이 너무 많습니다')
+    // 차단됐으므로 Naver API 호출이 발생하지 않아야 함.
+    expect(mockNaverLocalSearch).not.toHaveBeenCalled()
+  })
+
+  it('enrichFromGoogle: ratelimit 초과 시 Google 호출 안 함', async () => {
+    mockCheckRateLimit.mockResolvedValueOnce({
+      success: false, remaining: 0, reset: Date.now() + 30_000, limit: 30,
+    })
+    const { enrichFromGoogle } = await import('@/lib/actions/register-place')
+    const result = await enrichFromGoogle({ name: 'X', address: 'Y' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toContain('요청이 너무 많습니다')
+    expect(mockSearchByText).not.toHaveBeenCalled()
+  })
+
+  it('searchPlace: ratelimit 초과 시 Google 호출 안 함', async () => {
+    mockCheckRateLimit.mockResolvedValueOnce({
+      success: false, remaining: 0, reset: Date.now() + 30_000, limit: 30,
+    })
+    const { searchPlace } = await import('@/lib/actions/register-place')
+    const result = await searchPlace('x', '천안')
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toContain('요청이 너무 많습니다')
+    expect(mockSearchByText).not.toHaveBeenCalled()
+  })
+
+  it('rate-limit kind 매핑 — searchPlaceByNaver는 external_search', async () => {
+    mockNaverLocalSearch.mockResolvedValue([])
+    const { searchPlaceByNaver } = await import('@/lib/actions/register-place')
+    await searchPlaceByNaver('x')
+    expect(mockCheckRateLimit).toHaveBeenCalledWith('u1', 'external_search')
+  })
+
+  it('rate-limit kind 매핑 — enrichFromGoogle은 external_search', async () => {
+    mockSearchByText.mockResolvedValue([])
+    const { enrichFromGoogle } = await import('@/lib/actions/register-place')
+    await enrichFromGoogle({ name: 'X', address: 'Y' })
+    expect(mockCheckRateLimit).toHaveBeenCalledWith('u1', 'external_search')
   })
 })

@@ -56,18 +56,50 @@ const formLimiter = (() => {
   })
 })()
 
+// T-259 S2 — 등록 흐름의 AI 콘텐츠/추천 생성 (Sonnet 4.6). 비용 큰 호출이므로 분당 5회 / user.
+const aiGenerateLimiter = (() => {
+  const r = getRedis()
+  if (!r) return null
+  return new Ratelimit({
+    redis: r,
+    limiter: Ratelimit.slidingWindow(5, '60 s'),
+    analytics: true,
+    prefix: 'aip:rl:ai_generate',
+  })
+})()
+
+// T-259 S2 — 외부 검색 API (Google Places, Naver Local). 분당 30회 / user.
+const externalSearchLimiter = (() => {
+  const r = getRedis()
+  if (!r) return null
+  return new Ratelimit({
+    redis: r,
+    limiter: Ratelimit.slidingWindow(30, '60 s'),
+    analytics: true,
+    prefix: 'aip:rl:external_search',
+  })
+})()
+
 /**
- * IP 기반 rate limit 체크.
- * Upstash 미설정 시 always success (dev fallback).
+ * Rate limit 체크 — Upstash sliding window 기반.
+ * Upstash 미설정 시 dev/test 는 always success, production 은 hard-block.
  *
- * @param ip 요청자 IP (헤더에서 추출).
- * @param kind 'diagnose' = 분당 5회, 'form' = 분당 10회.
+ * @param key 키 — ip 또는 user.id. kind 별로 prefix 가 분리되므로 둘이 같아도 충돌 없음.
+ * @param kind 적용 정책.
+ *   - 'diagnose' (분당 5회) — /check 공개 진단 (IP 키)
+ *   - 'form' (분당 10회) — /signup·/lead 등 폼 (IP 키)
+ *   - 'ai_generate' (분당 5회) — Anthropic 등록 콘텐츠/추천 생성 (user.id 키)
+ *   - 'external_search' (분당 30회) — Google/Naver 검색·enrich (user.id 키)
  */
 export async function checkRateLimit(
-  ip: string,
-  kind: 'diagnose' | 'form',
+  key: string,
+  kind: 'diagnose' | 'form' | 'ai_generate' | 'external_search',
 ): Promise<RateLimitResult> {
-  const limiter = kind === 'diagnose' ? diagnoseLimiter : formLimiter
+  const limiter =
+    kind === 'diagnose' ? diagnoseLimiter
+    : kind === 'form' ? formLimiter
+    : kind === 'ai_generate' ? aiGenerateLimiter
+    : externalSearchLimiter
   if (!limiter) {
     // T-259 (Codex consult #7 후속): production fail-open 제거. UPSTASH/KV env
     // 누락이 silent pass 가 아닌 hard-block 으로 노출되어야 한다 — 30초 안에 발견.
@@ -78,7 +110,7 @@ export async function checkRateLimit(
     }
     return { success: true, remaining: 999, reset: 0, limit: 999 }
   }
-  const r = await limiter.limit(ip)
+  const r = await limiter.limit(key)
   return {
     success: r.success,
     remaining: r.remaining,
