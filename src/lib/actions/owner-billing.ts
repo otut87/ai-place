@@ -148,22 +148,24 @@ export async function issueBillingKeyAction(input: {
     subscriptionId = (subRow as { id: string }).id
   }
 
-  // T-259 R6 — 카드 등록 시 R6-pending places 를 active 로 자동 전환.
-  //   register-first 흐름에서 자동승인(naver/google) 대상이었지만 카드 미등록이라 pending 으로
-  //   머물던 place 들을 한꺼번에 활성화. 수동 등록(naver/google 둘 다 없음)은 admin 검수
-  //   대기로 그대로 두기 위해 OR 조건으로 신호 1개 이상 있는 row 만 대상.
+  // T-259 R6 — 카드 등록 시 R6-pending / 파일럿 만료로 inactive 처리된 places 를
+  //   active 로 자동 전환. register-first 흐름의 짝꿍.
+  //   - status='pending': 카드 미등록 때문에 active 로 못 들어간 신규 등록
+  //   - status='inactive': 파일럿(trial_ends_at) 만료 + 카드 미등록으로 비활성화된 기존 등록
+  //   수동 등록(naver/google 둘 다 없음)은 admin 검수 대기 의미가 섞이므로 OR 조건으로
+  //   자동승인 신호 1개 이상 있는 row 만 대상.
   //   이 update 가 실패해도 카드 등록 자체는 성공이므로 try/catch + 로그.
   try {
     const { data: reactivated } = await admin
       .from('places')
       .update({ status: 'active', updated_at: new Date().toISOString() })
       .eq('customer_id', c.id)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'inactive'])
       .or('naver_place_url.not.is.null,google_place_id.not.is.null')
       .select('id, slug')
     const reactivatedCount = ((reactivated as Array<{ id: string }> | null) ?? []).length
     if (reactivatedCount > 0) {
-      console.log(`[issueBillingKeyAction] R6 reactivated ${reactivatedCount} pending places for customer ${c.id}`)
+      console.log(`[issueBillingKeyAction] R6 reactivated ${reactivatedCount} pending/inactive places for customer ${c.id}`)
     }
   } catch (e) {
     console.error('[issueBillingKeyAction] R6 reactivation 실패 (카드 발급은 성공):', e)

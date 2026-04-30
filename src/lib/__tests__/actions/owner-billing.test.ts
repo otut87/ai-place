@@ -104,13 +104,13 @@ function makeAdmin() {
       }
       if (table === 'places') {
         // T-259 R6 — issueBillingKeyAction 끝부분의 reactivation update.
-        //   .update().eq().eq().or().select() 체인.
+        //   .update().eq().in().or().select() 체인 ('inactive' 포함 후 .in 으로 변경).
         return {
           update: (payload: Record<string, unknown>) => {
             state.capturedPlacesUpdates.push(payload)
             return {
               eq: () => ({
-                eq: () => ({
+                in: () => ({
                   or: () => ({
                     select: async () => ({ data: state.reactivatedPlacesData, error: null }),
                   }),
@@ -370,7 +370,7 @@ describe('issueBillingKeyAction — R6 places reactivation (T-259)', () => {
             return {
               update: () => ({
                 eq: () => ({
-                  eq: () => ({
+                  in: () => ({
                     or: () => ({
                       select: async () => { throw new Error('places update boom') },
                     }),
