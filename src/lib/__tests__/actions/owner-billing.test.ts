@@ -11,6 +11,9 @@ const state: {
   subInsertError: { message: string } | null
   capturedSubUpdates: Record<string, unknown>[]
   capturedBkInserts: Record<string, unknown>[]
+  /** T-259 R6 — places.update payload 캡쳐 + 반환 row 수 제어. */
+  capturedPlacesUpdates: Record<string, unknown>[]
+  reactivatedPlacesData: Array<{ id: string; slug: string }>
 } = {
   customer: null,
   billingKeyId: 'bk-1',
@@ -21,6 +24,8 @@ const state: {
   subInsertError: null,
   capturedSubUpdates: [],
   capturedBkInserts: [],
+  capturedPlacesUpdates: [],
+  reactivatedPlacesData: [],
 }
 
 function makeAdmin() {
@@ -97,6 +102,24 @@ function makeAdmin() {
           }),
         }
       }
+      if (table === 'places') {
+        // T-259 R6 — issueBillingKeyAction 끝부분의 reactivation update.
+        //   .update().eq().eq().or().select() 체인.
+        return {
+          update: (payload: Record<string, unknown>) => {
+            state.capturedPlacesUpdates.push(payload)
+            return {
+              eq: () => ({
+                eq: () => ({
+                  or: () => ({
+                    select: async () => ({ data: state.reactivatedPlacesData, error: null }),
+                  }),
+                }),
+              }),
+            }
+          },
+        }
+      }
       throw new Error(`unexpected table ${table}`)
     },
   } as unknown as Record<string, unknown>
@@ -125,6 +148,8 @@ beforeEach(() => {
   state.capturedSubUpdates = []
   state.capturedBkInserts = []
   state.existingActiveCards = []
+  state.capturedPlacesUpdates = []
+  state.reactivatedPlacesData = []
   mockIssue.mockReset().mockResolvedValue({
     success: true,
     billingKey: 'bkey-xyz', method: '카드', cardCompany: 'SHINHAN',
@@ -315,5 +340,51 @@ describe('hasActiveBillingKey', () => {
     state.existingActiveCards = []
     const { hasActiveBillingKey } = await import('@/lib/actions/owner-billing')
     expect(await hasActiveBillingKey('user-1')).toBe(false)
+  })
+})
+
+// T-259 R6 — 카드 등록 시 R6 로 보류된 places 가 active 로 자동 전환되는지.
+describe('issueBillingKeyAction — R6 places reactivation (T-259)', () => {
+  it('R6-pending places 가 있으면 status=active 로 update 호출', async () => {
+    state.reactivatedPlacesData = [
+      { id: 'p-1', slug: 'a' },
+      { id: 'p-2', slug: 'b' },
+    ]
+    const { issueBillingKeyAction } = await import('@/lib/actions/owner-billing')
+    const r = await issueBillingKeyAction({ authKey: 'a', customerKey: 'c-1' })
+    expect(r.success).toBe(true)
+    expect(state.capturedPlacesUpdates).toHaveLength(1)
+    expect(state.capturedPlacesUpdates[0]).toMatchObject({ status: 'active' })
+  })
+
+  it('reactivation 실패해도 카드 발급 자체는 성공 (try/catch 보호)', async () => {
+    // places mock 이 throw 를 던지도록 — capturedPlacesUpdates 는 push 후 throw.
+    // (실제로는 supabase update 가 실패할 수 있으나 R6 reactivation 은 카드 발급의 부수효과
+    //  라 격리되어야 함.)
+    const { getAdminClient } = await import('@/lib/supabase/admin-client')
+    vi.mocked(getAdminClient).mockImplementationOnce(() => {
+      const base = makeAdmin() as { from: (t: string) => unknown }
+      return {
+        from(table: string) {
+          if (table === 'places') {
+            return {
+              update: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    or: () => ({
+                      select: async () => { throw new Error('places update boom') },
+                    }),
+                  }),
+                }),
+              }),
+            }
+          }
+          return base.from(table)
+        },
+      } as never
+    })
+    const { issueBillingKeyAction } = await import('@/lib/actions/owner-billing')
+    const r = await issueBillingKeyAction({ authKey: 'a', customerKey: 'c-1' })
+    expect(r.success).toBe(true)
   })
 })
