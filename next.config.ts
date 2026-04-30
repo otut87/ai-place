@@ -1,17 +1,27 @@
 import type { NextConfig } from 'next'
 
 /**
- * T-010f: 기존 keyword/compare/guide 라우트를 /blog 로 301 redirect.
+ * T-010f / T-259 R4 — 기존 keyword/compare/guide 라우트를 /blog 로 301 redirect.
  *
- * 현재 천안 피부과(dermatology → sector=medical)만 활성. 다른 도시/카테고리가
- * 추가되면 여기 규칙을 확장해야 함.
- *   → 향후 자동화: scripts/ 에서 (city, category, sector) 매핑을 읽어 빌드 시
- *     redirects 를 생성하는 방식으로 교체 고려.
+ * Phase 6 마이그레이션 후 src/app/ 에서 compare·guide·keyword 라우트는 모두 제거됐고,
+ * 콘텐츠는 blog_posts 테이블 + /blog/[city]/[sector]/[slug] 로 통합. 이 redirects()
+ * 만이 legacy URL 지원의 유일 채널이다.
+ *
+ * 다음 도시·카테고리 추가 절차:
+ *   1) Supabase places 테이블에 새 city×category 업체 등록
+ *      (자동: sitemap·홈·도시 hub·블로그 enqueue 모두 places 기반)
+ *   2) 아래 매핑 규칙 3 줄을 (city, category, sector) 조합으로 추가
+ *      (선택 — legacy URL 백링크가 있을 때만 필요. 신규 도시면 보통 생략 가능)
  *
  * 매핑 규칙:
  *   /{city}/{category}/k/{keyword}      → /blog/{city}/{sector}/{city}-{category}-{keyword}
  *   /compare/{city}/{category}/{topic}   → /blog/{city}/{sector}/{city}-{category}-{topic}
  *   /guide/{city}/{category}             → /blog/{city}/{sector}/{city}-{category}-guide
+ *
+ * 자동화 미루는 이유:
+ *   - cities × categories 전체 조합은 10×83=830 룰 — 빌드 산출물 부담
+ *   - 활성 city×category 만 추리려면 빌드 시 DB 접근 필요 — env 의존성·실패 모드 ↑
+ *   - 현 단계(천안 1도시) 에선 수동 3 줄 추가가 가장 단순·안전
  */
 // T-040: 보안 헤더 (HSTS / Frame / Referrer / Permissions).
 // CSP 는 Next 의 inline script (/ reaction) 와 Vercel Analytics 로 인해

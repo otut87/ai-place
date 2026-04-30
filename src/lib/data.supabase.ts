@@ -184,7 +184,24 @@ export async function updatePlaceGoogleData(slug: string, data: {
   }
 }
 
-// --- 비교/가이드/키워드 페이지: 아직 시드 데이터만 (Phase 6에서 DB 전환) ---
+// --- 비교/가이드/키워드 페이지: T-259 R4 — 사실상 dead code ---
+//
+// 이 12개 함수는 Phase 6 에서 /blog/ 라우트로 마이그레이션 완료된 후 production
+// 어디서도 호출되지 않는다 (호출처: migrate-to-blog 일회성 스크립트 + 테스트만).
+//
+// 실제 라우트 상태:
+//   - src/app/compare/, src/app/guide/, src/app/[city]/[category]/k/ 모두 부재
+//   - next.config.ts 의 redirects() 가 모든 legacy URL → /blog/[city]/[sector]/[slug]
+//     301 redirect 처리 (천안/피부과 12개 룰)
+//
+// 다음 도시·카테고리 진입 시:
+//   1) places DB 에 새 city×category 등록 → 자동 sitemap 노출
+//   2) next.config.ts redirects() 에 3 룰 추가 (compare/guide/keyword 패턴)
+//      예시: '/cheonan/orthopedics/k/:keyword' → '/blog/cheonan/medical/cheonan-orthopedics-:keyword'
+//   3) seed 데이터 추가 불필요 — blog_posts 테이블에서 자동 조회
+//
+// 이 wrappers 는 backward compat / 테스트 호환을 위해 동작 유지 — 호출 시 천안/피부과
+// seed 만 반환. 새 도시는 빈 배열. /blog/ 로 redirect 가 처리하므로 사용자 영향 없음.
 
 export async function getComparisonTopics(city: string, category: string): Promise<ComparisonTopic[]> {
   return seed.getComparisonTopics(city, category)
