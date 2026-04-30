@@ -3,5 +3,9 @@
   "compilerOptions": {
     "types": ["@playwright/test", "node"]
   },
-  "include": ["**/*.ts"]
+  "include": ["**/*.ts"],
+  // 부모 tsconfig 의 exclude("e2e") 가 상속되면 자기 자신을 제외해 "No inputs" 에러 발생.
+  // exclude 를 명시적으로 override 하여 e2e/* 만 type check.
+  "exclude": ["node_modules"]
 }
+
