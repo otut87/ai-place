@@ -35,6 +35,16 @@ const SECURITY_HEADERS = [
 ]
 
 const nextConfig: NextConfig = {
+  // T-259 R6 follow-up — /api/places/photo proxy 가 ref 쿼리 (Google Places photo reference) 를
+  //   사용하므로 next.js 16 의 images.localPatterns 에 명시 등록 필요.
+  //   미등록 시 prerender 단계에서 "Image is using a query string which is not configured" 오류로 빌드 실패.
+  //   ref 값은 Google Places API 가 발급하는 불투명 토큰이라 정확 매치 불가 → search 미지정 (모든 쿼리 허용).
+  //   /api/places/photo route 자체가 ref 검증·캐싱·rate-limit 책임.
+  images: {
+    localPatterns: [
+      { pathname: '/api/places/photo' },
+    ],
+  },
   async headers() {
     return [
       {
