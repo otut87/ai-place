@@ -18,10 +18,17 @@ beforeEach(() => {
   mockRequireOwner.mockResolvedValue({ id: 'u1', email: 'o@x.com' })
 })
 
-function mockDbOk(opts: { customerId?: string; existing?: Array<{ id: string; name: string; address: string; slug: string }>; insertId?: string } = {}) {
+function mockDbOk(opts: {
+  customerId?: string
+  existing?: Array<{ id: string; name: string; address: string; slug: string }>
+  insertId?: string
+  /** T-259 R6: 등록 시 카드 보유 여부 — autoApproved 와 결합해 status 결정. 기본 1 (카드 있음). */
+  activeCardCount?: number
+} = {}) {
   const customerId = opts.customerId ?? 'c1'
   const existing = opts.existing ?? []
   const insertId = opts.insertId ?? 'p-new'
+  const cardCount = opts.activeCardCount ?? 1
   const insertMock = vi.fn(() => ({
     select: () => ({ single: () => Promise.resolve({ data: { id: insertId }, error: null }) }),
   }))
@@ -34,10 +41,10 @@ function mockDbOk(opts: { customerId?: string; existing?: Array<{ id: string; na
       })),
       update: vi.fn(() => ({ eq: () => Promise.resolve({ error: null }) })),
     }
-    // T-223.5: 카드 선등록 게이트 — 테스트는 기본적으로 "카드 있음" 가정.
+    // T-259 R6: count 조회만 사용. R6 status 결정 시 select(...).eq(...).eq(...) 체인.
     if (table === 'billing_keys') return {
       select: () => ({
-        eq: () => ({ eq: () => Promise.resolve({ count: 1, data: null, error: null }) }),
+        eq: () => ({ eq: () => Promise.resolve({ count: cardCount, data: null, error: null }) }),
       }),
     }
     if (table === 'places') {
@@ -86,37 +93,35 @@ describe('registerOwnerPlaceAction', () => {
     if (!r.success) expect(r.error).toMatch(/slug/)
   })
 
-  it('T-223.5: customer row 없음 → 카드 등록 먼저 요구 (pre-check 차단)', async () => {
-    // 카드 선등록 모델에서는 customer row 가 없다는 건 카드도 없다는 의미 —
-    // 기존 "customer 자동 생성" 이 아니라 명시적으로 "카드 먼저 등록" 에러 반환.
-    mockFrom.mockImplementation((table: string) => {
-      if (table === 'customers') return {
-        select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) }),
-      }
-      return {}
-    })
+  it('T-259 R6: customer 없음 + 카드 없음 → 등록 허용, customer 자동 생성, status=pending', async () => {
+    // R6: register-first — 카드 선등록 게이트 제거. 카드 없는 owner 도 등록은 가능하지만
+    //   place 는 status='pending' 으로 머무름. 카드 등록 후 active 전환은 별도 작업.
+    mockDbOk({ activeCardCount: 0 })
     const { registerOwnerPlaceAction } = await import('@/lib/actions/owner-register-place')
-    const r = await registerOwnerPlaceAction({ name: 'X', city: 'cheonan', category: 'medical', address: 'y' })
-    expect(r.success).toBe(false)
-    if (!r.success) expect(r.error).toMatch(/카드/)
+    const r = await registerOwnerPlaceAction({
+      name: 'X', city: 'cheonan', category: 'medical', address: 'y',
+      naverPlaceUrl: 'https://m.place.naver.com/place/123',
+    })
+    expect(r.success).toBe(true)
+    // Naver 매칭이 있어도 카드 미등록이므로 status=pending (R6).
+    if (r.success) {
+      expect(r.status).toBe('pending')
+      expect(r.autoApproved).toBe(true)   // autoApproved 신호 자체는 true
+    }
   })
 
-  it('T-223.5: customer 있지만 active 카드 0 → 카드 등록 먼저 요구', async () => {
-    mockFrom.mockImplementation((table: string) => {
-      if (table === 'customers') return {
-        select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: { id: 'c1' } }) }) }),
-      }
-      if (table === 'billing_keys') return {
-        select: () => ({
-          eq: () => ({ eq: () => Promise.resolve({ count: 0, data: null, error: null }) }),
-        }),
-      }
-      return {}
-    })
+  it('T-259 R6: customer 있고 카드 있음 + naver 매칭 → status=active 정상 흐름', async () => {
+    mockDbOk({ activeCardCount: 1 })
     const { registerOwnerPlaceAction } = await import('@/lib/actions/owner-register-place')
-    const r = await registerOwnerPlaceAction({ name: 'X', city: 'cheonan', category: 'medical', address: 'y' })
-    expect(r.success).toBe(false)
-    if (!r.success) expect(r.error).toMatch(/카드/)
+    const r = await registerOwnerPlaceAction({
+      name: 'X', city: 'cheonan', category: 'medical', address: 'y',
+      naverPlaceUrl: 'https://m.place.naver.com/place/123',
+    })
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.status).toBe('active')
+      expect(r.autoApproved).toBe(true)
+    }
   })
 
   it('수동 등록 (Naver/Google 매칭 없음) → pending', async () => {

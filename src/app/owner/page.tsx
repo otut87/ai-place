@@ -72,6 +72,7 @@ export default async function OwnerHomePage({ searchParams }: Params) {
         <BillingBanner
           hasCard={data.billing.hasCard}
           pilotRemainingDays={data.billing.pilotRemainingDays}
+          activePlaceCount={activePlaceCount}
         />
       )}
 
@@ -155,12 +156,15 @@ export default async function OwnerHomePage({ searchParams }: Params) {
   )
 }
 
-// ── 파일럿 배너 ──────────────────────────────────────────────
+// ── 파일럿 + 카드 등록 배너 ──────────────────────────────────────────────
+// T-259 R6: register-first 흐름 — 카드 없어도 업체 등록은 가능하지만 발행/AI 리포트는 잠김.
+//   activePlaceCount > 0 이면 "발행/리포트 잠김" 안내를 우선 노출.
 function BillingBanner({
-  hasCard, pilotRemainingDays,
+  hasCard, pilotRemainingDays, activePlaceCount,
 }: {
   hasCard: boolean
   pilotRemainingDays: number
+  activePlaceCount: number
 }) {
   // 카드 등록 완료 & 파일럿 정상 진행 중.
   if (hasCard && pilotRemainingDays > 0) {
@@ -174,26 +178,44 @@ function BillingBanner({
     )
   }
 
-  // 카드 없음 · 파일럿 진행 중 — 신뢰형 배너.
-  if (!hasCard && pilotRemainingDays > 7) {
+  // T-259 R6: 카드 없음 + 등록한 업체 있음 → 발행/리포트 잠금 명시.
+  if (!hasCard && activePlaceCount > 0 && pilotRemainingDays > 7) {
     return (
-      <div className="dash-banner" role="status">
-        <div className="ic">!</div>
-        <div>체험판 잔여 <b>{pilotRemainingDays}일</b> · 카드 등록은 종료 <b>7일 전</b>까지 완료하세요.</div>
+      <div className="dash-banner warn" role="alert">
+        <div className="ic">🔒</div>
+        <div>
+          카드를 등록해야 블로그 자동 발행과 AI 인용 리포트가 시작됩니다.
+          체험판 잔여 <b>{pilotRemainingDays}일</b> · 종료까지 카드 미등록 시 등록한 업체가 비공개로 전환됩니다.
+        </div>
         <div className="grow" />
-        <Link href="/owner/billing">요금제 관리 →</Link>
+        <Link href="/owner/billing">카드 등록 →</Link>
       </div>
     )
   }
 
-  // 7일 이내 만료 경고.
-  if (!hasCard && pilotRemainingDays > 0 && pilotRemainingDays <= 7) {
+  if (!hasCard && activePlaceCount > 0 && pilotRemainingDays > 0 && pilotRemainingDays <= 7) {
     return (
       <div className="dash-banner warn" role="alert">
-        <div className="ic">!</div>
-        <div>파일럿 종료 <b>{pilotRemainingDays}일</b> 남음 · 지금 카드 등록하면 AI 노출이 끊기지 않아요.</div>
+        <div className="ic">⚠</div>
+        <div>
+          체험판 종료 <b>{pilotRemainingDays}일</b> 남음 · 카드 미등록 상태로 종료되면 등록한
+          {activePlaceCount > 1 ? <> 업체 {activePlaceCount}개가 </> : <> 업체가 </>}
+          비공개로 전환됩니다. 카드 등록 즉시 발행·리포트가 활성화됩니다.
+        </div>
         <div className="grow" />
         <Link href="/owner/billing">카드 등록 →</Link>
+      </div>
+    )
+  }
+
+  // 카드 없음 + 업체 0곳 — 등록 권유 (기존 EmptyState 와 별도 라인 유지).
+  if (!hasCard && activePlaceCount === 0 && pilotRemainingDays > 7) {
+    return (
+      <div className="dash-banner" role="status">
+        <div className="ic">!</div>
+        <div>체험판 잔여 <b>{pilotRemainingDays}일</b> · 업체 등록 후 카드를 등록하면 발행·리포트가 활성화됩니다.</div>
+        <div className="grow" />
+        <Link href="/owner/places/new">업체 등록 →</Link>
       </div>
     )
   }
@@ -203,7 +225,10 @@ function BillingBanner({
     return (
       <div className="dash-banner danger" role="alert">
         <div className="ic">⚠</div>
-        <div>파일럿이 종료됐어요. 카드 등록으로 구독을 재개할 수 있습니다.</div>
+        <div>
+          파일럿이 종료됐어요. 카드 미등록 상태이므로 등록한 업체는 비공개 상태입니다.
+          카드 등록 즉시 공개·발행·리포트가 다시 시작됩니다.
+        </div>
         <div className="grow" />
         <Link href="/owner/billing">카드 등록 →</Link>
       </div>

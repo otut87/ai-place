@@ -1,24 +1,17 @@
-// T-201/T-220/T-223.5 — 업체 등록 페이지.
+// T-201/T-220/T-223.5/T-259 R6 — 업체 등록 페이지.
 // 좌: step flow + form / 우: sticky summary-card.
-// T-223.5: 카드 선등록 게이트 — active billing_key 없으면 /owner/billing 강제 이동.
+// T-259 R6: register-first 전환. 카드 없어도 업체 등록은 허용.
+//   대신 발행/AI 리포트는 카드 있어야 활성화 (대시보드 안내 + 백엔드 가드 별도).
 
-import { redirect } from 'next/navigation'
 import { requireOwnerUser } from '@/lib/owner/auth'
 import { getCities, getCategories } from '@/lib/data.supabase'
-import { hasActiveBillingKey } from '@/lib/actions/owner-billing'
 import { OwnerRegisterForm } from './owner-register-form'
 import { MONTHLY_PRICE_LABEL } from '@/lib/pricing'
 
 export const dynamic = 'force-dynamic'
 
 export default async function NewPlacePage() {
-  const user = await requireOwnerUser()
-
-  // T-223.5: 카드 없으면 업체 등록 자체 차단. 빌링 페이지로 이동 (?need_card=1 배너).
-  const hasCard = await hasActiveBillingKey(user.id)
-  if (!hasCard) {
-    redirect('/owner/billing?need_card=1')
-  }
+  await requireOwnerUser()
 
   const [cities, categories] = await Promise.all([getCities(), getCategories()])
 
