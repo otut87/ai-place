@@ -12,10 +12,12 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { requireOwnerUser } from '@/lib/owner/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
+import { hasActiveBillingKey } from '@/lib/actions/owner-billing'
 import { loadAeoSnapshotsForPlaces } from '@/lib/owner/aeo-snapshot'
 import { getOwnerDailyTrend, listOwnerBotVisits, dailyRowToChartCounts, type OwnerBotVisit } from '@/lib/owner/bot-stats'
 import { calcCompletionItems, sumCompletion } from '@/lib/owner/place-completion'
 import { canOwnerEdit } from '@/lib/owner/permissions'
+import { EmptyState } from '@/app/owner/_components/empty-state'
 import { CrawlerTrendChart } from './_components/crawler-trend-chart'
 import { CitationTestButton } from './citation-test-button'
 import { hasActiveSubscription, checkCitationTestRateLimit } from '@/lib/diagnostic/citation-test'
@@ -109,6 +111,36 @@ export default async function OwnerPlaceDashboardPage({ params }: Props) {
 
   const publicUrl = `/${place.city}/${place.category}/${place.slug}`
   const editUrl = `/owner/places/${place.id}`
+
+  // T-259 R6 follow-up — 카드 미등록 owner 는 업체 dashboard(AI 크롤러 추이/정보 완성도/크롤러 로그)
+  //   진입 차단. 카드 등록 전엔 발행/노출이 시작되지 않아 모든 데이터가 0 → "왜 비어있지?" 가 아니라
+  //   카드 등록 안내로 명확화. 업체 편집은 카드 없어도 가능하므로 secondary CTA 로 노출.
+  const hasCard = await hasActiveBillingKey(user.id)
+  if (!hasCard) {
+    return (
+      <div className="pd-page">
+        <div className="crumbs">
+          <Link href="/owner/places">내 업체</Link>
+          <span className="sep">›</span>
+          <span className="cur">{place.name}</span>
+          <span className="sep">›</span>
+          <span className="cur">대시보드</span>
+        </div>
+        <EmptyState
+          eyebrow="🔒 카드 등록이 필요합니다"
+          title={<>업체 대시보드는 <em>카드 등록</em> 후 활성화됩니다</>}
+          description={
+            <>
+              AI 크롤러 추이 · 정보 완성도 진단 · 크롤러 로그는 카드 등록 시점부터 데이터가 쌓입니다.
+              30일 파일럿 무료 · 이후 14,900원/월 자동 결제. 업체 정보 편집은 카드 없이도 가능합니다.
+            </>
+          }
+          action={{ href: '/owner/billing', label: '카드 등록 →', variant: 'accent' }}
+          secondaryAction={{ href: editUrl, label: '업체 편집', variant: 'ghost' }}
+        />
+      </div>
+    )
+  }
 
   // 30일 데이터 병렬 로드
   const [aeoSnapshots, dailyTrend, recentVisits, subActive, rateLimit] = await Promise.all([
