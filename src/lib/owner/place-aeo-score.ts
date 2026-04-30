@@ -29,7 +29,7 @@ export const AEO_RULES = [
   { id: 'photos-3',             label: '대표 사진 3장 이상',               weight: 10 },
   { id: 'opening-hours',        label: '영업시간 정확',                   weight: 10 },
   { id: 'services-min',         label: '서비스 1가지 이상',                weight: 10 },
-  { id: 'mentioned-in-content', label: '브랜드·카테고리·지역 언급',        weight: 10 },
+  { id: 'mentioned-in-content', label: '내부 콘텐츠 자동 언급 (블로그·비교·가이드)', weight: 10 },
 ] as const
 
 export type AeoRuleId = (typeof AEO_RULES)[number]['id']
@@ -168,14 +168,18 @@ export function scorePlaceAeo(input: PlaceAeoInput): PlaceAeoScore {
     detail: servicesOk ? undefined : '서비스 없음',
   })
 
-  // 8. 브랜드·카테고리·지역 언급 — 비교/가이드/블로그/키워드 콘텐츠에 언급 (mentionCount >= 1).
+  // 8. 내부 콘텐츠 자동 언급 — 비교/가이드/블로그/키워드 페이지에 이 업체가 등장 (mentionCount >= 1).
+  //    owner 가 직접 처리하는 룰이 아님. 카드 등록 후 자동 발행 파이프라인이 가동되면
+  //    이 업체를 본문에서 언급하기 시작 → 누적되며 +10 회복.
   const mentionedOk = mentionCount >= 1
   rules.push({
     id: 'mentioned-in-content',
-    label: '브랜드·카테고리·지역 언급',
+    label: '내부 콘텐츠 자동 언급 (블로그·비교·가이드)',
     weight: 10,
     passed: mentionedOk,
-    detail: mentionedOk ? `${mentionCount}회 언급` : '아직 언급 없음',
+    detail: mentionedOk
+      ? `${mentionCount}회 언급`
+      : '카드 등록 후 자동 발행되는 블로그·비교·가이드·키워드 페이지가 이 업체를 언급할 때 누적됩니다 (owner 직접 작성 불필요)',
   })
 
   const score = rules.reduce((sum, r) => sum + (r.passed ? r.weight : 0), 0)

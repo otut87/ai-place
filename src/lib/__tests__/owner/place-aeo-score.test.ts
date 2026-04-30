@@ -106,11 +106,12 @@ describe('place-aeo-score', () => {
     expect(legacy.rules.find(x => x.id === 'photos-3')!.detail).toBe('1장')
   })
 
-  it('언급 0회 → mentioned FAIL', () => {
+  it('언급 0회 → mentioned FAIL (T-259 R6 follow-up: 카드 등록 안내 detail)', () => {
     const r = scorePlaceAeo({ place: fullPlace, mentionCount: 0, now: NOW })
     const rule = r.rules.find(x => x.id === 'mentioned-in-content')!
     expect(rule.passed).toBe(false)
-    expect(rule.detail).toBe('아직 언급 없음')
+    expect(rule.detail).toContain('카드 등록')
+    expect(rule.detail).toContain('자동 발행')
     expect(r.score).toBe(90)
   })
 

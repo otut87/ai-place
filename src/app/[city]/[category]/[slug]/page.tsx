@@ -307,6 +307,46 @@ export default async function ProfilePage({ params }: Props) {
                   </div>
                 )}
 
+                {/* T-259 R6 follow-up — owner 가 등록한 추가 사진 갤러리.
+                    AEO 룰 'photos-3' (3장 이상) 충족 시 공개 페이지에도 노출되도록.
+                    hero(imageUrl) 와 동일 URL 은 중복 배제. */}
+                {(() => {
+                  const gallery = (place.images ?? []).filter((img) => img.url && img.url !== place.imageUrl)
+                  if (gallery.length === 0) return null
+                  return (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                        gap: 8,
+                      }}
+                      aria-label={`${place.name} 사진 ${gallery.length}장`}
+                    >
+                      {gallery.map((img, i) => (
+                        <div
+                          key={`${img.url}-${i}`}
+                          style={{
+                            aspectRatio: '4 / 3',
+                            borderRadius: 'var(--r-md)',
+                            overflow: 'hidden',
+                            background: 'var(--bg-2)',
+                            position: 'relative',
+                          }}
+                        >
+                          <Image
+                            src={img.url}
+                            alt={img.alt || `${place.name} 사진 ${i + 2}`}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 640px) 50vw, (max-width: 980px) 33vw, 240px"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+
                 <h1 className="biz-title">{place.name}</h1>
 
                 <p className="biz-lede">
