@@ -113,7 +113,7 @@ export default function PrivacyPage() {
 
           <Section title="9. 개인정보 보호 책임자">
             <ul>
-              <li>책임자: {SITE_BRAND.publisher} 대표 <em>(성명 미기재 — 사업자 등록 정보 입력 필요)</em></li>
+              <li>책임자: {SITE_BRAND.publisher} 대표 이지수</li>
               <li>이메일: <a href={`mailto:${SITE_BRAND.email}`}>{SITE_BRAND.email}</a></li>
               <li>주소: {SITE_BRAND.address}</li>
               <li>사업자등록번호: {SITE_BRAND.bizRegNo}</li>

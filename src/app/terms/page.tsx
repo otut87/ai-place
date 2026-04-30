@@ -98,13 +98,15 @@ export default function TermsPage() {
             <ul>
               <li>상호: {SITE_BRAND.publisher}</li>
               <li>서비스명: {SITE_BRAND.name}</li>
+              <li>대표자: 이지수</li>
               <li>사업자등록번호: {SITE_BRAND.bizRegNo}</li>
               <li>주소: {SITE_BRAND.address}</li>
               <li>고객지원: <a href={`mailto:${SITE_BRAND.email}`}>{SITE_BRAND.email}</a></li>
               <li>호스팅 제공자: Vercel Inc.</li>
-              <li>대표자 성명: <em>(미기재 — 사업자 등록 정보 입력 필요)</em></li>
-              <li>통신판매업 신고번호: <em>(미기재 — 신고 후 입력 필요)</em></li>
-              <li>고객센터 전화: <em>(미기재 — 사업자 등록 전화번호 입력 필요)</em></li>
+              <li>
+                통신판매업 신고: 서비스 본격 운영 시점에 관할 시·군·구청에 신고 예정
+                (현재는 「전자상거래 등에서의 소비자보호에 관한 법률」 시행령 제16조의 신고 의무 면제 기준 이내)
+              </li>
             </ul>
           </Section>
 
