@@ -6,6 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@/lib/auth', () => ({
   requireAuth: vi.fn(() => ({ id: 'user-123', email: 'admin@test.com' })),
+  // T-259 R6 hotfix — generateRecommendation 이 owner 도 호출 가능하도록 전환됨.
+  requireLoggedInForAction: vi.fn(() => ({ id: 'user-123', email: 'owner@test.com' })),
 }))
 
 vi.mock('next/navigation', () => ({ redirect: vi.fn() }))

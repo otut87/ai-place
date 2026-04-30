@@ -584,7 +584,10 @@ export async function generateRecommendation(input: {
   placeType: string
   recommendationNote: string
 }>> {
-  const user = await requireAuth()
+  // T-259 R6 hotfix — owner 등록 흐름에서도 호출하므로 admin-only requireAuth() 가 아니라
+  //   로그인된 모든 사용자 허용. 같은 화면의 generatePlaceContent 가 이미 동일 정책.
+  //   이전 requireAuth() 는 owner UI 에서 redirect /admin/login 으로 새는 회귀 원인이었음.
+  const user = await requireLoggedInForAction()
 
   const rl = await checkRateLimit(user.id, 'ai_generate')
   if (!rl.success) return rateLimitErrorResult(rl.reset)

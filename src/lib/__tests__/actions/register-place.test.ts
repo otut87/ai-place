@@ -259,4 +259,38 @@ describe('rate-limit 차단 (T-259 S2)', () => {
     await enrichFromGoogle({ name: 'X', address: 'Y' })
     expect(mockCheckRateLimit).toHaveBeenCalledWith('u1', 'external_search')
   })
+
+  // T-259 R6 hotfix — generateRecommendation 이 admin-only requireAuth 라 owner 호출 시
+  //   /admin/login 으로 redirect 되던 회귀. requireLoggedInForAction 으로 통일됐는지 검증.
+  it('generateRecommendation 은 requireLoggedInForAction 사용 (owner 도 호출 가능)', async () => {
+    const auth = await import('@/lib/auth')
+    vi.mocked(auth.requireAuth).mockClear()
+    vi.mocked(auth.requireLoggedInForAction).mockClear()
+    // Anthropic SDK mock — 응답 없으면 generate 가 실패하므로 stub.
+    vi.doMock('@anthropic-ai/sdk', () => ({
+      default: class {
+        messages = {
+          create: vi.fn().mockResolvedValue({
+            content: [{
+              type: 'tool_use',
+              input: {
+                recommendedFor: ['상담'],
+                strengths: ['친절'],
+                placeType: '미용시술형',
+                recommendationNote: '천안에서 상담이 필요할 때 추천되는 곳. 친절.',
+              },
+            }],
+            usage: { input_tokens: 10, output_tokens: 10 },
+          }),
+        }
+      },
+    }))
+    const { generateRecommendation } = await import('@/lib/actions/register-place')
+    await generateRecommendation({
+      name: 'X', category: 'medical', address: '천안',
+      services: [{ name: 's1' }],
+    })
+    expect(auth.requireLoggedInForAction).toHaveBeenCalled()
+    expect(auth.requireAuth).not.toHaveBeenCalled()
+  })
 })
