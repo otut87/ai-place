@@ -67,6 +67,12 @@ h1.au-title .it { font-family: var(--serif); font-style: italic; font-weight: 40
 }
 .au-form .meta-strip b { color: var(--ink); font-weight: 600; }
 .au-form .meta-strip .ac { color: var(--aip-accent); font-weight: 600; }
+.au-form .meta-note {
+  margin-top: 8px; font-size: 11px; line-height: 1.55;
+  color: var(--aip-muted); letter-spacing: -.005em;
+}
+.au-form .meta-note a { color: var(--aip-muted); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 2px; }
+.au-form .meta-note a:hover { color: var(--ink); text-decoration-color: var(--ink); }
 
 /* Sample preview */
 .au-sample {
