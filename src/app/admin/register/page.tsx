@@ -414,7 +414,7 @@ export default function RegisterPage() {
       {selectedPlace && (
         <div className="mb-6 p-4 rounded-lg bg-[#f9fafb] border border-[#e5e7eb]">
           <p className="text-xs font-medium text-[#6b7280] mb-2">📋 자동 분류 결과 (필요시 수정)</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-[#6a6a6a] mb-1">도시</label>
               <select value={city} onChange={e => setCity(e.target.value)} className="w-full h-10 px-3 rounded border border-[#dddddd] text-sm">
@@ -493,7 +493,7 @@ export default function RegisterPage() {
           )}
 
           {/* 기본 정보 */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#484848] mb-1">
                 영문 이름 <span className="text-xs text-[#6a6a6a]">(자동)</span>
@@ -556,7 +556,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#484848] mb-1">전화번호 <span className="text-xs text-[#6a6a6a]">(자동)</span></label>
               <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-[#dddddd] text-sm" placeholder="+82-41-XXX-XXXX" />
@@ -590,7 +590,7 @@ export default function RegisterPage() {
           <div>
             <h2 className="text-base font-semibold text-[#222222] mb-2">서비스 (최소 1개)</h2>
             {services.map((s, i) => (
-              <div key={i} className="grid grid-cols-3 gap-2 mb-2">
+              <div key={i} className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
                 <input placeholder="서비스명" value={s.name} onChange={e => { const next = [...services]; next[i] = { ...next[i], name: e.target.value }; setServices(next) }} className="h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
                 <input placeholder="설명" value={s.description} onChange={e => { const next = [...services]; next[i] = { ...next[i], description: e.target.value }; setServices(next) }} className="h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />
                 <input placeholder="가격대" value={s.priceRange} onChange={e => { const next = [...services]; next[i] = { ...next[i], priceRange: e.target.value }; setServices(next) }} className="h-10 px-3 rounded-lg border border-[#dddddd] text-sm" />

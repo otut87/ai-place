@@ -28,6 +28,11 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // 일회성 디자인 핸드오프/임시 자료 — 실제 빌드 대상 아님.
     ".tmp/**",
+    // T-259 — Playwright artifacts. ESLint 는 .gitignore 와 별개라 명시 무시 필요.
+    "playwright-report/**",
+    "test-results/**",
+    "blob-report/**",
+    "playwright/.cache/**",
   ]),
 ]);
 

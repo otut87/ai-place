@@ -67,7 +67,7 @@ export function CandidatePicker({
       {/* description 카드 택일 */}
       <div>
         <p className="mb-2 text-xs font-medium text-[#484848]">1. 설명 (Direct Answer Block)</p>
-        <div className="grid gap-2 md:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
           {pool.descriptions.map((d, i) => (
             <label
               key={i}

@@ -371,8 +371,20 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
                     key={`${c.naverPlaceUrl}-${idx}`}
                     className={`candidate-card${disabled ? ' disabled' : ''}`}
                     onClick={() => !disabled && handleSelectNaver(c)}
+                    onKeyDown={(e) => {
+                      if (disabled) return
+                      // Enter / Space 로 선택 — 마우스/터치와 동등한 키보드 접근.
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleSelectNaver(c)
+                      }
+                    }}
                     role={disabled ? undefined : 'button'}
                     tabIndex={disabled ? -1 : 0}
+                    aria-disabled={disabled || undefined}
+                    aria-label={disabled
+                      ? `${c.displayName} — 이미 등록됨`
+                      : `${c.displayName} 선택`}
                   >
                     <div className="row-1">
                       <b>{c.displayName}</b>
@@ -869,13 +881,16 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
               ) : (
                 <>
                   <div className="ph-grid">
-                    {photoRefs.map((ref) => {
+                    {photoRefs.map((ref, idx) => {
                       const checked = selectedPhotos.has(ref)
+                      const photoLabel = `${selectedPlace?.name ?? '업체'} 후보 사진 ${idx + 1}${checked ? ' (선택됨)' : ''}`
                       return (
                         <button
                           key={ref}
                           type="button"
                           className={`ph${checked ? ' selected' : ''}`}
+                          aria-label={photoLabel}
+                          aria-pressed={checked}
                           onClick={() => {
                             setSelectedPhotos((prev) => {
                               const next = new Set(prev)
@@ -888,7 +903,7 @@ export function OwnerRegisterForm({ cities, categories }: Props) {
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={`/api/places/photo?ref=${encodeURIComponent(ref)}&w=400`}
-                            alt=""
+                            alt={photoLabel}
                             loading="lazy"
                           />
                         </button>

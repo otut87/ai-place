@@ -15,7 +15,9 @@ import { OAuthButtons } from '@/components/auth/oauth-buttons'
 import { MONTHLY_PRICE_LABEL } from '@/lib/pricing'
 
 type PwCheck = 'len' | 'letter' | 'num' | 'spec'
-type EmailState = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+// T-259 U6 — 'unverified' 추가: 일시 장애 / rate-limit 으로 중복 확인 실패한 상태.
+//   이전엔 fail-open 으로 'checking' 유지 → 사용자가 무한 로딩으로 보였음. 이제 명시 표시.
+type EmailState = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'unverified'
 
 export function SignupForm() {
   const router = useRouter()
@@ -36,7 +38,7 @@ export function SignupForm() {
   const [verifyMsg, setVerifyMsg] = useState<string | null>(null)
 
   // API 결과는 요청 시점의 email 을 함께 저장 — 입력 변경 시 자동 stale 처리.
-  const [apiResult, setApiResult] = useState<{ email: string; state: 'available' | 'taken' | 'invalid' } | null>(null)
+  const [apiResult, setApiResult] = useState<{ email: string; state: 'available' | 'taken' | 'invalid' | 'unverified' } | null>(null)
 
   const pwChecks = useMemo<Record<PwCheck, boolean>>(
     () => ({
@@ -68,11 +70,18 @@ export function SignupForm() {
     if (syncEmailState !== 'checking') return
     const currentEmail = email
     const timer = setTimeout(async () => {
-      const r = await checkEmailAvailableAction(currentEmail)
-      if (r.status === 'available' || r.status === 'taken' || r.status === 'invalid') {
-        setApiResult({ email: currentEmail, state: r.status })
+      try {
+        const r = await checkEmailAvailableAction(currentEmail)
+        if (r.status === 'available' || r.status === 'taken' || r.status === 'invalid') {
+          setApiResult({ email: currentEmail, state: r.status })
+        } else {
+          // T-259 U6 — error / rate_limited / 네트워크 장애 → 'unverified' 로 표시.
+          //   가입 진행은 허용 (서버측 supabase 가 최종 중복 차단). 사용자에겐 명시 안내.
+          setApiResult({ email: currentEmail, state: 'unverified' })
+        }
+      } catch {
+        setApiResult({ email: currentEmail, state: 'unverified' })
       }
-      // 에러는 fail-open — apiResult 건드리지 않음 (syncEmailState='checking' 유지)
     }, 500)
     return () => clearTimeout(timer)
   }, [email, syncEmailState])
@@ -365,6 +374,14 @@ function EmailStatusHint({ state }: { state: EmailState }) {
   }
   if (state === 'taken') {
     return <span className="hint" style={{ color: '#b42318' }}>이미 사용 중</span>
+  }
+  if (state === 'unverified') {
+    // T-259 U6 — 중복 확인 일시 실패. 가입은 진행 가능 (서버 측 최종 검증).
+    return (
+      <span className="hint" style={{ color: '#b45309' }} role="status">
+        중복 확인 일시 실패 · 가입 시 최종 확인됩니다
+      </span>
+    )
   }
   return <span className="hint">업무용 권장</span>
 }

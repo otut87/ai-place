@@ -52,7 +52,7 @@ export default async function CitationsPage({ searchParams }: { searchParams: Pr
       </header>
 
       {/* 엔진별 집계 */}
-      <section className="grid grid-cols-3 gap-3">
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {(['chatgpt', 'claude', 'gemini'] as const).map(engine => {
           const s = byEngine[engine]
           return (
@@ -130,7 +130,7 @@ export default async function CitationsPage({ searchParams }: { searchParams: Pr
         {topPlaces.length === 0 ? (
           <p className="text-xs text-[#6a6a6a]">데이터가 아직 없습니다.</p>
         ) : (
-          <ol className="grid grid-cols-3 gap-2 text-xs">
+          <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
             {topPlaces.map((p, i) => (
               <li key={p.name} className="flex items-center justify-between rounded bg-[#f5f3ff] px-2 py-1">
                 <span>
