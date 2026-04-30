@@ -201,7 +201,7 @@ export default function AboutPage() {
                 <span className="n">3</span>
                 <h3>AI에 추천 시작</h3>
                 <p>ChatGPT · Claude · Gemini가 추천하는 답변에 등장하기 시작합니다.</p>
-                <span className="tail">월간 PDF 리포트로 인용 측정</span>
+                <span className="tail">대시보드에서 인용 실시간 측정</span>
               </div>
             </div>
 

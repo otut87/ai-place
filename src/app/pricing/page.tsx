@@ -17,7 +17,7 @@ import '@/styles/pricing-remix.css'
 
 const BASE_URL = 'https://aiplace.kr'
 const TITLE = composePageTitle('요금 안내 — AI Place')
-const DESC = `AI Place 파일럿 30일 무료, 이후 ${MONTHLY_PRICE_LABEL} 단일 플랜. 월 블로그 5편 + 월간 리포트 + AEO 점검 포함. 프리미엄 GEO 컨설팅 별도.`
+const DESC = `AI Place 파일럿 30일 무료, 이후 ${MONTHLY_PRICE_LABEL} 단일 플랜. 월 블로그 5편 + AI 인용 측정 + AEO 점검 포함. 프리미엄 GEO 컨설팅 별도.`
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -37,14 +37,14 @@ const faqs: FAQ[] = [
     answer: `30일 무료 체험이 끝나기 7일 전에 알림을 보내드립니다. 그 시점까지 해지하지 않으면 등록된 결제수단으로 ${MONTHLY_PRICE_LABEL}이 자동 청구됩니다. 언제든 대시보드에서 즉시 해지 가능합니다.`,
   },
   {
-    question: '월간 리포트는 어떻게 받나요?',
+    question: 'AI 인용 측정은 어떻게 확인하나요?',
     answer:
-      '매월 1일 PDF 리포트가 가입 이메일로 발송되며, 동시에 대시보드에서도 다운로드 가능합니다. AI 봇 방문 횟수, AEO 8종 점수 변화, 실제 AI 인용 테스트 결과가 포함됩니다.',
+      '오너 대시보드에서 실시간으로 확인합니다. AI 봇 방문 횟수(GPTBot·ClaudeBot·PerplexityBot 등), AEO 8종 점수 변화, 주 1회 실제 AI 인용 테스트(ChatGPT·Claude·Perplexity) 결과가 표시됩니다.',
   },
   {
     question: '해지하면 내 업체 페이지는 어떻게 되나요?',
     answer:
-      '해지 후에도 업체 페이지는 읽기 전용으로 유지됩니다. 새 콘텐츠 발행과 리포트만 중단되며, 기존 페이지의 검색·AI 인용은 그대로 유효합니다. 재구독 시 즉시 활성화됩니다.',
+      '해지 후에도 업체 페이지는 읽기 전용으로 유지됩니다. 새 콘텐츠 발행과 인용 측정만 중단되며, 기존 페이지의 검색·AI 인용은 그대로 유효합니다. 재구독 시 즉시 활성화됩니다.',
   },
   {
     question: '프리미엄 컨설팅은 월 구독과 별도인가요?',
@@ -66,7 +66,7 @@ export default function PricingPage() {
     '@type': 'Product',
     name: 'AI Place 입점 플랜',
     description:
-      'AI 검색(ChatGPT·Claude·Gemini)에 내 업체가 노출되도록 구조화하는 입점 서비스. 업체 페이지 발행, AEO 최적화, 월간 리포트, 단일 요금제.',
+      'AI 검색(ChatGPT·Claude·Gemini)에 내 업체가 노출되도록 구조화하는 입점 서비스. 업체 페이지 발행, AEO 최적화, AI 인용 측정, 단일 요금제.',
     brand: SITE_BRAND.name,
     offers: [
       {
@@ -152,7 +152,7 @@ export default function PricingPage() {
                 </div>
 
                 <p className="lede">
-                  업체 1곳 · 월 블로그 5편 자동 발행 · AEO 점검 · 월간 리포트.{' '}
+                  업체 1곳 · 월 블로그 5편 자동 발행 · AEO 점검 · AI 인용 측정.{' '}
                   <b>단일 요금제로 단순</b>합니다.
                 </p>
 
@@ -160,7 +160,6 @@ export default function PricingPage() {
                   <li>{checkIcon}<div>AI Place <b>업체 페이지</b> 자동 생성 <span className="mono-tail">(JSON-LD · AEO 최적화)</span></div></li>
                   <li>{checkIcon}<div>월 <b>5편 블로그 자동 발행</b> — 내 업체 중심 <span className="mono-tail">(업체분석 · 비교 · 가이드 · 키워드 롱테일)</span></div></li>
                   <li>{checkIcon}<div>오너 대시보드 — AI 봇 방문 실측 · 직접/언급 귀속 · <b>AEO 8종 점수</b></div></li>
-                  <li>{checkIcon}<div>월간 <b>PDF 리포트</b> — 모든 구독자 공통 제공</div></li>
                   <li>{checkIcon}<div>주 1회 실제 AI 인용 테스트 <span className="mono-tail">(GPT · Claude · Perplexity)</span></div></li>
                   <li>{checkIcon}<div>IndexNow 실시간 제출 · <span className="mono-tail">robots/sitemap/llms.txt 탑재</span></div></li>
                   <li>{checkIcon}<div>언제든 해지 · 해지돼도 업체 페이지는 <b>읽기 전용</b>으로 유지</div></li>
@@ -186,7 +185,7 @@ export default function PricingPage() {
                 </p>
 
                 <ul className="feats">
-                  <li>{checkIcon}<div>초기 <span className="em">진단 리포트</span> (PDF)</div></li>
+                  <li>{checkIcon}<div>초기 <span className="em">진단 리포트</span></div></li>
                   <li>{checkIcon}<div>우선순위 매트릭스 + <b>수정 코드 제공</b></div></li>
                   <li>{checkIcon}<div>직접 작업 또는 <b>작업 지시서 선택</b></div></li>
                   <li>{checkIcon}<div>작업 완료 후 <b>재진단 실행</b></div></li>

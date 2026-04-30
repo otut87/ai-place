@@ -53,7 +53,7 @@ export default async function AdminSeoPage() {
       <header className="mb-5">
         <h1 className="text-xl font-semibold">AI 봇 방문 로그</h1>
         <p className="mt-1 text-sm text-[#6b6b6b]">
-          GPTBot, ClaudeBot, PerplexityBot 등 AI 크롤러의 실제 방문 이력. 월간 리포트의 근거.
+          GPTBot, ClaudeBot, PerplexityBot 등 AI 크롤러의 실제 방문 이력. AI 인용 측정의 근거.
         </p>
       </header>
 

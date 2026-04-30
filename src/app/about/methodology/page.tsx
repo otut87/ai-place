@@ -124,7 +124,7 @@ export default function MethodologyPage() {
               <div>
                 <h2>내 페이지가 AI에게 잘 읽히는지 <span className="it">바로 진단</span></h2>
                 <p>
-                  같은 방법론을 적용한 무료 진단 도구. URL 1개만 넣으면 30초 내에 16개 항목 점수와 PDF 리포트를 받을 수 있습니다.
+                  같은 방법론을 적용한 무료 진단 도구. URL 1개만 넣으면 30초 내에 16개 항목 점수와 진단 결과를 받을 수 있습니다.
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

@@ -286,7 +286,7 @@ export default async function HomePage() {
               최근 30일, <span className="it">AI 검색</span>에서<br />이렇게 인용됩니다.
             </h2>
             <p className="sec-lede">
-              아래 카드는 <b>예시 응답</b>입니다. 실제 업체별 인용 결과는 등록 후 월간 리포트로 제공됩니다.
+              아래 카드는 <b>예시 응답</b>입니다. 실제 업체별 인용 결과는 등록 후 대시보드에서 실시간 확인합니다.
             </p>
           </div>
 
@@ -541,7 +541,7 @@ export default async function HomePage() {
           <div className="sec-head">
             <div className="sec-kicker">실제 플로우 · PROCESS</div>
             <h2 className="sec-title">
-              가입부터 <span className="it">월간 리포트</span>까지,<br />AI 최적화 전 과정.
+              가입부터 <span className="it">AI 인용 측정</span>까지,<br />AI 최적화 전 과정.
             </h2>
             <p className="sec-lede">
               사장님 작업은 회원가입 · 업체명 검색 · AI 초안 검수 3가지. 나머지는 전부 자동화되어 있습니다.
