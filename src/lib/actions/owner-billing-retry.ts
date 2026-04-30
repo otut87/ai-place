@@ -99,6 +99,17 @@ export async function ownerRetryBillingAction(subscriptionId: string): Promise<O
       ? calcDiscountedAmount(row.amount, redemption.discountType, redemption.discountValue)
       : row.amount
 
+    // T-259 C3 — chargeAmount sanity. 0 이하 또는 합리 상한 초과면 결제 차단 + lock 해제.
+    const MAX_CHARGE_AMOUNT_KRW = 10_000_000
+    if (chargeAmount <= 0 || chargeAmount > MAX_CHARGE_AMOUNT_KRW) {
+      console.error(`[ownerRetryBilling] invalid chargeAmount=${chargeAmount} for sub ${row.id} (base=${row.amount})`)
+      await admin
+        .from('subscriptions')
+        .update({ charging_started_at: null })
+        .eq('id', row.id)
+      return { success: false, error: '결제 금액이 비정상이라 결제를 진행할 수 없습니다. 고객지원으로 문의해 주세요.' }
+    }
+
     const outcome = await chargeSubscriptionOnce(adapter, {
       subscriptionId: row.id,
       billingKey: row.billing_keys.billing_key,

@@ -46,6 +46,11 @@ export async function GET(req: Request) {
   let failed = 0
 
   let skippedZero = 0
+  let skippedLocked = 0
+  let skippedInvalidAmount = 0
+  // T-259 C3 — Toss 결제 amount 상한선. 합리적 SaaS 월 구독 (단일 업체 14,900원~다업체).
+  // 이를 초과하면 calc 버그 또는 데이터 손상으로 판단 → 결제 차단 + 알람.
+  const MAX_CHARGE_AMOUNT = 10_000_000   // 1천만원
   for (const row of data as unknown as Array<{
     id: string
     customer_id: string
@@ -65,6 +70,23 @@ export async function GET(req: Request) {
       continue
     }
 
+    // T-259 C3 — atomic per-row lock acquire. 다중 cron 인스턴스 동시 실행 또는
+    //   manual retry 와 충돌 시 한쪽만 진입 (Postgres row-level lock 의해 보장).
+    //   원래 query 의 `or(charging_started_at.is.null, < cutoff)` 만으로는 select→charge
+    //   사이에 race 존재. 여기서 row 별 update 로 atomic 화.
+    const lockCutoff = new Date(Date.now() - 60_000).toISOString()
+    const lockNowIso = new Date().toISOString()
+    const { data: locked, error: lockErr } = await admin
+      .from('subscriptions')
+      .update({ charging_started_at: lockNowIso })
+      .eq('id', row.id)
+      .or(`charging_started_at.is.null,charging_started_at.lt.${lockCutoff}`)
+      .select('id')
+    if (lockErr || !locked || (locked as unknown[]).length === 0) {
+      skippedLocked += 1
+      continue
+    }
+
     // T-229: 미적용 쿠폰이 있으면 이번 charge 에 discount 적용.
     //   실패 시 redemption 은 그대로 유지돼 다음 주기로 carry-over.
     const redemption = await loadUnappliedRedemption(admin, row.customer_id)
@@ -72,15 +94,39 @@ export async function GET(req: Request) {
       ? calcDiscountedAmount(row.amount, redemption.discountType, redemption.discountValue)
       : row.amount
 
-    const outcome = await chargeSubscriptionOnce(adapter, {
-      subscriptionId: row.id,
-      billingKey: row.billing_keys.billing_key,
-      customerKey: row.customer_id,
-      customerName: row.customers?.name ?? '(이름 없음)',
-      customerEmail: row.customers?.email ?? undefined,
-      amount: chargeAmount,          // T-210 + T-229: 쿠폰 적용된 최종 금액
-      retriedCount: row.failed_retry_count,
-    })
+    // T-259 C3 — chargeAmount sanity. calc 버그 / 데이터 손상으로 0 이하 또는
+    //   합리 상한 초과면 silent wrong charge 가 발생하지 않도록 차단 + 로그.
+    if (chargeAmount <= 0 || chargeAmount > MAX_CHARGE_AMOUNT) {
+      console.error(`[billing-charge] invalid chargeAmount=${chargeAmount} for sub ${row.id} (base=${row.amount}) — skip + lock release`)
+      await admin
+        .from('subscriptions')
+        .update({ charging_started_at: null })
+        .eq('id', row.id)
+      skippedInvalidAmount += 1
+      continue
+    }
+
+    let outcome: Awaited<ReturnType<typeof chargeSubscriptionOnce>>
+    try {
+      outcome = await chargeSubscriptionOnce(adapter, {
+        subscriptionId: row.id,
+        billingKey: row.billing_keys.billing_key,
+        customerKey: row.customer_id,
+        customerName: row.customers?.name ?? '(이름 없음)',
+        customerEmail: row.customers?.email ?? undefined,
+        amount: chargeAmount,          // T-210 + T-229: 쿠폰 적용된 최종 금액
+        retriedCount: row.failed_retry_count,
+      })
+    } catch (e) {
+      // adapter 가 throw → lock 해제만 하고 다음 row.
+      console.error(`[billing-charge] chargeSubscriptionOnce threw for sub ${row.id}:`, e)
+      await admin
+        .from('subscriptions')
+        .update({ charging_started_at: null })
+        .eq('id', row.id)
+      failed += 1
+      continue
+    }
 
     const { data: insertedPayment } = await admin
       .from('payments')
@@ -145,5 +191,13 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, scanned: data.length, succeeded, failed, skippedZero })
+  return NextResponse.json({
+    ok: true,
+    scanned: data.length,
+    succeeded,
+    failed,
+    skippedZero,
+    skippedLocked,
+    skippedInvalidAmount,
+  })
 }

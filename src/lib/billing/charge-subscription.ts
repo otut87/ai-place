@@ -56,6 +56,9 @@ export interface ChargeSubscriptionOutcome {
 }
 
 const MONTH_DAYS = 30
+// T-259 C3 — Toss 결제 amount 의 합리적 상한선. SaaS 월 구독 단일 결제로 1천만원 초과는 비정상.
+//   caller (cron / manual retry) 에서도 사전 검증하지만, 여기서 last-line defense.
+const MAX_CHARGE_AMOUNT_KRW = 10_000_000
 
 /** 멱등키 orderId 생성: `<subId>-<YYYYMM>-<retry>`. */
 export function buildOrderId(subscriptionId: string, now: Date, retriedCount: number): string {
@@ -70,6 +73,16 @@ export async function chargeSubscriptionOnce(
 ): Promise<ChargeSubscriptionOutcome> {
   const now = input.now ?? new Date()
   const amount = input.amount ?? STANDARD_PLAN_AMOUNT
+
+  // T-259 C3 — amount sanity. caller 가 잘못된 값을 넘긴 경우 PG 호출 전에 차단.
+  //   payments 테이블에 잘못된 값이 기록되거나 Toss 에 비정상 금액이 전달되는 사고 방지.
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error(`chargeSubscriptionOnce: invalid amount=${amount} (must be > 0)`)
+  }
+  if (amount > MAX_CHARGE_AMOUNT_KRW) {
+    throw new Error(`chargeSubscriptionOnce: amount=${amount} exceeds MAX_CHARGE_AMOUNT_KRW=${MAX_CHARGE_AMOUNT_KRW}`)
+  }
+
   const orderId = buildOrderId(input.subscriptionId, now, input.retriedCount)
 
   const result = await adapter.chargeOnce({

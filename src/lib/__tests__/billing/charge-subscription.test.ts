@@ -33,6 +33,55 @@ describe('buildOrderId', () => {
   })
 })
 
+// T-259 C3 — amount sanity (caller bug 보호 + 위변조 last-line defense).
+describe('chargeSubscriptionOnce — amount sanity (T-259 C3)', () => {
+  it('amount=0 → throw (PG 호출 안 함)', async () => {
+    const charge = vi.fn()
+    const adapter = makeAdapter(charge)
+    await expect(
+      chargeSubscriptionOnce(adapter, { ...BASE, amount: 0 }),
+    ).rejects.toThrow(/invalid amount/)
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('amount=음수 → throw', async () => {
+    const charge = vi.fn()
+    const adapter = makeAdapter(charge)
+    await expect(
+      chargeSubscriptionOnce(adapter, { ...BASE, amount: -100 }),
+    ).rejects.toThrow(/invalid amount/)
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('amount=NaN → throw', async () => {
+    const charge = vi.fn()
+    const adapter = makeAdapter(charge)
+    await expect(
+      chargeSubscriptionOnce(adapter, { ...BASE, amount: Number.NaN }),
+    ).rejects.toThrow(/invalid amount/)
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('amount=10,000,001 (상한 초과) → throw', async () => {
+    const charge = vi.fn()
+    const adapter = makeAdapter(charge)
+    await expect(
+      chargeSubscriptionOnce(adapter, { ...BASE, amount: 10_000_001 }),
+    ).rejects.toThrow(/exceeds MAX_CHARGE_AMOUNT/)
+    expect(charge).not.toHaveBeenCalled()
+  })
+
+  it('amount=상한 정확히 통과 (10,000,000) → 정상 호출', async () => {
+    const charge = vi.fn(async () => ({
+      success: true as const, orderId: 'x', paymentKey: 'pk', approvedAt: NOW.toISOString(),
+    }))
+    const adapter = makeAdapter(charge)
+    const r = await chargeSubscriptionOnce(adapter, { ...BASE, amount: 10_000_000 })
+    expect(charge).toHaveBeenCalledTimes(1)
+    expect(r.paymentRow.amount).toBe(10_000_000)
+  })
+})
+
 describe('chargeSubscriptionOnce — 성공', () => {
   it('active + next_charge=+30d, retry=0, notify=none', async () => {
     const adapter = makeAdapter(async () => ({
