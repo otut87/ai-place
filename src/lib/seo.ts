@@ -10,6 +10,30 @@ import { formatDABExampleClause } from './seo/category-phrase'
 // robots.txt는 app/robots.ts에서 Next.js MetadataRoute로 처리.
 
 /**
+ * T-259 R5 — 정적 페이지(/, /about, /about/methodology, /check, /blog) 의 lastModified.
+ *   매 빌드/요청마다 now() 를 박으면 검색엔진이 "정말 변경됐나?" 신뢰가 약화된다.
+ *   Vercel 빌드 환경의 git author-date 를 우선 사용 (커밋 시각 = 진짜 변경 시각),
+ *   없으면 모듈 로드 시점에 한 번만 캡처해서 lock.
+ */
+const SITE_BUILD_AT: string = (() => {
+  const fromCi = process.env.VERCEL_GIT_COMMIT_AUTHOR_DATE
+  if (fromCi) {
+    const ms = Date.parse(fromCi)
+    if (Number.isFinite(ms)) return new Date(ms).toISOString()
+  }
+  return new Date().toISOString()
+})()
+
+/** 배열 중 가장 최신 ISO timestamp/date 반환. 모두 비어있거나 invalid 면 SITE_BUILD_AT. */
+function maxIso(values: Array<string | null | undefined>): string {
+  let m = ''
+  for (const v of values) {
+    if (v && v > m) m = v
+  }
+  return m || SITE_BUILD_AT
+}
+
+/**
  * Sitemap 엔트리 생성
  * GEO 딥리서치 §8.1: changeFrequency weekly, priority 0.9(카테고리)/0.8(상세)
  */
@@ -21,13 +45,12 @@ export interface SitemapEntry {
 }
 
 export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEntry[]> {
-  const now = new Date().toISOString()
   const entries: SitemapEntry[] = []
 
   // 메인 페이지
   entries.push({
     url: baseUrl,
-    lastModified: now,
+    lastModified: SITE_BUILD_AT,
     changeFrequency: 'weekly',
     priority: 1.0,
   })
@@ -35,7 +58,7 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
   // About 페이지
   entries.push({
     url: `${baseUrl}/about`,
-    lastModified: now,
+    lastModified: SITE_BUILD_AT,
     changeFrequency: 'monthly',
     priority: 0.7,
   })
@@ -43,7 +66,7 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
   // T-125: 조사 방법론 페이지
   entries.push({
     url: `${baseUrl}/about/methodology`,
-    lastModified: now,
+    lastModified: SITE_BUILD_AT,
     changeFrequency: 'monthly',
     priority: 0.6,
   })
@@ -51,7 +74,7 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
   // T-136: 공개 진단 페이지
   entries.push({
     url: `${baseUrl}/check`,
-    lastModified: now,
+    lastModified: SITE_BUILD_AT,
     changeFrequency: 'monthly',
     priority: 0.75,
   })
@@ -69,9 +92,11 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
   const activeCities = new Set(places.map(p => p.city))
   for (const city of cities) {
     if (!activeCities.has(city.slug)) continue
+    // T-259 R5: 도시 hub 의 lastModified = 그 도시 places 의 max(updated_at).
+    const cityMax = maxIso(places.filter(p => p.city === city.slug).map(p => p.lastUpdated))
     entries.push({
       url: `${baseUrl}/${city.slug}`,
-      lastModified: now,
+      lastModified: cityMax,
       changeFrequency: 'weekly',
       priority: 0.85,
     })
@@ -81,9 +106,15 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
   for (const city of cities) {
     for (const cat of categories) {
       if (!activeCategoryKeys.has(`${city.slug}/${cat.slug}`)) continue
+      // T-259 R5: 도시+카테고리 hub 의 lastModified = 해당 places 의 max(updated_at).
+      const catMax = maxIso(
+        places
+          .filter(p => p.city === city.slug && p.category === cat.slug)
+          .map(p => p.lastUpdated)
+      )
       entries.push({
         url: `${baseUrl}/${city.slug}/${cat.slug}`,
-        lastModified: now,
+        lastModified: catMax,
         changeFrequency: 'weekly',
         priority: 0.9,
       })
@@ -95,9 +126,11 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
   const blogCities = new Set(blogAll.map(p => p.city))
   for (const city of cities) {
     if (!blogCities.has(city.slug)) continue
+    // T-259 R5: 도시 블로그 hub = 해당 도시 블로그 글의 max(updated_at).
+    const cityBlogMax = maxIso(blogAll.filter(b => b.city === city.slug).map(b => b.updatedAt))
     entries.push({
       url: `${baseUrl}/blog/${city.slug}`,
-      lastModified: now,
+      lastModified: cityBlogMax,
       changeFrequency: 'weekly',
       priority: 0.8,
     })
@@ -106,9 +139,15 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
   for (const city of cities) {
     for (const sec of sectors) {
       if (!blogCitySectorKeys.has(`${city.slug}/${sec.slug}`)) continue
+      // T-259 R5: 도시+섹터 블로그 hub = 해당 셀의 블로그 글 max(updated_at).
+      const sectorBlogMax = maxIso(
+        blogAll
+          .filter(b => b.city === city.slug && b.sector === sec.slug)
+          .map(b => b.updatedAt)
+      )
       entries.push({
         url: `${baseUrl}/blog/${city.slug}/${sec.slug}`,
-        lastModified: now,
+        lastModified: sectorBlogMax,
         changeFrequency: 'weekly',
         priority: 0.75,
       })
@@ -119,27 +158,26 @@ export async function generateSitemapEntries(baseUrl: string): Promise<SitemapEn
   for (const place of places) {
     entries.push({
       url: `${baseUrl}/${place.city}/${place.category}/${place.slug}`,
-      lastModified: place.lastUpdated ?? now,
+      lastModified: place.lastUpdated ?? SITE_BUILD_AT,
       changeFrequency: 'monthly',
       priority: 0.8,
     })
   }
 
-  // 블로그 홈
+  // 블로그 홈 — 전체 블로그의 max(updatedAt). 발행 시 자동으로 갱신 신호.
   entries.push({
     url: `${baseUrl}/blog`,
-    lastModified: now,
+    lastModified: maxIso(blogAll.map(b => b.updatedAt)),
     changeFrequency: 'daily',
     priority: 0.9,
   })
 
   // 블로그 글 (T-010g 마이그레이션 후 통합 — keyword/compare/guide 12개)
-  // T-122: 개별 updatedAt 노출 원하면 getAllActiveBlogPosts 반환 타입 확장 필요 (현재 최소).
-  const blogPosts = blogAll
-  for (const p of blogPosts) {
+  // T-259 R5: 개별 글의 updatedAt 사용 (이전엔 모두 now() 동일값).
+  for (const p of blogAll) {
     entries.push({
       url: `${baseUrl}/blog/${p.city}/${p.sector}/${p.slug}`,
-      lastModified: now,
+      lastModified: p.updatedAt || SITE_BUILD_AT,
       changeFrequency: 'weekly',
       priority: 0.85,
     })

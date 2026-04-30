@@ -8,17 +8,27 @@ export async function GET() {
   const places = await getAllPlaces()
   const cities = await getCities()
   const categories = await getCategories()
-  const now = new Date().toUTCString()
   const baseUrl = 'https://aiplace.kr'
 
-  const items = places.map(place => {
+  // T-259 R5 — pubDate 를 place 별 lastUpdated 로. lastBuildDate 는 max(lastUpdated).
+  //   이전엔 모든 item 에 동일한 now() 를 박아 reader/검색엔진이 freshness 신뢰 약화.
+  const sorted = [...places].sort((a, b) => (b.lastUpdated ?? '').localeCompare(a.lastUpdated ?? ''))
+  const fallbackPubDate = new Date().toUTCString()
+  const toUtc = (iso: string | null | undefined): string => {
+    if (!iso) return fallbackPubDate
+    const ms = Date.parse(iso)
+    return Number.isFinite(ms) ? new Date(ms).toUTCString() : fallbackPubDate
+  }
+  const lastBuildDate = sorted[0]?.lastUpdated ? toUtc(sorted[0].lastUpdated) : fallbackPubDate
+
+  const items = sorted.map(place => {
     const cityObj = cities.find(c => c.slug === place.city)
     const catObj = categories.find(c => c.slug === place.category)
     return `    <item>
       <title>${escapeXml(place.name)} - ${cityObj?.name ?? place.city} ${catObj?.name ?? place.category}</title>
       <link>${baseUrl}/${place.city}/${place.category}/${place.slug}</link>
       <description>${escapeXml(place.description)}</description>
-      <pubDate>${now}</pubDate>
+      <pubDate>${toUtc(place.lastUpdated)}</pubDate>
       <guid>${baseUrl}/${place.city}/${place.category}/${place.slug}</guid>
     </item>`
   })
@@ -30,7 +40,7 @@ export async function GET() {
     <link>${baseUrl}</link>
     <description>ChatGPT, Claude, Gemini에서 추천되는 로컬 업체를 찾아보세요.</description>
     <language>ko</language>
-    <lastBuildDate>${now}</lastBuildDate>
+    <lastBuildDate>${lastBuildDate}</lastBuildDate>
     <atom:link href="${baseUrl}/feed.xml" rel="self" type="application/rss+xml"/>
 ${items.join('\n')}
   </channel>

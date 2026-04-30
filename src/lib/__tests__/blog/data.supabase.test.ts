@@ -183,7 +183,7 @@ describe('getPopularBlogPosts', () => {
 })
 
 describe('getAllActiveBlogPosts (T-010d generateStaticParams)', () => {
-  it('모든 active 글의 라우팅 키 반환 (city/sector/slug)', async () => {
+  it('모든 active 글의 라우팅 키 + updatedAt 반환 (T-259 R5)', async () => {
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue(makeChain({ data: [sampleRow], error: null })),
     })
@@ -194,6 +194,7 @@ describe('getAllActiveBlogPosts (T-010d generateStaticParams)', () => {
       city: 'cheonan',
       sector: 'medical',
       slug: 'cheonan-dermatology-acne',
+      updatedAt: sampleRow.updated_at,
     })
   })
 

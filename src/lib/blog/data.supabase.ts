@@ -120,11 +120,11 @@ export function getPopularBlogPosts(limit: number): Promise<BlogPostSummary[]> {
 }
 
 /**
- * generateStaticParams 용 — 모든 active 글의 라우팅 키 반환.
- * 페이로드 가벼우나 select * 를 그대로 사용 (별도 분기 회피).
+ * generateStaticParams 용 — 모든 active 글의 라우팅 키 + updated_at 반환.
+ * T-259 R5: sitemap freshness 정합 위해 updatedAt 노출. 페이로드 가벼움.
  */
 export async function getAllActiveBlogPosts(): Promise<
-  Array<{ city: string; sector: string; slug: string }>
+  Array<{ city: string; sector: string; slug: string; updatedAt: string }>
 > {
   try {
     const supabase = getReadClient()
@@ -135,7 +135,12 @@ export async function getAllActiveBlogPosts(): Promise<
       error: unknown
     }
     if (error || !data) return []
-    return data.map(r => ({ city: r.city, sector: r.sector, slug: r.slug }))
+    return data.map(r => ({
+      city: r.city,
+      sector: r.sector,
+      slug: r.slug,
+      updatedAt: r.updated_at,
+    }))
   } catch (err) {
     console.error('[blog/data.supabase] getAllActiveBlogPosts failed:', err)
     return []
