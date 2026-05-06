@@ -16,8 +16,11 @@ import {
 // <100ms 안에 동일 결과 반환.
 // T-265: listOwnerBotVisits 도 paths IN (수천) 으로 raw 1.17M 에서 path 인덱스 부재 →
 // 수만 row 스캔으로 수십초 hang. 054 RPC + (path, visited_at) composite 인덱스로 교체.
+// T-269: getOwnerBotSummaryDaily/getOwnerDailyTrendDaily 가 같은 RPC 두 개를 각자 호출하던 중복
+// 발사 제거 — fetchOwnerStatsBundle 1회 후 bundle 을 두 aggregator 에 전달.
 import {
-  getOwnerBotSummaryDaily, getOwnerDailyTrendDaily, listOwnerBotVisitsDaily,
+  fetchOwnerStatsBundle, getOwnerBotSummaryFromBundle, getOwnerDailyTrendFromBundle,
+  listOwnerBotVisitsDaily,
 } from '@/lib/owner/bot-stats-daily'
 import { detectOwnerTodos, type OwnerTodo } from '@/lib/owner/todos'
 import type { FAQ, PlaceImage, ReviewSummary, Service } from '@/lib/types'
@@ -232,16 +235,19 @@ export async function loadOwnerDashboard(
   const placeIds = ownerRows.map((r) => r.id)
   debugTiming.placeIds_count = placeIds.length
 
-  // 2. 병렬 로드 — 모두 daily 사전집계 / RPC 기반 (T-264 + T-265).
-  const [fullPlaces, mentionMap, botSummary, dailyTrend, recentBotVisits, billing, sectorMap] = await Promise.all([
+  // 2. 병렬 로드 — 모두 daily 사전집계 / RPC 기반 (T-264 + T-265 + T-269).
+  // T-269: bot stats bundle 1회 fetch (snapshot RPC + today RPC) → summary / trend 둘에 prop drill.
+  const [fullPlaces, mentionMap, statsBundle, recentBotVisits, billing, sectorMap] = await Promise.all([
     timed('loadFullPlacesForOwner', loadFullPlacesForOwner(placeIds)),
     timed('countMentionsByPlace', countMentionsByPlace(placeIds)),
-    timed('getOwnerBotSummaryDaily', getOwnerBotSummaryDaily(placeIds, trendDays, now)),
-    timed('getOwnerDailyTrendDaily', getOwnerDailyTrendDaily(placeIds, trendDays, now)),
+    timed('fetchOwnerStatsBundle', fetchOwnerStatsBundle(placeIds, trendDays, now)),
     timed('listOwnerBotVisitsDaily', listOwnerBotVisitsDaily(placeIds, 10, trendDays, now)),
     timed('loadBillingState', loadBillingState(user.id, now, user.email)),
     timed('loadSectorMap', loadSectorMap()),
   ])
+  // 동기 aggregate — DB 호출 없음. timing 측정 의미 없으므로 즉시 변환.
+  const botSummary = getOwnerBotSummaryFromBundle(statsBundle, placeIds)
+  const dailyTrend = getOwnerDailyTrendFromBundle(statsBundle)
   debugTiming.TOTAL_loadOwnerDashboard = Date.now() - dashStart
 
   // 3. 각 place 에 대해 AEO 점수 계산.

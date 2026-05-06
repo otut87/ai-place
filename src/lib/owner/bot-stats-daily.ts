@@ -60,7 +60,7 @@ function isDirect(pageType: string): boolean {
 }
 
 // ── DB row 형식 ───────────────────────────────────────────────────────
-interface OwnerDailyRow {
+export interface OwnerDailyRow {
   date: string                     // YYYY-MM-DD (KST)
   place_id: string
   bot_id: string
@@ -69,12 +69,28 @@ interface OwnerDailyRow {
   last_visited_at: string | null
 }
 
-interface OwnerTodayRow {
+export interface OwnerTodayRow {
   place_id: string
   bot_id: string
   page_type: string
   visits: number                   // bigint → number coerce
   last_visited_at: string | null
+}
+
+/** T-269: dashboard-data 가 RPC 1회 호출 후 prop drill 하는 통합 fetch. */
+export interface OwnerStatsRpcBundle {
+  /** 어제까지 사전집계. null = DB 미가용. */
+  snapshot: OwnerDailyRow[] | null
+  /** 오늘 라이브 RPC. */
+  todayRows: OwnerTodayRow[]
+  /** 윈도우 시작/종료 ISO (resolveStatsPeriod 결과). */
+  fromIso: string
+  toIso: string
+  days: number
+  /** 윈도우 시작 KST date key (YYYY-MM-DD) — daily trend 버킷 초기화에 사용. */
+  fromKey: string
+  /** today KST date key — todayRows 가 누적되는 일자. */
+  todayKey: string
 }
 
 // ── snapshot fetch (어제까지 사전집계) — 054 RPC 로 페이지네이션 제거 ─────
@@ -111,6 +127,119 @@ async function fetchOwnerToday(placeIds: string[]): Promise<OwnerTodayRow[]> {
     return []
   }
   return (data ?? []) as OwnerTodayRow[]
+}
+
+// ── 통합 fetch (T-269: 중복 RPC 제거) ──────────────────────────────────
+/**
+ * 어제까지 snapshot + 오늘 라이브 RPC 를 1회씩만 호출. dashboard-data 가 이 결과를
+ * getOwnerBotSummaryFromBundle / getOwnerDailyTrendFromBundle 두 함수에 prop drill 하면
+ * 같은 RPC 가 중복으로 두 번 발사되는 문제 해결.
+ *
+ * placeIds 빈 배열이면 RPC 호출 없이 빈 bundle 반환.
+ */
+export async function fetchOwnerStatsBundle(
+  placeIds: string[],
+  period: StatsPeriodInput = 30,
+  now: Date = new Date(),
+): Promise<OwnerStatsRpcBundle> {
+  const { fromIso, toIso, days } = resolveStatsPeriod(period, now)
+  const todayKey = todayKstKey(now)
+  const fromKey = dateKeyMinusDays(now, days - 1)
+  const yesterdayKey = dateKeyMinusDays(now, 1)
+
+  if (placeIds.length === 0) {
+    return { snapshot: [], todayRows: [], fromIso, toIso, days, fromKey, todayKey }
+  }
+
+  const [snapshot, todayRows] = await Promise.all([
+    fromKey <= yesterdayKey
+      ? fetchOwnerDailySnapshot(placeIds, fromKey, yesterdayKey)
+      : Promise.resolve([]),
+    fetchOwnerToday(placeIds),
+  ])
+
+  return { snapshot, todayRows, fromIso, toIso, days, fromKey, todayKey }
+}
+
+export function getOwnerBotSummaryFromBundle(
+  bundle: OwnerStatsRpcBundle,
+  placeIds: string[],
+): OwnerBotSummary {
+  const empty = (): OwnerBotSummary => ({
+    periodDays: bundle.days,
+    since: bundle.fromIso,
+    until: bundle.toIso,
+    placeIds,
+    aiSearch: emptyBucket(AI_SEARCH_ENGINE_KEYS),
+    aiTraining: emptyBucket(AI_TRAINING_ENGINE_KEYS),
+  })
+
+  if (bundle.snapshot === null) {
+    console.error('[bot-stats-daily] getOwnerBotSummaryFromBundle: snapshot 미가용')
+    return empty()
+  }
+
+  const aiSearch = emptyBucket(AI_SEARCH_ENGINE_KEYS)
+  const aiTraining = emptyBucket(AI_TRAINING_ENGINE_KEYS)
+
+  function accumulate(botId: string, pageType: string, visits: number, lastVisitedAt: string | null) {
+    const group = ID_TO_GROUP.get(botId)
+    if (group !== 'ai-search' && group !== 'ai-training') return
+    const bucket = group === 'ai-search' ? aiSearch : aiTraining
+    const engine = mapBotToEngine(botId, group)
+    bucket.total += visits
+    if (isDirect(pageType)) bucket.direct += visits
+    else bucket.mention += visits
+    bucket.byEngine[engine] = (bucket.byEngine[engine] ?? 0) + visits
+    if (lastVisitedAt && (!bucket.lastVisitAt || lastVisitedAt > bucket.lastVisitAt)) {
+      bucket.lastVisitAt = lastVisitedAt
+    }
+  }
+
+  for (const r of bundle.snapshot) accumulate(r.bot_id, r.page_type, r.visits, r.last_visited_at)
+  for (const r of bundle.todayRows) accumulate(r.bot_id, r.page_type, Number(r.visits), r.last_visited_at)
+
+  return { periodDays: bundle.days, since: bundle.fromIso, until: bundle.toIso, placeIds, aiSearch, aiTraining }
+}
+
+export function getOwnerDailyTrendFromBundle(
+  bundle: OwnerStatsRpcBundle,
+): OwnerDailyTrendRow[] {
+  // 일자 버킷 초기화 — fromKey..todayKey 모든 KST 일자.
+  const buckets = new Map<string, OwnerDailyTrendRow>()
+  let cursor = bundle.fromKey
+  let guard = 400
+  while (guard-- > 0) {
+    if (!buckets.has(cursor)) buckets.set(cursor, makeEmptyTrendRow(cursor))
+    if (cursor >= bundle.todayKey) break
+    // YYYY-MM-DD 다음날
+    const [y, m, d] = cursor.split('-').map((s) => parseInt(s, 10))
+    const next = new Date(Date.UTC(y, m - 1, d + 1))
+    cursor = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')}`
+  }
+
+  if (bundle.snapshot === null) {
+    return Array.from(buckets.values()).sort((a, b) => a.date.localeCompare(b.date))
+  }
+
+  function accumulate(date: string, botId: string, visits: number) {
+    const group = ID_TO_GROUP.get(botId)
+    if (group !== 'ai-search' && group !== 'ai-training') return
+    const bucket = buckets.get(date)
+    if (!bucket) return
+    const engine = mapBotToEngine(botId, group)
+    if (group === 'ai-search') {
+      bucket.aiSearch[engine as AiSearchEngine] = (bucket.aiSearch[engine as AiSearchEngine] ?? 0) + visits
+    } else {
+      bucket.aiTraining[engine as AiTrainingEngine] = (bucket.aiTraining[engine as AiTrainingEngine] ?? 0) + visits
+    }
+    bucket.total += visits
+  }
+
+  for (const r of bundle.snapshot) accumulate(r.date, r.bot_id, r.visits)
+  for (const r of bundle.todayRows) accumulate(bundle.todayKey, r.bot_id, Number(r.visits))
+
+  return Array.from(buckets.values()).sort((a, b) => a.date.localeCompare(b.date))
 }
 
 // ── KST 날짜 헬퍼 ─────────────────────────────────────────────────────

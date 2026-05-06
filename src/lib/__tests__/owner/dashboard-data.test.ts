@@ -21,16 +21,16 @@ vi.mock('@/lib/owner/place-aeo-score', async (importActual) => {
   return { ...actual, scorePlaceAeo: (args: unknown) => mockScoreAeo(args) }
 })
 
-const mockBotSummary = vi.fn()
-const mockDailyTrend = vi.fn()
+const mockBundle = vi.fn()
+const mockBotSummaryFromBundle = vi.fn()
+const mockDailyTrendFromBundle = vi.fn()
 const mockRecentVisits = vi.fn()
 vi.mock('@/lib/owner/bot-stats', () => ({}))
 vi.mock('@/lib/owner/bot-stats-daily', () => ({
-  // T-264: botSummary / dailyTrend 는 053 일별 사전집계 + today RPC.
-  // T-265: listOwnerBotVisits 도 054 RPC 로 교체 — paths IN 큰 배열 + bot_visits.path 인덱스
-  // 부재로 인한 수십초 hang 해소.
-  getOwnerBotSummaryDaily: (...a: unknown[]) => mockBotSummary(...a),
-  getOwnerDailyTrendDaily: (...a: unknown[]) => mockDailyTrend(...a),
+  // T-269: dashboard-data 가 RPC 1회 fetchOwnerStatsBundle + bundle prop drill 두 aggregator.
+  fetchOwnerStatsBundle: (...a: unknown[]) => mockBundle(...a),
+  getOwnerBotSummaryFromBundle: (...a: unknown[]) => mockBotSummaryFromBundle(...a),
+  getOwnerDailyTrendFromBundle: (...a: unknown[]) => mockDailyTrendFromBundle(...a),
   listOwnerBotVisitsDaily: (...a: unknown[]) => mockRecentVisits(...a),
 }))
 
@@ -119,12 +119,16 @@ beforeEach(() => {
     ],
     missingTotal: 15,
   })
-  mockBotSummary.mockReset().mockResolvedValue({
+  mockBundle.mockReset().mockResolvedValue({
+    snapshot: [], todayRows: [], fromIso: '2026-03-22T00:00:00Z', toIso: '2026-04-22T00:00:00Z',
+    days: 30, fromKey: '2026-03-22', todayKey: '2026-04-22',
+  })
+  mockBotSummaryFromBundle.mockReset().mockReturnValue({
     periodDays: 30, since: '2026-03-22T00:00:00Z', placeIds: [],
     aiSearch: { total: 0, direct: 0, mention: 0, byEngine: {}, lastVisitAt: null },
     aiTraining: { total: 0, direct: 0, mention: 0, byEngine: {}, lastVisitAt: null },
   })
-  mockDailyTrend.mockReset().mockResolvedValue([])
+  mockDailyTrendFromBundle.mockReset().mockReturnValue([])
   mockRecentVisits.mockReset().mockResolvedValue([])
   mockDetectTodos.mockReset().mockReturnValue([])
   mockGetWindow.mockReset().mockReturnValue({ state: 'measuring', daysSinceSignup: 5 })
@@ -234,8 +238,8 @@ describe('loadOwnerDashboard', () => {
     const { loadOwnerDashboard } = await import('@/lib/owner/dashboard-data')
     const d = await loadOwnerDashboard(new Date(), { trendDays: 7 })
     expect(d.trendDays).toBe(7)
-    // T-264: bot-stats-daily 의 *Daily 함수는 pathMap 인자 없음 (SQL-side 매핑).
-    expect(mockBotSummary).toHaveBeenCalledWith([], 7, expect.any(Date))
+    // T-269: bundle fetch 가 trendDays 인자로 호출됨.
+    expect(mockBundle).toHaveBeenCalledWith([], 7, expect.any(Date))
   })
 
   it('places 조회 에러 → fullPlaces 빈 map (AEO 는 기본 입력으로 계산)', async () => {
