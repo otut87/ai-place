@@ -9,6 +9,7 @@ import { hasActiveBillingKey } from '@/lib/actions/owner-billing'
 import { listOwnerPlaces } from '@/lib/actions/owner-places'
 import {
   getOwnerBotSummary, getOwnerDailyTrend, getOwnerByPathSummary, listOwnerBotVisits,
+  fetchOwnerPathMap,
 } from '@/lib/owner/bot-stats'
 import { resolveOwnerPagePeriod } from '@/lib/owner/period-parser'
 import { composePageTitle } from '@/lib/seo/compose-title'
@@ -85,11 +86,13 @@ export default async function OwnerCitationsPage({ searchParams }: Params) {
     ? period.days
     : { from: period.from, to: period.to }
 
+  // Phase 1 / A3: pathMap 1회 fetch 후 4개 통계 함수에 prop drill (기존 4회 중복 제거).
+  const pathMap = await fetchOwnerPathMap(placeIds)
   const [summary, dailyTrend, byPath, recent, aeoSnapshots] = await Promise.all([
-    getOwnerBotSummary(placeIds, statsInput, now),
-    getOwnerDailyTrend(placeIds, statsInput, now),
-    getOwnerByPathSummary(placeIds, statsInput, now),
-    listOwnerBotVisits(placeIds, 30, statsInput, now),
+    getOwnerBotSummary(placeIds, statsInput, now, pathMap),
+    getOwnerDailyTrend(placeIds, statsInput, now, pathMap),
+    getOwnerByPathSummary(placeIds, statsInput, now, pathMap),
+    listOwnerBotVisits(placeIds, 30, statsInput, now, pathMap),
     loadAeoSnapshotsForPlaces(placeIds),
   ])
 

@@ -9,6 +9,7 @@ import { getMeasurementWindow, type MeasurementWindow } from '@/lib/owner/measur
 import { countMentionsByPlace } from '@/lib/owner/place-mentions'
 import {
   getOwnerBotSummary, getOwnerDailyTrend, listOwnerBotVisits,
+  fetchOwnerPathMap,
   type OwnerBotSummary, type OwnerDailyTrendRow, type OwnerBotVisit,
 } from '@/lib/owner/bot-stats'
 import { detectOwnerTodos, type OwnerTodo } from '@/lib/owner/todos'
@@ -189,12 +190,14 @@ export async function loadOwnerDashboard(
   const placeIds = ownerRows.map((r) => r.id)
 
   // 2. 병렬 로드
+  // Phase 1 / A3: pathMap 1회 fetch 후 3개 통계 함수에 prop drill (기존 3회 중복 제거).
+  const pathMap = await fetchOwnerPathMap(placeIds)
   const [fullPlaces, mentionMap, botSummary, dailyTrend, recentBotVisits, billing, sectorMap] = await Promise.all([
     loadFullPlacesForOwner(placeIds),
     countMentionsByPlace(placeIds),
-    getOwnerBotSummary(placeIds, trendDays, now),
-    getOwnerDailyTrend(placeIds, trendDays, now),
-    listOwnerBotVisits(placeIds, 10, trendDays, now),
+    getOwnerBotSummary(placeIds, trendDays, now, pathMap),
+    getOwnerDailyTrend(placeIds, trendDays, now, pathMap),
+    listOwnerBotVisits(placeIds, 10, trendDays, now, pathMap),
     loadBillingState(user.id, now),
     loadSectorMap(),
   ])

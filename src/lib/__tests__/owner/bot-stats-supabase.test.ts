@@ -23,30 +23,38 @@ function makeAdmin() {
   return {
     from(table: string) {
       if (table === 'place_mentions') {
+        // Phase 1 / A3: paginatePlaceMentions 가 .in().range() 체인 사용. .range() 지원 추가.
+        const pmRange = (from: number, to: number) =>
+          state.mentionsError
+            ? chainReturn(null, state.mentionsError)
+            : chainReturn(state.mentions.slice(from, to + 1))
         return {
           select: () => ({
-            in: () => state.mentionsError
-              ? chainReturn(null, state.mentionsError)
-              : chainReturn(state.mentions),
+            in: () => ({
+              range: pmRange,
+            }),
           }),
         }
       }
       if (table === 'bot_visits') {
-        const leaf = state.visitsError
-          ? chainReturn(null, state.visitsError)
-          : {
-              // getOwnerByPathSummary / getOwnerDailyTrend / getOwnerBotSummary 는 .in().gte().lt() 까지만
-              then: (onFulfilled: (v: { data: unknown; error: unknown }) => unknown) =>
-                onFulfilled({ data: state.visits, error: null }),
-              // listOwnerBotVisits 는 .order().limit()
-              order: () => ({
-                limit: () => chainReturn(state.visits),
-              }),
-            }
+        // Phase 1 / A3: paginateBotVisitsByPath 가 .in().gte().lt().range() 체인 사용.
+        //   - getOwnerBotSummary / getOwnerDailyTrend / getOwnerByPathSummary 는 .range() 호출
+        //   - listOwnerBotVisits 는 .order().limit() 호출 (paginate 안 함)
+        const leaf = {
+          order: () => ({
+            limit: () =>
+              state.visitsError
+                ? chainReturn(null, state.visitsError)
+                : chainReturn(state.visits),
+          }),
+          range: (from: number, to: number) =>
+            state.visitsError
+              ? chainReturn(null, state.visitsError)
+              : chainReturn(state.visits.slice(from, to + 1)),
+        }
         return {
           select: () => ({
             in: () => ({
-              // T-209: .gte().lt() 체인 추가 (period 명시적 from/to)
               gte: () => ({ lt: () => leaf }),
             }),
           }),
@@ -293,5 +301,47 @@ describe('listOwnerBotVisits', () => {
     vi.mocked(mod.getAdminClient).mockReturnValueOnce(makeAdmin() as never).mockReturnValueOnce(null as never)
     const { listOwnerBotVisits } = await import('@/lib/owner/bot-stats')
     expect(await listOwnerBotVisits(['p-1'])).toEqual([])
+  })
+})
+
+// ── Phase 1 / A3: paginate 1000-row cap 정합성 검증 ───────────────────
+describe('paginateBotVisitsByPath (1000-row cap 정합화)', () => {
+  it('1500 visits 도 누락 없이 모두 집계', async () => {
+    state.mentions = [{ page_path: '/a', page_type: 'place', place_id: 'p-1' }]
+    state.visits = Array.from({ length: 1500 }, (_, i) => ({
+      id: i,
+      bot_id: 'chatgpt-user',
+      path: '/a',
+      visited_at: `2026-04-${String(20 + (i % 10)).padStart(2, '0')}T10:00:00Z`,
+    }))
+    const { getOwnerBotSummary } = await import('@/lib/owner/bot-stats')
+    const s = await getOwnerBotSummary(['p-1'], 30, new Date('2026-04-30T00:00:00Z'))
+    // 1000-row cap 회피 검증: 1500건 모두 집계되어야 함
+    expect(s.aiSearch.total).toBe(1500)
+    expect(s.aiSearch.byEngine.chatgpt).toBe(1500)
+  })
+})
+
+// ── Phase 1 / A3: pathMap prop drill 검증 ──────────────────────────────
+describe('fetchOwnerPathMap + prop drill', () => {
+  it('pathMap 인자 전달 시 내부 fetch 생략 (place_mentions 0회 호출)', async () => {
+    state.mentions = [{ page_path: '/a', page_type: 'place', place_id: 'p-1' }]
+    state.visits = [
+      { id: 1, bot_id: 'chatgpt-user', path: '/a', visited_at: '2026-04-20T10:00:00Z' },
+    ]
+    const { getOwnerBotSummary, fetchOwnerPathMap } = await import('@/lib/owner/bot-stats')
+
+    const mentionsBefore = state.mentions.length
+    const sharedMap = await fetchOwnerPathMap(['p-1'])
+    expect(sharedMap.size).toBe(1)
+
+    // 호출 직전에 mentions 비우기 — pathMap 이 prop 으로 전달되면
+    // getOwnerBotSummary 내부에서 place_mentions 재조회 안 해야 함.
+    state.mentions = []
+    const s = await getOwnerBotSummary(['p-1'], 30, new Date('2026-04-22T00:00:00Z'), sharedMap)
+    expect(s.aiSearch.total).toBe(1)
+
+    // 복구
+    state.mentions = Array.from({ length: mentionsBefore })
   })
 })

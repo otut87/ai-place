@@ -24,10 +24,13 @@ vi.mock('@/lib/owner/place-aeo-score', async (importActual) => {
 const mockBotSummary = vi.fn()
 const mockDailyTrend = vi.fn()
 const mockRecentVisits = vi.fn()
+const mockFetchPathMap = vi.fn(async (..._a: unknown[]) => new Map())
 vi.mock('@/lib/owner/bot-stats', () => ({
   getOwnerBotSummary: (...a: unknown[]) => mockBotSummary(...a),
   getOwnerDailyTrend: (...a: unknown[]) => mockDailyTrend(...a),
   listOwnerBotVisits: (...a: unknown[]) => mockRecentVisits(...a),
+  // Phase 1 / A3: dashboard-data.ts 가 fetchOwnerPathMap 1회 호출 후 prop drill
+  fetchOwnerPathMap: (...a: unknown[]) => mockFetchPathMap(...a),
 }))
 
 const mockDetectTodos = vi.fn()
@@ -230,7 +233,8 @@ describe('loadOwnerDashboard', () => {
     const { loadOwnerDashboard } = await import('@/lib/owner/dashboard-data')
     const d = await loadOwnerDashboard(new Date(), { trendDays: 7 })
     expect(d.trendDays).toBe(7)
-    expect(mockBotSummary).toHaveBeenCalledWith([], 7, expect.any(Date))
+    // Phase 1 / A3: 4번째 인자로 pathMap (Map) prop drill 추가
+    expect(mockBotSummary).toHaveBeenCalledWith([], 7, expect.any(Date), expect.any(Map))
   })
 
   it('places 조회 에러 → fullPlaces 빈 map (AEO 는 기본 입력으로 계산)', async () => {

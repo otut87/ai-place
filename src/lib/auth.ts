@@ -3,17 +3,24 @@
 //
 // T-259: ADMIN_EMAILS 는 src/lib/auth/admin-emails.ts (edge-runtime safe) 의 단일 source.
 // middleware 도 동일 모듈에서 import 하므로 두 곳 동기화 필요 없음.
+//
+// Phase 1 / A1 (2026-05-06): React cache() 로 같은 request 내 다중 호출이 1회의
+// Supabase Auth round-trip 으로 통합됨. 기존엔 middleware → layout → page 3중
+// 호출로 admin 페이지마다 600~900ms 추가 지연 발생.
+// 패턴 출처: Next.js 16 공식 authentication 가이드 (DAL verifySession).
 
+import { cache } from 'react'
 import { createServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { isAdminEmail } from '@/lib/auth/admin-emails'
 
-/** 현재 세션의 유저를 반환. 미인증 시 null. */
-export async function getUser() {
+/** 현재 세션의 유저를 반환. 미인증 시 null.
+ *  React cache() 로 같은 render pass 내 호출 횟수 무관하게 1회만 실제 Supabase Auth 호출. */
+export const getUser = cache(async () => {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user
-}
+})
 
 /** 인증 필수 + admin role 확인. 미인증/비admin 시 /admin/login으로 리다이렉트. */
 export async function requireAuth() {

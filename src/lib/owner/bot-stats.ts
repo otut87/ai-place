@@ -174,27 +174,83 @@ export function aggregateOwnerBotSummary(
 
 // ── Supabase 조회 래퍼 ────────────────────────────────────────────────────
 /**
+ * Phase 1 / A3 — 오너 측 path map 타입 단일화. 페이지 레벨에서 1회 fetch 후
+ * 4개 통계 함수에 prop drill 하면 같은 데이터 4회 중복 fetch 방지.
+ */
+export type OwnerPathMap = Map<string, { pageType: MentionType; placeIds: string[] }>
+
+/**
+ * Phase 1 / A3 — PostgREST 1000-row cap 우회용 페이지네이션. admin/bot-visits 의 패턴과 동일.
+ * 첫 페이지 error/null 이면 null 반환 (caller 가 "DB 미가용" 신호로 처리),
+ * 정상 + 0행이면 빈 배열 반환.
+ */
+async function paginatePlaceMentions(
+  admin: ReturnType<typeof getAdminClient>,
+  placeIds: string[],
+): Promise<Array<{ page_path: string; page_type: MentionType; place_id: string }> | null> {
+  if (!admin) return null
+  const PAGE = 1000, MAX = 100_000
+  const out: Array<{ page_path: string; page_type: MentionType; place_id: string }> = []
+  for (let from = 0; from < MAX; from += PAGE) {
+    const { data, error } = await admin
+      .from('place_mentions')
+      .select('page_path, page_type, place_id')
+      .in('place_id', placeIds)
+      .range(from, from + PAGE - 1)
+    if (from === 0 && (error || !data)) return null
+    if (error || !data) break
+    out.push(...(data as Array<{ page_path: string; page_type: MentionType; place_id: string }>))
+    if (data.length < PAGE) break
+  }
+  return out
+}
+
+async function paginateBotVisitsByPath<T>(
+  admin: ReturnType<typeof getAdminClient>,
+  cols: string,
+  paths: string[],
+  fromIso: string,
+  toIso: string,
+): Promise<T[] | null> {
+  if (!admin) return null
+  const PAGE = 1000, MAX = 100_000
+  const out: T[] = []
+  for (let from = 0; from < MAX; from += PAGE) {
+    const { data, error } = await admin
+      .from('bot_visits')
+      .select(cols)
+      .in('path', paths)
+      .gte('visited_at', fromIso)
+      .lt('visited_at', toIso)
+      .range(from, from + PAGE - 1)
+    if (from === 0 && (error || !data)) return null
+    if (error || !data) break
+    out.push(...(data as T[]))
+    if (data.length < PAGE) break
+  }
+  return out
+}
+
+/**
  * 오너 업체에 귀속된 page_path → (page_type, place_id[]) 맵을 조회.
  * 동일 page_path 가 여러 place 에 귀속될 수 있어 place_id[] 로 보관.
+ *
+ * Phase 1 / A3: export + paginate 적용. 페이지 레벨에서 1회 fetch 후 prop drill 하면
+ * 4개 통계 함수가 중복 호출하지 않음.
  */
-async function fetchPathMap(placeIds: string[]): Promise<Map<string, { pageType: MentionType; placeIds: string[] }>> {
-  const map = new Map<string, { pageType: MentionType; placeIds: string[] }>()
+export async function fetchOwnerPathMap(placeIds: string[]): Promise<OwnerPathMap> {
+  const map: OwnerPathMap = new Map()
   if (placeIds.length === 0) return map
 
   const admin = getAdminClient()
   if (!admin) return map
 
-  const { data, error } = await admin
-    .from('place_mentions')
-    .select('page_path, page_type, place_id')
-    .in('place_id', placeIds)
-
-  if (error) {
-    console.error('[bot-stats] place_mentions 조회 실패:', error.message)
+  const rows = await paginatePlaceMentions(admin, placeIds)
+  if (rows === null) {
+    console.error('[bot-stats] place_mentions 조회 실패 (DB 미가용)')
     return map
   }
 
-  const rows = (data ?? []) as Array<{ page_path: string; page_type: MentionType; place_id: string }>
   for (const r of rows) {
     const existing = map.get(r.page_path)
     if (existing) {
@@ -210,6 +266,8 @@ export async function getOwnerBotSummary(
   placeIds: string[],
   period: StatsPeriodInput = 30,
   now: Date = new Date(),
+  /** Phase 1 / A3: 페이지 레벨에서 fetchOwnerPathMap() 1회 호출 후 prop drill. 미전달 시 내부 fetch. */
+  pathMap?: OwnerPathMap,
 ): Promise<OwnerBotSummary> {
   const { fromIso, toIso, days } = resolveStatsPeriod(period, now)
   const empty = (): OwnerBotSummary => ({
@@ -222,26 +280,23 @@ export async function getOwnerBotSummary(
   })
 
   if (placeIds.length === 0) return empty()
-  const pathMap = await fetchPathMap(placeIds)
-  if (pathMap.size === 0) return empty()
+  const map = pathMap ?? await fetchOwnerPathMap(placeIds)
+  if (map.size === 0) return empty()
   const admin = getAdminClient()
   if (!admin) return empty()
 
-  const paths = Array.from(pathMap.keys())
-  const { data, error } = await admin
-    .from('bot_visits')
-    .select('bot_id, path, visited_at')
-    .in('path', paths)
-    .gte('visited_at', fromIso)
-    .lt('visited_at', toIso)
-  if (error) {
-    console.error('[bot-stats] bot_visits 조회 실패:', error.message)
+  const paths = Array.from(map.keys())
+  const rows = await paginateBotVisitsByPath<{ bot_id: string; path: string; visited_at: string }>(
+    admin, 'bot_id, path, visited_at', paths, fromIso, toIso,
+  )
+  if (rows === null) {
+    console.error('[bot-stats] bot_visits 조회 실패 (DB 미가용)')
     return empty()
   }
 
   const annotated: AnnotatedVisit[] = []
-  for (const row of (data ?? []) as Array<{ bot_id: string; path: string; visited_at: string }>) {
-    const info = pathMap.get(row.path)
+  for (const row of rows) {
+    const info = map.get(row.path)
     if (!info) continue
     annotated.push({ botId: row.bot_id, pageType: info.pageType, visitedAt: row.visited_at })
   }
@@ -359,32 +414,31 @@ export async function getOwnerDailyTrend(
   placeIds: string[],
   period: StatsPeriodInput = 30,
   now: Date = new Date(),
+  /** Phase 1 / A3: 페이지 레벨에서 fetchOwnerPathMap() 1회 호출 후 prop drill. */
+  pathMap?: OwnerPathMap,
 ): Promise<OwnerDailyTrendRow[]> {
   if (placeIds.length === 0) return aggregateOwnerDailyTrend([], period, now)
 
-  const pathMap = await fetchPathMap(placeIds)
-  if (pathMap.size === 0) return aggregateOwnerDailyTrend([], period, now)
+  const map = pathMap ?? await fetchOwnerPathMap(placeIds)
+  if (map.size === 0) return aggregateOwnerDailyTrend([], period, now)
 
   const admin = getAdminClient()
   if (!admin) return aggregateOwnerDailyTrend([], period, now)
 
   const { fromIso, toIso } = resolveStatsPeriod(period, now)
-  const paths = Array.from(pathMap.keys())
+  const paths = Array.from(map.keys())
 
-  const { data, error } = await admin
-    .from('bot_visits')
-    .select('bot_id, path, visited_at')
-    .in('path', paths)
-    .gte('visited_at', fromIso)
-    .lt('visited_at', toIso)
-  if (error) {
-    console.error('[bot-stats] getOwnerDailyTrend 실패:', error.message)
+  const rows = await paginateBotVisitsByPath<{ bot_id: string; path: string; visited_at: string }>(
+    admin, 'bot_id, path, visited_at', paths, fromIso, toIso,
+  )
+  if (rows === null) {
+    console.error('[bot-stats] getOwnerDailyTrend 실패 (DB 미가용)')
     return aggregateOwnerDailyTrend([], period, now)
   }
 
   const annotated: AnnotatedVisit[] = []
-  for (const row of (data ?? []) as Array<{ bot_id: string; path: string; visited_at: string }>) {
-    const info = pathMap.get(row.path)
+  for (const row of rows) {
+    const info = map.get(row.path)
     if (!info) continue
     annotated.push({ botId: row.bot_id, pageType: info.pageType, visitedAt: row.visited_at })
   }
@@ -412,33 +466,32 @@ export async function getOwnerByPathSummary(
   placeIds: string[],
   period: StatsPeriodInput = 90,
   now: Date = new Date(),
+  /** Phase 1 / A3: 페이지 레벨에서 fetchOwnerPathMap() 1회 호출 후 prop drill. */
+  pathMap?: OwnerPathMap,
 ): Promise<OwnerPathSummaryRow[]> {
   if (placeIds.length === 0) return []
-  const pathMap = await fetchPathMap(placeIds)
-  if (pathMap.size === 0) return []
+  const map = pathMap ?? await fetchOwnerPathMap(placeIds)
+  if (map.size === 0) return []
 
   const admin = getAdminClient()
   if (!admin) return []
 
   const { fromIso, toIso } = resolveStatsPeriod(period, now)
-  const paths = Array.from(pathMap.keys())
+  const paths = Array.from(map.keys())
 
-  const { data, error } = await admin
-    .from('bot_visits')
-    .select('bot_id, path, visited_at')
-    .in('path', paths)
-    .gte('visited_at', fromIso)
-    .lt('visited_at', toIso)
-  if (error) {
-    console.error('[bot-stats] getOwnerByPathSummary 실패:', error.message)
+  const rows = await paginateBotVisitsByPath<{ bot_id: string; path: string; visited_at: string }>(
+    admin, 'bot_id, path, visited_at', paths, fromIso, toIso,
+  )
+  if (rows === null) {
+    console.error('[bot-stats] getOwnerByPathSummary 실패 (DB 미가용)')
     return []
   }
 
   const acc = new Map<string, OwnerPathSummaryRow>()
-  for (const row of (data ?? []) as Array<{ bot_id: string; path: string; visited_at: string }>) {
+  for (const row of rows) {
     const group = ID_TO_GROUP.get(row.bot_id)
     if (group !== 'ai-search' && group !== 'ai-training') continue
-    const info = pathMap.get(row.path)
+    const info = map.get(row.path)
     if (!info) continue
 
     let bucket = acc.get(row.path)
@@ -471,22 +524,28 @@ export async function getOwnerByPathSummary(
   return Array.from(acc.values()).sort((a, b) => b.total - a.total)
 }
 
-/** Sprint D-2 용 — 최근 N건 AI 봇 방문 이력. ai-search/ai-training 그룹만. */
+/** Sprint D-2 용 — 최근 N건 AI 봇 방문 이력. ai-search/ai-training 그룹만.
+ *
+ *  이 함수는 `.order().limit()` 으로 최신 N건 + 여유분만 가져오므로 paginate 불필요.
+ *  PostgREST 1000-row cap 도 limit 가 그보다 작아서 영향 없음.
+ */
 export async function listOwnerBotVisits(
   placeIds: string[],
   limit = 10,
   period: StatsPeriodInput = 30,
   now: Date = new Date(),
+  /** Phase 1 / A3: 페이지 레벨에서 fetchOwnerPathMap() 1회 호출 후 prop drill. */
+  pathMap?: OwnerPathMap,
 ): Promise<OwnerBotVisit[]> {
   if (placeIds.length === 0) return []
-  const pathMap = await fetchPathMap(placeIds)
-  if (pathMap.size === 0) return []
+  const map = pathMap ?? await fetchOwnerPathMap(placeIds)
+  if (map.size === 0) return []
 
   const admin = getAdminClient()
   if (!admin) return []
 
   const { fromIso, toIso } = resolveStatsPeriod(period, now)
-  const paths = Array.from(pathMap.keys())
+  const paths = Array.from(map.keys())
 
   const { data } = await admin
     .from('bot_visits')
@@ -501,7 +560,7 @@ export async function listOwnerBotVisits(
   for (const row of (data ?? []) as Array<{ id: number; bot_id: string; path: string; visited_at: string }>) {
     const group = ID_TO_GROUP.get(row.bot_id)
     if (group !== 'ai-search' && group !== 'ai-training') continue
-    const info = pathMap.get(row.path)
+    const info = map.get(row.path)
     if (!info) continue
     out.push({
       id: row.id,
