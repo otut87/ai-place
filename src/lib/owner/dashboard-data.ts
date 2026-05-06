@@ -8,15 +8,15 @@ import { scorePlaceAeo, type AeoGrade, type AeoRuleResult } from '@/lib/owner/pl
 import { getMeasurementWindow, type MeasurementWindow } from '@/lib/owner/measurement-window'
 import { countMentionsByPlace } from '@/lib/owner/place-mentions'
 import {
-  listOwnerBotVisits,
-  fetchOwnerPathMap,
   type OwnerBotSummary, type OwnerDailyTrendRow, type OwnerBotVisit,
 } from '@/lib/owner/bot-stats'
 // T-264: getOwnerBotSummary / getOwnerDailyTrend 는 raw bot_visits 5중 페이지네이션 →
 // 1.17M rows 위에서 5+ 라운드트립으로 hang. *Daily 버전이 053 사전집계 + today RPC 로
-// <100ms 안에 동일 결과 반환. listOwnerBotVisits 는 .order().limit() 이라 빠르므로 유지.
+// <100ms 안에 동일 결과 반환.
+// T-265: listOwnerBotVisits 도 paths IN (수천) 으로 raw 1.17M 에서 path 인덱스 부재 →
+// 수만 row 스캔으로 수십초 hang. 054 RPC + (path, visited_at) composite 인덱스로 교체.
 import {
-  getOwnerBotSummaryDaily, getOwnerDailyTrendDaily,
+  getOwnerBotSummaryDaily, getOwnerDailyTrendDaily, listOwnerBotVisitsDaily,
 } from '@/lib/owner/bot-stats-daily'
 import { detectOwnerTodos, type OwnerTodo } from '@/lib/owner/todos'
 import type { FAQ, PlaceImage, ReviewSummary, Service } from '@/lib/types'
@@ -195,17 +195,15 @@ export async function loadOwnerDashboard(
   const ownerRows = await listOwnerPlaces()
   const placeIds = ownerRows.map((r) => r.id)
 
-  // 2. 병렬 로드
-  // T-264: botSummary / dailyTrend 는 053 일별 사전집계 reader 로 교체 — bot_visits 1.17M
-  // 페이지네이션 5+ 라운드트립 hang 해소. listOwnerBotVisits 는 raw .order().limit() 이라
-  // 빠르므로 유지하고, 그 함수만 fetchOwnerPathMap 에 의존.
-  const pathMap = await fetchOwnerPathMap(placeIds)
+  // 2. 병렬 로드 — 모두 daily 사전집계 / RPC 기반 (T-264 + T-265).
+  // 기존 fetchOwnerPathMap 사전 호출은 listOwnerBotVisits 가 paths IN 으로 raw bot_visits 를
+  // 두드릴 때 prop drill 용이었음. 054 RPC 로 server-side INNER JOIN 처리 후 불필요.
   const [fullPlaces, mentionMap, botSummary, dailyTrend, recentBotVisits, billing, sectorMap] = await Promise.all([
     loadFullPlacesForOwner(placeIds),
     countMentionsByPlace(placeIds),
     getOwnerBotSummaryDaily(placeIds, trendDays, now),
     getOwnerDailyTrendDaily(placeIds, trendDays, now),
-    listOwnerBotVisits(placeIds, 10, trendDays, now, pathMap),
+    listOwnerBotVisitsDaily(placeIds, 10, trendDays, now),
     loadBillingState(user.id, now),
     loadSectorMap(),
   ])

@@ -8,15 +8,21 @@
 // 5중 페이지네이션이라 1.17M rows 위에서 5+ 라운드트립. 본 모듈로 점진 교체.
 
 import { getAdminClient } from '@/lib/supabase/admin-client'
+import { AI_BOT_PATTERNS, type BotGroup } from '@/lib/seo/bot-detection'
 import {
   AI_SEARCH_ENGINE_KEYS, AI_TRAINING_ENGINE_KEYS,
   ID_TO_GROUP, mapBotToEngine,
   type AiSearchEngine, type AiTrainingEngine,
+  type Attribution,
+  type MentionType,
   type OwnerBotBucket, type OwnerBotSummary,
+  type OwnerBotVisit,
   type OwnerDailyTrendRow,
   type StatsPeriodInput,
   resolveStatsPeriod,
 } from '@/lib/owner/bot-stats'
+
+const ID_TO_LABEL_LOCAL = new Map(AI_BOT_PATTERNS.map((p) => [p.id, p.label]))
 
 // ── 공용 헬퍼 ─────────────────────────────────────────────────────────
 function emptyBucket(engineKeys: readonly string[]): OwnerBotBucket {
@@ -71,7 +77,10 @@ interface OwnerTodayRow {
   last_visited_at: string | null
 }
 
-// ── 페이지네이션 fetch (어제까지 사전집계) ────────────────────────────
+// ── snapshot fetch (어제까지 사전집계) — 054 RPC 로 페이지네이션 제거 ─────
+// 기존 PostgREST .range() 페이지네이션은 1000-row cap 때문에 owner 의 daily_owner row 수만큼
+// 라운드트립 (5 places × 27 bots × 5 pageType × 30일 = 20K rows → 21회). RPC 는 max_rows 영향
+// 없어 한 번에 모든 row 반환.
 async function fetchOwnerDailySnapshot(
   placeIds: string[],
   fromDate: string,                // YYYY-MM-DD
@@ -81,23 +90,16 @@ async function fetchOwnerDailySnapshot(
   if (!admin) return null
   if (placeIds.length === 0) return []
 
-  const PAGE = 1000
-  const MAX = 200_000
-  const out: OwnerDailyRow[] = []
-  for (let from = 0; from < MAX; from += PAGE) {
-    const { data, error } = await admin
-      .from('bot_visits_daily_owner')
-      .select('date, place_id, bot_id, page_type, visits, last_visited_at')
-      .in('place_id', placeIds)
-      .gte('date', fromDate)
-      .lte('date', toDate)
-      .range(from, from + PAGE - 1)
-    if (from === 0 && (error || !data)) return null
-    if (error || !data) break
-    out.push(...(data as OwnerDailyRow[]))
-    if (data.length < PAGE) break
+  const { data, error } = await admin.rpc('owner_bot_visits_daily_select', {
+    p_place_ids: placeIds,
+    p_from_date: fromDate,
+    p_to_date: toDate,
+  })
+  if (error) {
+    console.error('[bot-stats-daily] owner_bot_visits_daily_select RPC 실패:', error.message)
+    return null
   }
-  return out
+  return (data ?? []) as OwnerDailyRow[]
 }
 
 async function fetchOwnerToday(placeIds: string[]): Promise<OwnerTodayRow[]> {
@@ -239,4 +241,83 @@ export async function getOwnerDailyTrendDaily(
   for (const r of todayRows) accumulate(todayKey, r.bot_id, Number(r.visits))
 
   return Array.from(buckets.values()).sort((a, b) => a.date.localeCompare(b.date))
+}
+
+// ── 최근 N건 봇 방문 (RPC 기반 — paths IN 큰 배열 회피) ───────────────
+/**
+ * T-265: 054 RPC `owner_recent_bot_visits` 로 server-side INNER JOIN. 기존
+ * lib/owner/bot-stats.ts:listOwnerBotVisits 는 paths IN (수천) 으로 raw 1.17M 위에서
+ * bot_visits.path 인덱스 부재 → 수만 row 스캔. RPC 는 (path, visited_at) composite
+ * 인덱스 활용 + 큰 IN 배열 SQL 전송 비용 회피.
+ */
+interface RecentVisitRpcRow {
+  id: number
+  bot_id: string
+  path: string
+  visited_at: string
+  page_type: string
+  place_id: string
+}
+
+export async function listOwnerBotVisitsDaily(
+  placeIds: string[],
+  limit = 10,
+  period: StatsPeriodInput = 30,
+  now: Date = new Date(),
+): Promise<OwnerBotVisit[]> {
+  if (placeIds.length === 0) return []
+  const admin = getAdminClient()
+  if (!admin) return []
+
+  const { fromIso, toIso } = resolveStatsPeriod(period, now)
+
+  const { data, error } = await admin.rpc('owner_recent_bot_visits', {
+    p_place_ids: placeIds,
+    p_limit: limit * 3,             // AI 그룹 필터링 여유분.
+    p_from: fromIso,
+    p_to: toIso,
+  })
+  if (error) {
+    console.error('[bot-stats-daily] owner_recent_bot_visits RPC 실패:', error.message)
+    return []
+  }
+
+  // RPC 가 한 path → N place 매핑 시 row fan-out → id 로 dedup + path 별 placeIds 병합.
+  const placesByPath = new Map<string, string[]>()
+  const pageTypeByPath = new Map<string, string>()
+  for (const row of (data ?? []) as RecentVisitRpcRow[]) {
+    const arr = placesByPath.get(row.path) ?? []
+    if (!arr.includes(row.place_id)) arr.push(row.place_id)
+    placesByPath.set(row.path, arr)
+    pageTypeByPath.set(row.path, row.page_type)
+  }
+
+  const out: OwnerBotVisit[] = []
+  const seenIds = new Set<number>()
+  for (const row of (data ?? []) as RecentVisitRpcRow[]) {
+    if (seenIds.has(row.id)) continue
+    seenIds.add(row.id)
+    const group: BotGroup | undefined = ID_TO_GROUP.get(row.bot_id)
+    if (group !== 'ai-search' && group !== 'ai-training') continue
+
+    const dbType = pageTypeByPath.get(row.path) ?? 'place'
+    // DB enum: 'detail' (places.status='active' fan-out) | 'place' (legacy) | 'blog' | 'compare' | 'guide' | 'keyword'.
+    // OwnerBotVisit.pageType 은 'place' | 'blog' | 'compare' | 'guide' | 'keyword' — 'detail' 는 'place' 와 의미 동일.
+    const pageType: MentionType = dbType === 'detail' ? 'place' : (dbType as MentionType)
+    const attribution: Attribution = pageType === 'place' ? 'direct' : 'mention'
+
+    out.push({
+      id: row.id,
+      botId: row.bot_id,
+      botLabel: ID_TO_LABEL_LOCAL.get(row.bot_id) ?? row.bot_id,
+      group,
+      path: row.path,
+      pageType,
+      attribution,
+      visitedAt: row.visited_at,
+      placeIds: placesByPath.get(row.path) ?? [],
+    })
+    if (out.length >= limit) break
+  }
+  return out
 }

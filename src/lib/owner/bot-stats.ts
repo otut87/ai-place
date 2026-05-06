@@ -529,6 +529,10 @@ export async function getOwnerByPathSummary(
  *
  *  이 함수는 `.order().limit()` 으로 최신 N건 + 여유분만 가져오므로 paginate 불필요.
  *  PostgREST 1000-row cap 도 limit 가 그보다 작아서 영향 없음.
+ *
+ *  T-265: dashboard-data 는 paths IN 큰 배열 비효율 회피 위해 lib/owner/bot-stats-daily 의
+ *  listOwnerBotVisitsDaily(054 RPC 사용) 를 쓰도록 교체됨. 본 함수는 owner/citations 등
+ *  pathMap 이 작은 caller 와 기존 테스트 호환성 위해 유지.
  */
 export async function listOwnerBotVisits(
   placeIds: string[],

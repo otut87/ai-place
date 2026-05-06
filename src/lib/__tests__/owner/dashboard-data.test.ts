@@ -24,16 +24,14 @@ vi.mock('@/lib/owner/place-aeo-score', async (importActual) => {
 const mockBotSummary = vi.fn()
 const mockDailyTrend = vi.fn()
 const mockRecentVisits = vi.fn()
-const mockFetchPathMap = vi.fn(async (..._a: unknown[]) => new Map())
-vi.mock('@/lib/owner/bot-stats', () => ({
-  listOwnerBotVisits: (...a: unknown[]) => mockRecentVisits(...a),
-  // T-264: dashboard-data.ts 가 fetchOwnerPathMap 1회 호출 후 listOwnerBotVisits 에만 prop drill.
-  // botSummary / dailyTrend 는 053 일별 사전집계(bot-stats-daily) 가 path 매핑 SQL-side 처리.
-  fetchOwnerPathMap: (...a: unknown[]) => mockFetchPathMap(...a),
-}))
+vi.mock('@/lib/owner/bot-stats', () => ({}))
 vi.mock('@/lib/owner/bot-stats-daily', () => ({
+  // T-264: botSummary / dailyTrend 는 053 일별 사전집계 + today RPC.
+  // T-265: listOwnerBotVisits 도 054 RPC 로 교체 — paths IN 큰 배열 + bot_visits.path 인덱스
+  // 부재로 인한 수십초 hang 해소.
   getOwnerBotSummaryDaily: (...a: unknown[]) => mockBotSummary(...a),
   getOwnerDailyTrendDaily: (...a: unknown[]) => mockDailyTrend(...a),
+  listOwnerBotVisitsDaily: (...a: unknown[]) => mockRecentVisits(...a),
 }))
 
 const mockDetectTodos = vi.fn()
