@@ -2,6 +2,10 @@
 
 // T-155·T-156·T-157 — Owner AI 자동 입력·수정 서버 액션.
 // Rate limit(checkAiRateLimit) → generateOwnerDraft → 결과 반환.
+//
+// Phase 1 / B1 (2026-05-06) — 기존 per-place 5/월 + 주 1회 cooldown 은 placeId 있을 때만.
+// 프리뷰 모드(placeId 미존재)는 무제한 LLM 호출 가능했음. 사용자 단위 분당 5회 (ai_generate)
+// 를 모든 경로에 추가해 cost 폭증 방어.
 
 import { requireOwnerForAction } from '@/lib/owner/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
@@ -12,6 +16,7 @@ import {
   type OwnerAiOutput,
   type RateLimitStatus,
 } from '@/lib/ai/owner-generate'
+import { checkRateLimit } from '@/lib/security/rate-limit'
 import { getCities, getCategories } from '@/lib/data.supabase'
 
 export interface AiGenerateActionInput {
@@ -30,6 +35,13 @@ export type AiGenerateOutcome =
 
 export async function ownerGenerateAiAction(input: AiGenerateActionInput): Promise<AiGenerateOutcome> {
   const user = await requireOwnerForAction()
+
+  // Phase 1 / B1 — 사용자 단위 분당 5회 LLM 호출 한도. preview mode 도 포함.
+  const rl = await checkRateLimit(user.id, 'ai_generate')
+  if (!rl.success) {
+    const seconds = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000))
+    return { success: false, error: `요청이 너무 많습니다. ${seconds}초 후 다시 시도해 주세요.` }
+  }
 
   // 소유권 검증 (placeId 있을 때만)
   if (input.placeId) {

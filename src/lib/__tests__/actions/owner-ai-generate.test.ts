@@ -21,16 +21,25 @@ vi.mock('@/lib/data.supabase', () => ({
   getCategories: async () => [{ slug: 'medical', name: '의료', sector: 'medical' }],
 }))
 
+// Phase 1 / B1 — 사용자 단위 ai_generate rate-limit. 기본은 통과로 mock.
+const mockCheckUserRateLimit = vi.fn()
+vi.mock('@/lib/security/rate-limit', () => ({
+  checkRateLimit: (...a: unknown[]) => mockCheckUserRateLimit(...a),
+}))
+
 beforeEach(() => {
   mockRequireOwner.mockReset()
   mockFrom.mockReset()
   mockCheckRateLimit.mockReset()
   mockGenerate.mockReset()
+  mockCheckUserRateLimit.mockReset()
   mockRequireOwner.mockResolvedValue({ id: 'u1', email: 'o@x.com' })
+  // 기본: 사용자 단위 rate-limit 통과
+  mockCheckUserRateLimit.mockResolvedValue({ success: true, remaining: 5, reset: 0, limit: 5 })
 })
 
 describe('ownerGenerateAiAction', () => {
-  it('프리뷰 (placeId 없음) → rate limit 스킵', async () => {
+  it('프리뷰 (placeId 없음) → place-level rate limit 스킵 (user-level 은 적용)', async () => {
     mockGenerate.mockResolvedValue({
       success: true,
       output: { description: 'd', tags: [], services: [], recommendedFor: [], strengths: [] },
@@ -39,7 +48,20 @@ describe('ownerGenerateAiAction', () => {
     const { ownerGenerateAiAction } = await import('@/lib/actions/owner-ai-generate')
     const r = await ownerGenerateAiAction({ name: 'X', city: 'cheonan', category: 'medical' })
     expect(r.success).toBe(true)
-    expect(mockCheckRateLimit).not.toHaveBeenCalled()
+    expect(mockCheckRateLimit).not.toHaveBeenCalled()             // place-level skip
+    expect(mockCheckUserRateLimit).toHaveBeenCalledWith('u1', 'ai_generate')  // user-level 적용
+  })
+
+  // Phase 1 / B1 — 사용자 단위 ai_generate rate-limit 차단 시
+  it('사용자 단위 ai_generate 한도 초과 → 즉시 차단 (LLM 호출 안 함)', async () => {
+    mockCheckUserRateLimit.mockResolvedValueOnce({
+      success: false, remaining: 0, reset: Date.now() + 30_000, limit: 5,
+    })
+    const { ownerGenerateAiAction } = await import('@/lib/actions/owner-ai-generate')
+    const r = await ownerGenerateAiAction({ name: 'X', city: 'cheonan', category: 'medical' })
+    expect(r.success).toBe(false)
+    if (!r.success) expect(r.error).toMatch(/요청이 너무 많습니다/)
+    expect(mockGenerate).not.toHaveBeenCalled()
   })
 
   it('업체 없음 → 실패', async () => {

@@ -123,7 +123,7 @@ export default function PrivacyPage() {
             가능합니다.
           </Section>
 
-          <p className="footnote">* 본 문서는 초안입니다. 정식 방침은 법무 검토 후 갱신됩니다.</p>
+          <p className="footnote">* 본 개인정보처리방침은 2026-05-06 시행. 법령 변경 또는 서비스 변경에 따라 제8조에 따라 시행 7일 전 공지 후 갱신됩니다.</p>
         </div>
       </main>
       <SiteFooter />

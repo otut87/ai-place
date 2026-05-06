@@ -36,15 +36,25 @@ SSR/SSG 라우트의 200 응답 + 핵심 마크업 노출 확인. next.config / 
 - `/`, `/pricing`, `/terms`, `/privacy`, `/about`, `/check`, `/login`, `/signup`
 - `/robots.txt`, `/sitemap.xml`, `/llms.txt`
 
-## Phase 2 로 미룬 시나리오 (인증 fixture 필요)
+### `e2e/security-regression.spec.ts` — Phase 1 / D1 보안 회귀 4 시나리오 + perf 가드
 
-| 회귀 # | 시나리오 | 필요 셋업 |
-|---|---|---|
-| S5 | Owner IDOR — A 계정이 B 계정 place URL 진입 시 차단 | owner 2명 fixture, supabase seed |
-| S4 | admin blog markdown 본문에 `<script>` 삽입 → preview 정상 (XSS 차단) | admin 로그인 storage state |
-| S7 | /check 6회 연속 요청 시 6번째 429 (Upstash rate-limit) | preview 환경 + Upstash test 인스턴스 |
+T-259 Phase 0 + Phase 1 hardening 의 자동 회귀 안전망. **시나리오 로직은 작성 완료**, fixture 인프라가 들어오는 시점에 자동 활성.
 
-이 시나리오들은 fixture 인프라 (test users seed + storageState) 가 별도로 필요해 phase 2 로 분리.
+| 회귀 # | 시나리오 | 가드 | 활성 조건 |
+|---|---|---|---|
+| #1 | /check 6회 연속 → 6번째 429 (S7 + B1) | `HAS_UPSTASH` | UPSTASH_REDIS_REST_URL 또는 KV_REST_API_URL env 설정 시 |
+| #2 | non-admin 로그인 사용자가 /admin URL → redirect (S1) | `HAS_AUTH_FIXTURES` | E2E_FIXTURES=1 + owner storageState |
+| #3 | owner-A 가 owner-B place URL 진입 차단 (S5) | `HAS_AUTH_FIXTURES` | owner-A/B fixture + E2E_OTHER_PLACE_ID |
+| #4 | admin blog `<script>` 본문 → preview XSS 차단 (S4) | `HAS_AUTH_FIXTURES` | admin storageState + 테스트용 blog slug |
+| #5 | /admin/seo 10초 안에 헤더 노출 (A2 perf 가드) | `HAS_AUTH_FIXTURES` | admin storageState |
+
+### Fixture 인프라 도입 로드맵 (Phase 2 후속 작업)
+
+1. `e2e/fixtures/seed.ts` — Supabase test schema 에 admin·owner-A·owner-B + 각 1개 place + dummy blog post 시드
+2. `e2e/fixtures/storage-states/{admin,owner-a,owner-b}.json` — 각 사용자 sign-in 후 storageState 추출
+3. `playwright.config.ts` — projects 분리: 기본 (no auth) + authenticated projects
+4. `package.json` — `test:e2e:fixtures` 스크립트로 시드/인증 사전 단계
+5. CI: GitHub Actions 에 Upstash test 인스턴스 + Supabase preview branch 환경변수 주입
 
 ## CI 통합 (TODO)
 

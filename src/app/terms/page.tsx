@@ -111,7 +111,7 @@ export default function TermsPage() {
           </Section>
 
           <p className="footnote">
-            * 본 문서는 초안입니다. 정식 약관은 법무 검토 후 갱신됩니다. 문의:{' '}
+            * 본 약관은 2026-05-06 시행. 법령 변경 또는 서비스 개선 시 제8조에 따라 시행 7일 전 공지 후 갱신됩니다. 문의:{' '}
             <a href={`mailto:${SITE_BRAND.email}`}>{SITE_BRAND.email}</a>
           </p>
         </div>
