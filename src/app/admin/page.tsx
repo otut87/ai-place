@@ -3,7 +3,8 @@ import { AdminLink } from '@/components/admin/admin-link'
 import { requireAuth } from '@/lib/auth'
 import { getDashboardMetrics, getRecentActivity, dashboardIssuesCount } from '@/lib/admin/dashboard-metrics'
 import { summarizeAction, actorTypeLabel, type AuditAction, type ActorType } from '@/lib/admin/audit'
-import { aggregateBotVisits } from '@/lib/admin/bot-visits'
+// Phase 1 / A2 (2026-05-06): 일별 사전집계 + pg_cron 으로 페이지네이션 폭증 영구 해결.
+import { aggregateBotVisitsDaily } from '@/lib/admin/bot-visits-daily'
 import { AI_BOT_PATTERNS } from '@/lib/seo/bot-detection'
 import { ClipboardCheck, Megaphone, ActivitySquare, CreditCardIcon, User, Bot, Cog } from 'lucide-react'
 
@@ -14,8 +15,8 @@ export default async function AdminDashboard() {
   const [metrics, activity, botAgg7d, botAgg30d] = await Promise.all([
     getDashboardMetrics(),
     getRecentActivity(15),
-    aggregateBotVisits(7),
-    aggregateBotVisits(30),
+    aggregateBotVisitsDaily(7),
+    aggregateBotVisitsDaily(30),
   ])
   const totalIssues = dashboardIssuesCount(metrics)
   const botLabelById = new Map(AI_BOT_PATTERNS.map(p => [p.id, p.label]))

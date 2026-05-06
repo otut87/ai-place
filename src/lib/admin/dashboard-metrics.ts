@@ -3,6 +3,9 @@
 
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { listExpiringCards } from '@/lib/admin/billing-queries'
+// Phase 1 / A2 (2026-05-06): 1.17M rows 환경에서 unpaginated bot_visits select 가
+// PostgREST 1000-row cap 으로 silent truncation. 일별 사전집계로 교체.
+import { aggregateBotStatusDaily } from '@/lib/admin/bot-visits-daily'
 
 export interface DashboardMetrics {
   pendingPlaces: number
@@ -36,7 +39,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const sevenDaysAgoIso = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const thisMonthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString()
 
-  const [pending, active, rejected, blogToday, pipeFail, payFail, activeSubs, bots, cancels] = await Promise.all([
+  const [pending, active, rejected, blogToday, pipeFail, payFail, activeSubs, botStatus, cancels] = await Promise.all([
     supabase.from('places').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('places').select('id', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('places').select('id', { count: 'exact', head: true }).eq('status', 'rejected'),
@@ -44,17 +47,15 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     supabase.from('pipeline_jobs').select('id', { count: 'exact', head: true }).eq('status', 'failed'),
     supabase.from('payments').select('id', { count: 'exact', head: true }).eq('status', 'failed').gte('attempted_at', sevenDaysAgoIso),
     supabase.from('subscriptions').select('amount').eq('status', 'active'),
-    supabase.from('bot_visits').select('status').gte('visited_at', sevenDaysAgoIso),
+    aggregateBotStatusDaily(7),
     supabase.from('subscriptions').select('id', { count: 'exact', head: true }).not('canceled_at', 'is', null).lt('canceled_at', thisMonthEnd).gte('canceled_at', todayIso),
   ])
 
   const mrrKrw = ((activeSubs.data ?? []) as Array<{ amount: number | null }>)
     .reduce((sum, s) => sum + (s.amount ?? 0), 0)
 
-  const botRows = (bots.data ?? []) as Array<{ status: number | null }>
-  const botVisits7d = botRows.length
-  const bot404s = botRows.filter(r => r.status === 404).length
-  const bot404Rate7d = botVisits7d === 0 ? 0 : bot404s / botVisits7d
+  const botVisits7d = botStatus.total
+  const bot404Rate7d = botStatus.rate404
 
   // 만료 임박 (30일 이내) — 전용 쿼리 재사용
   const expiringCards = await listExpiringCards(30)

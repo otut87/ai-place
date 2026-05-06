@@ -8,15 +8,16 @@
 //   6) 최근 방문 내역 (상태·UA 포함)
 
 import { requireAuth } from '@/lib/auth'
+import { listRecentBotVisits } from '@/lib/admin/bot-visits'
 import {
-  aggregateBotVisits,
-  listRecentBotVisits,
-  aggregateBotStatus,
-  topBot404Paths,
-  topCrawledPaths,
-  aggregateByGroup,
-  dailyVisitTrend,
-} from '@/lib/admin/bot-visits'
+  aggregateBotVisitsDaily,
+  aggregateBotStatusDaily,
+  topBot404PathsDaily,
+  topCrawledPathsDaily,
+  aggregateByGroupDaily,
+  dailyVisitTrendDaily,
+  getLastAggregatedAt,
+} from '@/lib/admin/bot-visits-daily'
 import { AI_BOT_PATTERNS, BOT_GROUP_LABEL, type BotGroup } from '@/lib/seo/bot-detection'
 
 export const dynamic = 'force-dynamic'
@@ -34,27 +35,35 @@ const GROUP_COLORS: Record<BotGroup, string> = {
 
 export default async function AdminSeoPage() {
   await requireAuth()
-  const [agg, recent, status, top404, topPaths, groups, trend] = await Promise.all([
-    aggregateBotVisits(30),
+  // Phase 1 / A2 (2026-05-06): 1.17M rows 환경에서 페이지네이션 5중 스캔 → 5,875 round-trip 폭증.
+  // 일별 사전집계 (migration 051) + pg_cron 으로 어제까지 = 작은 테이블 select, 오늘 = 단일 RPC.
+  // listRecentBotVisits 는 .limit(50) 이라 빠르므로 그대로 둠.
+  const [agg, recent, status, top404, topPaths, groups, trend, lastAggregatedAt] = await Promise.all([
+    aggregateBotVisitsDaily(30),
     listRecentBotVisits(50),
-    aggregateBotStatus(30),
-    topBot404Paths(30, 10),
-    topCrawledPaths(30, 10),
-    aggregateByGroup(30),
-    dailyVisitTrend(TREND_DAYS),
+    aggregateBotStatusDaily(30),
+    topBot404PathsDaily(30, 10),
+    topCrawledPathsDaily(30, 10),
+    aggregateByGroupDaily(30),
+    dailyVisitTrendDaily(TREND_DAYS),
+    getLastAggregatedAt(),
   ])
 
   const labelById = new Map(AI_BOT_PATTERNS.map((p) => [p.id, p.label]))
   const groupById = new Map(AI_BOT_PATTERNS.map((p) => [p.id, p.group]))
   const trendMax = Math.max(1, ...trend.map((d) => d.total))
+  const lastAggregationAgeHours = computeAgeHours(lastAggregatedAt)
 
   return (
     <div className="px-6 py-5">
-      <header className="mb-5">
-        <h1 className="text-xl font-semibold">AI 봇 방문 로그</h1>
-        <p className="mt-1 text-sm text-[#6b6b6b]">
-          GPTBot, ClaudeBot, PerplexityBot 등 AI 크롤러의 실제 방문 이력. AI 인용 측정의 근거.
-        </p>
+      <header className="mb-5 flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold">AI 봇 방문 로그</h1>
+          <p className="mt-1 text-sm text-[#6b6b6b]">
+            GPTBot, ClaudeBot, PerplexityBot 등 AI 크롤러의 실제 방문 이력. AI 인용 측정의 근거.
+          </p>
+        </div>
+        <AggregationStatusBadge lastAggregatedAt={lastAggregatedAt} ageHours={lastAggregationAgeHours} />
       </header>
 
       {/* 1) 상태 카드 */}
@@ -254,6 +263,45 @@ function StatusCard({ label, value, tone = 'muted' }: { label: string; value: st
     <div className="rounded-xl border border-[#e7e7e7] bg-white p-4">
       <div className="text-xs text-[#6b6b6b]">{label}</div>
       <div className={`mt-1 text-2xl font-semibold ${cls}`}>{value}</div>
+    </div>
+  )
+}
+
+// React 19 purity rule: 컴포넌트 함수 내 Date.now() 호출 금지. helper 함수로 분리.
+function computeAgeHours(iso: string | null): number | null {
+  if (!iso) return null
+  return (Date.now() - Date.parse(iso)) / 3_600_000
+}
+
+/**
+ * Phase 1 / A2 후속 — pg_cron 마지막 실행 시각 모니터링 배지.
+ * - 24시간 이내: 정상 (회색)
+ * - 24~48시간: 지연 (앰버) — 1회 누락 가능성
+ * - 48시간+: 실패 (빨강) — 즉시 점검
+ * - null: 데이터 없음 또는 백필 미실행
+ */
+function AggregationStatusBadge({ lastAggregatedAt, ageHours }: { lastAggregatedAt: string | null; ageHours: number | null }) {
+  if (!lastAggregatedAt || ageHours == null) {
+    return (
+      <div className="rounded-md border border-[#e7e7e7] bg-[#fafafa] px-3 py-2 text-right">
+        <div className="text-[10px] uppercase text-[#9a9a9a]">최근 집계</div>
+        <div className="text-xs text-[#6b6b6b]">데이터 없음</div>
+      </div>
+    )
+  }
+  const tone = ageHours < 24 ? 'ok' : ageHours < 48 ? 'warn' : 'danger'
+  const cls =
+    tone === 'ok'    ? 'border-[#e7e7e7] bg-[#fafafa] text-[#6b6b6b]' :
+    tone === 'warn'  ? 'border-amber-200 bg-amber-50 text-amber-700' :
+                       'border-red-200 bg-red-50 text-red-700'
+  const label =
+    tone === 'ok'    ? '정상' :
+    tone === 'warn'  ? '지연' :
+                       '실패 — 점검 필요'
+  return (
+    <div className={`rounded-md border px-3 py-2 text-right ${cls}`}>
+      <div className="text-[10px] uppercase opacity-75">최근 집계 ({label})</div>
+      <div className="text-xs">{new Date(lastAggregatedAt).toLocaleString('ko-KR')}</div>
     </div>
   )
 }

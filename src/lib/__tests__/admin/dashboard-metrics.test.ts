@@ -16,13 +16,30 @@ vi.mock('@/lib/admin/billing-queries', () => ({
   listExpiringCards: vi.fn(async () => []),
 }))
 
+// Phase 1 / A2 (2026-05-06): bot_visits 일별 사전집계 reader.
+// dashboard-metrics:47 unpaginated select 가 1.17M rows 환경에서 silent 1000 truncation
+// → aggregateBotStatusDaily 로 교체. 테스트도 신규 의존성 mock.
+const mockBotStatusDaily = vi.fn()
+vi.mock('@/lib/admin/bot-visits-daily', () => ({
+  aggregateBotStatusDaily: (...a: unknown[]) => mockBotStatusDaily(...a),
+}))
+
 beforeEach(() => {
   mockLimit.mockReset()
   mockFrom.mockReset()
+  mockBotStatusDaily.mockReset()
   mrrData = [{ amount: 33000 }, { amount: 33000 }]
   botRows = [
     { status: 200 }, { status: 200 }, { status: 200 }, { status: 404 },
   ]
+  // 4 visits, 1 of which is 404 → rate 0.25
+  mockBotStatusDaily.mockResolvedValue({
+    total: 4,
+    status200: 3,
+    status404: 1,
+    statusOther: 0,
+    rate404: 0.25,
+  })
 
   mockLimit.mockResolvedValue({
     data: [
