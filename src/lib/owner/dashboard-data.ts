@@ -69,8 +69,6 @@ export interface OwnerDashboardData {
   /** T-266: 관리자 계정 여부 — true 면 owner page 에서 결제 게이트(BillingBanner/
    *  PilotEndingBanner)를 노출하지 않음. 데이터 게이트는 loadBillingState 가 이미 우회. */
   isAdmin: boolean
-  /** T-268: 함수별 elapsed ms — admin 진단 용. 일반 owner 에는 빈 객체. */
-  debugTiming?: Record<string, number>
 }
 
 interface PlaceDbRow {
@@ -205,56 +203,33 @@ export interface LoadOwnerDashboardOptions {
   trendDays?: number
 }
 
-// T-268: 임시 timing 측정. /owner ~10초 hang 의 함수별 병목 식별 — 사용자 측정 후 제거.
-function makeTimed(timing: Record<string, number>) {
-  return async function timed<T>(label: string, promise: Promise<T>): Promise<T> {
-    const start = Date.now()
-    try {
-      const r = await promise
-      timing[label] = Date.now() - start
-      return r
-    } catch (e) {
-      timing[label] = Date.now() - start
-      timing[`${label}_FAILED`] = 1
-      throw e
-    }
-  }
-}
-
 export async function loadOwnerDashboard(
   now: Date = new Date(),
   opts: LoadOwnerDashboardOptions = {},
 ): Promise<OwnerDashboardData> {
-  const debugTiming: Record<string, number> = {}
-  const timed = makeTimed(debugTiming)
-
-  const dashStart = Date.now()
-  const user = await timed('requireOwnerUser', requireOwnerUser())
+  const user = await requireOwnerUser()
   const trendDays = opts.trendDays ?? 30
 
   // 1. 오너 업체 목록 (owner_id / owner_email / customer_id 매칭)
-  const ownerRows = await timed('listOwnerPlaces', listOwnerPlaces())
+  const ownerRows = await listOwnerPlaces()
   const placeIds = ownerRows.map((r) => r.id)
-  debugTiming.placeIds_count = placeIds.length
 
-  // T-270: listOwnerBotVisits 가 pathMap 받으면 fetchOwnerPathMap 재호출 안 함. listOwnerPlaces
-  // 결과 받은 직후에만 호출 가능 (placeIds 의존). 다른 7개 함수와 병렬로 묶음.
-  // T-272: fetchOwnerStatsBundle 도 pathMap 받아서 today RPC 대신 raw select.
-  const pathMap = await timed('fetchOwnerPathMap', fetchOwnerPathMap(placeIds))
+  // T-270/272: pathMap 1회 fetch 후 listOwnerBotVisits + fetchOwnerStatsBundle 두 곳에 prop drill.
+  // 둘 다 paths IN raw select 로 RPC dispatch 회피.
+  const pathMap = await fetchOwnerPathMap(placeIds)
 
-  // 2. 병렬 로드 — 모두 daily 사전집계 / raw select 기반 (T-264 + T-269 + T-270 + T-272).
+  // 2. 병렬 로드 — 모두 daily 사전집계 / raw select 기반 (T-264 + T-269 + T-270 + T-271 + T-272).
   const [fullPlaces, mentionMap, statsBundle, recentBotVisits, billing, sectorMap] = await Promise.all([
-    timed('loadFullPlacesForOwner', loadFullPlacesForOwner(placeIds)),
-    timed('countMentionsByPlace', countMentionsByPlace(placeIds)),
-    timed('fetchOwnerStatsBundle', fetchOwnerStatsBundle(placeIds, trendDays, now, pathMap)),
-    timed('listOwnerBotVisits', listOwnerBotVisits(placeIds, 10, trendDays, now, pathMap)),
-    timed('loadBillingState', loadBillingState(user.id, now, user.email)),
-    timed('loadSectorMap', loadSectorMap()),
+    loadFullPlacesForOwner(placeIds),
+    countMentionsByPlace(placeIds),
+    fetchOwnerStatsBundle(placeIds, trendDays, now, pathMap),
+    listOwnerBotVisits(placeIds, 10, trendDays, now, pathMap),
+    loadBillingState(user.id, now, user.email),
+    loadSectorMap(),
   ])
-  // 동기 aggregate — DB 호출 없음. timing 측정 의미 없으므로 즉시 변환.
+  // 동기 aggregate — DB 호출 없음. statsBundle 한 번 fetch 후 두 형태로 변환.
   const botSummary = getOwnerBotSummaryFromBundle(statsBundle, placeIds)
   const dailyTrend = getOwnerDailyTrendFromBundle(statsBundle)
-  debugTiming.TOTAL_loadOwnerDashboard = Date.now() - dashStart
 
   // 3. 각 place 에 대해 AEO 점수 계산.
   const places: OwnerPlaceSummary[] = []
@@ -340,7 +315,6 @@ export async function loadOwnerDashboard(
     ? null
     : Math.round(places.reduce((s, p) => s + p.aeoScore, 0) / places.length)
 
-  const isAdmin = isAdminEmail(user.email)
   return {
     user,
     places,
@@ -352,7 +326,6 @@ export async function loadOwnerDashboard(
     billing,
     averageAeoScore,
     trendDays,
-    isAdmin,
-    debugTiming: isAdmin ? debugTiming : undefined,
+    isAdmin: isAdminEmail(user.email),
   }
 }

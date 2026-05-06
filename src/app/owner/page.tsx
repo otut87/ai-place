@@ -54,19 +54,6 @@ export default async function OwnerHomePage({ searchParams }: Params) {
 
   return (
     <div className="dash-page">
-      {data.isAdmin && data.debugTiming && (
-        <div style={{
-          padding: '12px 16px', margin: '0 0 12px',
-          background: '#1a1a1a', color: '#7fff7f',
-          fontFamily: 'monospace', fontSize: 12,
-          borderRadius: 8, whiteSpace: 'pre-wrap',
-          border: '1px solid #333',
-        }}>
-          {`[T-268 owner-timing — admin only]
-` + Object.entries(data.debugTiming).map(([k, v]) => `  ${k}: ${v}${k === 'placeIds_count' ? '' : 'ms'}`).join('\n')}
-        </div>
-      )}
-
       {registered && msg && (
         <div className="dash-banner" role="status">
           <div className="ic">✓</div>
