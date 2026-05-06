@@ -61,8 +61,10 @@ export default async function OwnerHomePage({ searchParams }: Params) {
         </div>
       )}
 
-      {/* T-226: 파일럿 종료 D-3 이하 + 카드 있으면 첫 청구 예고. 그 외엔 기존 BillingBanner 가 담당. */}
-      {data.billing.hasCard && data.billing.pilotRemainingDays <= 3 && data.billing.pilotRemainingDays >= 0 ? (
+      {/* T-226: 파일럿 종료 D-3 이하 + 카드 있으면 첫 청구 예고. 그 외엔 기존 BillingBanner 가 담당.
+          T-266: 관리자 계정은 결제 게이트 자체가 의미 없음 (loadBillingState 가 hasCard=true,
+          pilotRemainingDays=9999 강제) — banner 도 노출하지 않음. */}
+      {data.isAdmin ? null : data.billing.hasCard && data.billing.pilotRemainingDays <= 3 && data.billing.pilotRemainingDays >= 0 ? (
         <PilotEndingBanner
           pilotRemainingDays={data.billing.pilotRemainingDays}
           trialEndsAt={data.billing.pilotEndsAt}

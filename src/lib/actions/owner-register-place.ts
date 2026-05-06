@@ -7,6 +7,7 @@ import { requireOwnerForAction } from '@/lib/owner/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { revalidatePath } from 'next/cache'
 import { romanizeKorean } from '@/lib/format/hangul-romanize'
+import { isAdminEmail } from '@/lib/auth/admin-emails'
 
 export interface OwnerPlaceDraft {
   name: string
@@ -265,12 +266,19 @@ export async function registerOwnerPlaceAction(draft: OwnerPlaceDraft): Promise<
   // T-259 R6: 카드 미등록 owner 의 place 는 자동승인 대상이라도 status='pending' 으로 머무름.
   //   카드 등록 시점에 별도 액션이 'active' 로 전환 (Phase 6 follow-up).
   //   status='pending' 효과: blog enqueue / 공개 페이지 노출 모두 자동 차단.
-  const { count: activeCardCount } = await admin
-    .from('billing_keys')
-    .select('id', { count: 'exact', head: true })
-    .eq('customer_id', customerId)
-    .eq('status', 'active')
-  const hasCard = (activeCardCount ?? 0) > 0
+  // T-266: ADMIN_EMAILS 운영자 계정은 카드 게이트 우회 — 관리자가 owner UI 로 등록한 place
+  //   는 즉시 active (실재 검증 통과 시).
+  let hasCard: boolean
+  if (isAdminEmail(user.email)) {
+    hasCard = true
+  } else {
+    const { count: activeCardCount } = await admin
+      .from('billing_keys')
+      .select('id', { count: 'exact', head: true })
+      .eq('customer_id', customerId)
+      .eq('status', 'active')
+    hasCard = (activeCardCount ?? 0) > 0
+  }
 
   // places.status 체크 제약: 'active' | 'pending' | 'rejected'. 실재 증거 + 카드 둘 다 있어야 active.
   const status: 'active' | 'pending' = (autoApproved && hasCard) ? 'active' : 'pending'

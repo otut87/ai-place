@@ -261,6 +261,25 @@ describe('loadOwnerDashboard', () => {
     vi.mocked(mod.getAdminClient).mockImplementation(() => makeAdmin() as never)
   })
 
+  it('T-266: 관리자 이메일 → isAdmin=true + billing 게이트 우회 (hasCard=true, pilotRemainingDays=9999)', async () => {
+    const { requireOwnerUser } = await import('@/lib/owner/auth')
+    vi.mocked(requireOwnerUser).mockResolvedValueOnce({ id: 'admin-1', email: 'support@dedo.kr' } as never)
+    // customer/billing_keys 둘 다 비어있어도 admin 분기로 hasCard=true 보장.
+    db.customer = null
+    db.billingKey = null
+    const { loadOwnerDashboard } = await import('@/lib/owner/dashboard-data')
+    const d = await loadOwnerDashboard()
+    expect(d.isAdmin).toBe(true)
+    expect(d.billing.hasCard).toBe(true)
+    expect(d.billing.pilotRemainingDays).toBe(9999)
+  })
+
+  it('T-266: 일반 owner 이메일 → isAdmin=false', async () => {
+    const { loadOwnerDashboard } = await import('@/lib/owner/dashboard-data')
+    const d = await loadOwnerDashboard()
+    expect(d.isAdmin).toBe(false)
+  })
+
   it('detectOwnerTodos / getMeasurementWindow 호출되며 결과 전달', async () => {
     mockDetectTodos.mockReturnValueOnce([{ id: 't1', title: 'Todo1', category: 'aeo' }])
     // MeasurementWindow 의 실제 필드(daysElapsed / daysRemaining / isMeasuring / label) 로 목업.

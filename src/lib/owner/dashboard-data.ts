@@ -3,6 +3,7 @@
 
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { requireOwnerUser, type OwnerUser } from '@/lib/owner/auth'
+import { isAdminEmail } from '@/lib/auth/admin-emails'
 import { listOwnerPlaces } from '@/lib/actions/owner-places'
 import { scorePlaceAeo, type AeoGrade, type AeoRuleResult } from '@/lib/owner/place-aeo-score'
 import { getMeasurementWindow, type MeasurementWindow } from '@/lib/owner/measurement-window'
@@ -60,6 +61,9 @@ export interface OwnerDashboardData {
   averageAeoScore: number | null
   /** 이 로드에서 사용된 기간 (기본 30일). */
   trendDays: number
+  /** T-266: 관리자 계정 여부 — true 면 owner page 에서 결제 게이트(BillingBanner/
+   *  PilotEndingBanner)를 노출하지 않음. 데이터 게이트는 loadBillingState 가 이미 우회. */
+  isAdmin: boolean
 }
 
 interface PlaceDbRow {
@@ -90,8 +94,18 @@ function parseJsonArray<T>(value: unknown): T[] {
   return []
 }
 
-/** customers + billing_keys + trial 정보로 파일럿/카드 상태 계산. */
-async function loadBillingState(userId: string, now: Date): Promise<OwnerBillingState> {
+/** customers + billing_keys + trial 정보로 파일럿/카드 상태 계산.
+ *
+ * T-266: ADMIN_EMAILS 의 운영자 계정은 owner UI 를 결제 게이트 없이 사용해야 함 (테스트·데모·
+ * 사후 점검 목적). hasCard=true + pilotRemainingDays=∞ 로 강제해 owner-register-place
+ * (status='active' 자동 진입), todos.ts (billing-required todo 비생성), BillingBanner/
+ * PilotEndingBanner (owner/page.tsx 가 isAdmin 으로 직접 숨김) 모두 한 번에 처리.
+ */
+async function loadBillingState(userId: string, now: Date, userEmail: string | null): Promise<OwnerBillingState> {
+  if (isAdminEmail(userEmail)) {
+    return { hasCard: true, pilotRemainingDays: 9999, pilotStartedAt: null, pilotEndsAt: null }
+  }
+
   const admin = getAdminClient()
   if (!admin) {
     return { hasCard: false, pilotRemainingDays: 30, pilotStartedAt: null, pilotEndsAt: null }
@@ -204,7 +218,7 @@ export async function loadOwnerDashboard(
     getOwnerBotSummaryDaily(placeIds, trendDays, now),
     getOwnerDailyTrendDaily(placeIds, trendDays, now),
     listOwnerBotVisitsDaily(placeIds, 10, trendDays, now),
-    loadBillingState(user.id, now),
+    loadBillingState(user.id, now, user.email),
     loadSectorMap(),
   ])
 
@@ -303,5 +317,6 @@ export async function loadOwnerDashboard(
     billing,
     averageAeoScore,
     trendDays,
+    isAdmin: isAdminEmail(user.email),
   }
 }

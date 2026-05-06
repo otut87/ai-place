@@ -137,6 +137,21 @@ describe('registerOwnerPlaceAction', () => {
     }
   })
 
+  it('T-266: 관리자 이메일 + 카드 없음 + naver 매칭 → status=active (카드 게이트 우회)', async () => {
+    mockRequireOwner.mockResolvedValueOnce({ id: 'u1', email: 'support@dedo.kr' })
+    mockDbOk({ activeCardCount: 0 })
+    const { registerOwnerPlaceAction } = await import('@/lib/actions/owner-register-place')
+    const r = await registerOwnerPlaceAction({
+      name: 'X', city: 'cheonan', category: 'medical', address: 'y',
+      naverPlaceUrl: 'https://m.place.naver.com/place/123',
+    })
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.status).toBe('active')
+      expect(r.autoApproved).toBe(true)
+    }
+  })
+
   it('naverPlaceUrl 매칭 → auto active', async () => {
     mockDbOk()
     const { registerOwnerPlaceAction } = await import('@/lib/actions/owner-register-place')
