@@ -8,9 +8,14 @@ import { requireOwnerUser } from '@/lib/owner/auth'
 import { hasActiveBillingKey } from '@/lib/actions/owner-billing'
 import { listOwnerPlaces } from '@/lib/actions/owner-places'
 import {
-  getOwnerBotSummary, getOwnerDailyTrend, getOwnerByPathSummary, listOwnerBotVisits,
+  getOwnerByPathSummary, listOwnerBotVisits,
   fetchOwnerPathMap,
 } from '@/lib/owner/bot-stats'
+// T-274: getOwnerBotSummary / getOwnerDailyTrend 는 raw bot_visits 5중 페이지네이션이라
+// 1.17M rows 위에서 hang. 일별 사전집계 (053) + today raw select 패턴으로 교체.
+import {
+  fetchOwnerStatsBundle, getOwnerBotSummaryFromBundle, getOwnerDailyTrendFromBundle,
+} from '@/lib/owner/bot-stats-daily'
 import { resolveOwnerPagePeriod } from '@/lib/owner/period-parser'
 import { composePageTitle } from '@/lib/seo/compose-title'
 import { DashCharts } from '../_components/dash-charts'
@@ -86,15 +91,18 @@ export default async function OwnerCitationsPage({ searchParams }: Params) {
     ? period.days
     : { from: period.from, to: period.to }
 
-  // Phase 1 / A3: pathMap 1회 fetch 후 4개 통계 함수에 prop drill (기존 4회 중복 제거).
+  // Phase 1 / A3: pathMap 1회 fetch 후 통계 함수들에 prop drill.
+  // T-274: summary/trend 는 bundle 1회 fetch (snapshot raw + today raw) → 동기 aggregate.
+  // byPath/recent 는 paths IN raw paginate 유지 (054 path 인덱스 + 작은 paths 셋이라 빠름).
   const pathMap = await fetchOwnerPathMap(placeIds)
-  const [summary, dailyTrend, byPath, recent, aeoSnapshots] = await Promise.all([
-    getOwnerBotSummary(placeIds, statsInput, now, pathMap),
-    getOwnerDailyTrend(placeIds, statsInput, now, pathMap),
+  const [bundle, byPath, recent, aeoSnapshots] = await Promise.all([
+    fetchOwnerStatsBundle(placeIds, statsInput, now, pathMap),
     getOwnerByPathSummary(placeIds, statsInput, now, pathMap),
     listOwnerBotVisits(placeIds, 30, statsInput, now, pathMap),
     loadAeoSnapshotsForPlaces(placeIds),
   ])
+  const summary = getOwnerBotSummaryFromBundle(bundle, placeIds)
+  const dailyTrend = getOwnerDailyTrendFromBundle(bundle)
 
   const lastVisit = recent[0] ?? null
   const lastVisitSub = lastVisit

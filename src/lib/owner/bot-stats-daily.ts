@@ -78,11 +78,12 @@ export interface OwnerTodayRow {
   last_visited_at: string | null
 }
 
-/** T-269: dashboard-data 가 RPC 1회 호출 후 prop drill 하는 통합 fetch. */
+/** T-269: dashboard-data 가 RPC 1회 호출 후 prop drill 하는 통합 fetch.
+ *  T-274: range 모드(month/custom) 까지 지원하도록 toKey 추가. */
 export interface OwnerStatsRpcBundle {
-  /** 어제까지 사전집계. null = DB 미가용. */
+  /** 어제까지(또는 윈도우 끝까지) 사전집계. null = DB 미가용. */
   snapshot: OwnerDailyRow[] | null
-  /** 오늘 라이브 RPC. */
+  /** 오늘 라이브 — 윈도우가 today 일자를 포함하는 경우만 채워짐. */
   todayRows: OwnerTodayRow[]
   /** 윈도우 시작/종료 ISO (resolveStatsPeriod 결과). */
   fromIso: string
@@ -90,7 +91,9 @@ export interface OwnerStatsRpcBundle {
   days: number
   /** 윈도우 시작 KST date key (YYYY-MM-DD) — daily trend 버킷 초기화에 사용. */
   fromKey: string
-  /** today KST date key — todayRows 가 누적되는 일자. */
+  /** 윈도우 끝 KST date key (YYYY-MM-DD) — daily trend 버킷 끝. */
+  toKey: string
+  /** today KST date key — todayRows 가 누적되는 일자 (toKey 와 같을 때만 todayRows 사용). */
   todayKey: string
 }
 
@@ -232,21 +235,39 @@ export async function fetchOwnerStatsBundle(
 ): Promise<OwnerStatsRpcBundle> {
   const { fromIso, toIso, days } = resolveStatsPeriod(period, now)
   const todayKey = todayKstKey(now)
-  const fromKey = dateKeyMinusDays(now, days - 1)
   const yesterdayKey = dateKeyMinusDays(now, 1)
 
+  // T-274: number 모드는 today 포함 days 일치 윈도우, range 모드는 from/to KST 키.
+  let fromKey: string
+  let toKey: string
+  if (typeof period === 'number' || period === undefined) {
+    const d = (typeof period === 'number' ? period : 30)
+    fromKey = dateKeyMinusDays(now, d - 1)
+    toKey = todayKey
+  } else {
+    const { fromDate, toDate } = resolveStatsPeriod(period, now)
+    fromKey = toKstDateKey(fromDate.toISOString())
+    toKey = toKstDateKey(toDate.toISOString())
+  }
+
+  // snapshot 커버: [fromKey, min(toKey, yesterdayKey)] — today 포함 윈도우면 어제까지만 snapshot.
+  const snapshotEndKey = toKey < todayKey ? toKey : yesterdayKey
+  const includesToday = toKey >= todayKey
+
   if (placeIds.length === 0) {
-    return { snapshot: [], todayRows: [], fromIso, toIso, days, fromKey, todayKey }
+    return { snapshot: [], todayRows: [], fromIso, toIso, days, fromKey, toKey, todayKey }
   }
 
   const [snapshot, todayRows] = await Promise.all([
-    fromKey <= yesterdayKey
-      ? fetchOwnerDailySnapshot(placeIds, fromKey, yesterdayKey)
+    fromKey <= snapshotEndKey
+      ? fetchOwnerDailySnapshot(placeIds, fromKey, snapshotEndKey)
       : Promise.resolve([]),
-    fetchOwnerToday(placeIds, pathMap, now),
+    includesToday
+      ? fetchOwnerToday(placeIds, pathMap, now)
+      : Promise.resolve([]),
   ])
 
-  return { snapshot, todayRows, fromIso, toIso, days, fromKey, todayKey }
+  return { snapshot, todayRows, fromIso, toIso, days, fromKey, toKey, todayKey }
 }
 
 export function getOwnerBotSummaryFromBundle(
@@ -293,13 +314,13 @@ export function getOwnerBotSummaryFromBundle(
 export function getOwnerDailyTrendFromBundle(
   bundle: OwnerStatsRpcBundle,
 ): OwnerDailyTrendRow[] {
-  // 일자 버킷 초기화 — fromKey..todayKey 모든 KST 일자.
+  // 일자 버킷 초기화 — fromKey..toKey 모든 KST 일자 (T-274 range 모드 지원).
   const buckets = new Map<string, OwnerDailyTrendRow>()
   let cursor = bundle.fromKey
   let guard = 400
   while (guard-- > 0) {
     if (!buckets.has(cursor)) buckets.set(cursor, makeEmptyTrendRow(cursor))
-    if (cursor >= bundle.todayKey) break
+    if (cursor >= bundle.toKey) break
     // YYYY-MM-DD 다음날
     const [y, m, d] = cursor.split('-').map((s) => parseInt(s, 10))
     const next = new Date(Date.UTC(y, m - 1, d + 1))

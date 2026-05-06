@@ -125,7 +125,7 @@ beforeEach(() => {
   })
   mockBundle.mockReset().mockResolvedValue({
     snapshot: [], todayRows: [], fromIso: '2026-03-22T00:00:00Z', toIso: '2026-04-22T00:00:00Z',
-    days: 30, fromKey: '2026-03-22', todayKey: '2026-04-22',
+    days: 30, fromKey: '2026-03-22', toKey: '2026-04-22', todayKey: '2026-04-22',
   })
   mockBotSummaryFromBundle.mockReset().mockReturnValue({
     periodDays: 30, since: '2026-03-22T00:00:00Z', placeIds: [],

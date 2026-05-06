@@ -193,7 +193,7 @@ describe('getOwnerBotSummaryFromBundle (T-269)', () => {
         { place_id: 'p1', bot_id: 'chatgpt-user', page_type: 'detail', visits: 2, last_visited_at: null },
       ],
       fromIso: '2026-04-06T00:00:00Z', toIso: '2026-05-06T12:00:00Z',
-      days: 30, fromKey: '2026-04-06', todayKey: '2026-05-06',
+      days: 30, fromKey: '2026-04-06', toKey: '2026-05-06', todayKey: '2026-05-06',
     }, ['p1'])
     expect(r.aiTraining.total).toBe(5)
     expect(r.aiTraining.direct).toBe(5)
@@ -207,7 +207,7 @@ describe('getOwnerBotSummaryFromBundle (T-269)', () => {
     const r = getOwnerBotSummaryFromBundle({
       snapshot: null,
       todayRows: [],
-      fromIso: 'a', toIso: 'b', days: 30, fromKey: '2026-04-06', todayKey: '2026-05-06',
+      fromIso: 'a', toIso: 'b', days: 30, fromKey: '2026-04-06', toKey: '2026-05-06', todayKey: '2026-05-06',
     }, ['p1'])
     expect(r.aiSearch.total).toBe(0)
     consoleSpy.mockRestore()
@@ -224,7 +224,7 @@ describe('getOwnerDailyTrendFromBundle (T-269)', () => {
       todayRows: [
         { place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 7, last_visited_at: null },
       ],
-      fromIso: 'a', toIso: 'b', days: 7, fromKey: '2026-04-30', todayKey: '2026-05-06',
+      fromIso: 'a', toIso: 'b', days: 7, fromKey: '2026-04-30', toKey: '2026-05-06', todayKey: '2026-05-06',
     })
     expect(rows).toHaveLength(7)
     const total = rows.reduce((s, r) => s + r.total, 0)
