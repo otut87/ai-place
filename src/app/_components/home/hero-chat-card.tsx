@@ -46,7 +46,7 @@ export function HeroChatCard() {
   return (
     <div className="chat-stack">
       <div className="chat-card" id="chat-hero">
-        <span className="stamp">예시 · 실제 응답은 시점·모델에 따라 달라집니다</span>
+        <span className="example-pin">예시 · 실제 응답은 시점·모델에 따라 달라집니다</span>
         <div className="chat-head">
           <span className={`ai-logo ${p.cls}`}>{p.letter}</span>
           <div className="chat-meta">

@@ -127,7 +127,7 @@ h1.hero-title {
 }
 .source-line a { color: var(--aip-accent); border-bottom: 1px dashed currentColor }
 
-.stamp {
+.example-pin {
   position: absolute; top: -12px; right: -12px;
   background: var(--aip-accent); color: #fff;
   padding: 6px 12px; border-radius: 999px;
@@ -382,8 +382,8 @@ h1.hero-title {
    aip.css 글로벌 패치(760px)에서 다루지 않는 홈 전용 보정.
    ============================================================ */
 @media (max-width: 760px) {
-  /* hero chat-card stamp — viewport 밖으로 튀어나가는 문제 */
-  .stamp {
+  /* hero chat-card example pin — viewport 밖으로 튀어나가는 문제 */
+  .example-pin {
     top: 8px; right: 8px;
     transform: none;
     font-size: 10.5px;
