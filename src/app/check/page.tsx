@@ -53,7 +53,8 @@ const FailIcon = (
   </svg>
 )
 
-const LAST_UPDATED = new Date().toISOString().slice(0, 10)
+// Phase 2 / P1-5: /check 는 진단 도구 페이지라 "updated" 표시가 콘텐츠 freshness
+//   신호와 무관 (매 빌드마다 변경되어 가짜 신호). 표시 자체 제거.
 
 export default async function CheckPage({ searchParams }: Props) {
   const { url } = await searchParams
@@ -83,8 +84,6 @@ export default async function CheckPage({ searchParams }: Props) {
               <span>checks <b>13</b></span>
               <span>·</span>
               <span>avg <b>30초</b></span>
-              <span>·</span>
-              <span>updated <b>{LAST_UPDATED}</b></span>
             </div>
 
             <h1 className="au-title">AI 가독성 <span className="it">진단</span></h1>

@@ -84,7 +84,8 @@ export default async function CityHubPage({ params }: Props) {
     categories.some(c => c.sector === s.slug && activeCategoryKeys.has(c.slug)),
   )
 
-  const lastUpdated = cityBlogs[0]?.publishedAt?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)
+  // Phase 2 / P1-5: 가짜 freshness 제거. 도시 글이 없으면 null — 표시 안 함.
+  const lastUpdated: string | null = cityBlogs[0]?.publishedAt?.slice(0, 10) ?? null
 
   const pageUrl = `${BASE_URL}/${city}`
   const breadcrumbItems = [
@@ -130,8 +131,12 @@ export default async function CityHubPage({ params }: Props) {
             <div className="ch-meta-line" style={{ marginTop: 14 }}>
               <span className="pill">City Hub · Live</span>
               <span>doc-id <b>aip-city-{city}</b></span>
-              <span>·</span>
-              <span>updated <b>{lastUpdated}</b></span>
+              {lastUpdated && (
+                <>
+                  <span>·</span>
+                  <span>updated <b>{lastUpdated}</b></span>
+                </>
+              )}
               <span>·</span>
               <span>places <b>{cityPlaces.length}</b></span>
               <span>·</span>
@@ -160,11 +165,13 @@ export default async function CityHubPage({ params }: Props) {
                 <dd>{cityBlogs.length}</dd>
                 <span className="sub">{cityObj.name} 가이드·비교·키워드</span>
               </div>
-              <div className="s">
-                <dt>마지막 갱신</dt>
-                <dd className="accent">{lastUpdated.slice(5, 10).replace('-', '/')}</dd>
-                <span className="sub">{lastUpdated}</span>
-              </div>
+              {lastUpdated && (
+                <div className="s">
+                  <dt>마지막 갱신</dt>
+                  <dd className="accent">{lastUpdated.slice(5, 10).replace('-', '/')}</dd>
+                  <span className="sub">{lastUpdated}</span>
+                </div>
+              )}
             </dl>
 
             {/* Cross-nav: 다른 도시 */}

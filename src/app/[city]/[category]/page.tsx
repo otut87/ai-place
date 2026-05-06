@@ -28,7 +28,7 @@ import { getBlogPostsBySector } from '@/lib/blog/data.supabase'
 import { generateItemList, generateFAQPage } from '@/lib/jsonld'
 import { generateBreadcrumbList, generateCategoryDAB } from '@/lib/seo'
 import { buildCategoryMetadata } from '@/lib/seo/page-meta'
-import { latestUpdatedAt, toIsoDate } from '@/lib/format/time'
+import { latestUpdatedAt } from '@/lib/format/time'
 import { extractReviewTotal } from '@/lib/seo/title-formula'
 import { HomeNav } from '@/app/_components/home/home-nav'
 import { SiteFooter, SITE_BRAND } from '@/components/site/site-footer'
@@ -154,7 +154,7 @@ function buildDerivedFaqs(opts: {
   servicesTop: ReturnType<typeof topServices>
   blogPostsCount: number
   recentBlogTitle: string | null
-  lastUpdated: string
+  lastUpdated: string | null
 }): FAQ[] {
   const faqs: FAQ[] = []
   const { cityName, catName, places, totalReviews, avgRating, topPlace, mostReviewed, servicesTop, blogPostsCount, recentBlogTitle, lastUpdated } = opts
@@ -192,7 +192,9 @@ function buildDerivedFaqs(opts: {
   }
   faqs.push({
     question: '이 페이지의 데이터는 얼마나 신뢰할 수 있나요?',
-    answer: `마지막 갱신은 ${lastUpdated}이며 네이버 플레이스, Google Places, 업체 직접 제공 정보를 결합합니다. 자세한 방법론은 /about/methodology 에서 확인하세요.`,
+    answer: lastUpdated
+      ? `마지막 갱신은 ${lastUpdated}이며 네이버 플레이스, Google Places, 업체 직접 제공 정보를 결합합니다. 자세한 방법론은 /about/methodology 에서 확인하세요.`
+      : '네이버 플레이스, Google Places, 업체 직접 제공 정보를 결합합니다. 자세한 방법론은 /about/methodology 에서 확인하세요.',
   })
   return faqs
 }
@@ -246,10 +248,9 @@ export default async function ListingPage({ params }: Props) {
   const districtLine = places.length > 0 ? deriveDistrictBreakdown(places) : ''
   const sourcesConfig = getSourcesForCategory({ sectorSlug: sector?.slug })
 
-  const lastUpdated =
-    latestUpdatedAt(places.map(p => p.lastUpdated ?? null)) ??
-    toIsoDate(new Date().toISOString()) ??
-    ''
+  // Phase 2 / P1-5: 가짜 freshness 제거. places 의 진짜 timestamp 가 없으면 null —
+  //   이전엔 toIsoDate(new Date()...) 폴백으로 매 요청 "오늘 갱신" 위조.
+  const lastUpdated: string | null = latestUpdatedAt(places.map(p => p.lastUpdated ?? null))
 
   const derivedFaqs = buildDerivedFaqs({
     cityName: cityObj.name,
@@ -312,12 +313,17 @@ export default async function ListingPage({ params }: Props) {
               <span>
                 doc-id <b>{docId}</b>
               </span>
-              <span>·</span>
-              <span>
-                {/* T-255 — `<time>` semantic + 한글 "최종 업데이트" 라벨로
-                    validate-pages SEO 게이트(time tag + Freshness) 통과. */}
-                최종 업데이트 <time dateTime={lastUpdated}><b>{lastUpdated}</b></time>
-              </span>
+              {/* T-255 — `<time>` semantic + 한글 "최종 업데이트" 라벨로
+                  validate-pages SEO 게이트(time tag + Freshness) 통과.
+                  Phase 2 / P1-5: lastUpdated 없으면 표시 자체 생략. */}
+              {lastUpdated && (
+                <>
+                  <span>·</span>
+                  <span>
+                    최종 업데이트 <time dateTime={lastUpdated}><b>{lastUpdated}</b></time>
+                  </span>
+                </>
+              )}
               <span>·</span>
               <span>
                 schema <b>{schemaBadges.join(' / ')}</b>
@@ -642,7 +648,7 @@ export default async function ListingPage({ params }: Props) {
                     return (
                       <li key={src.name}>
                         <b>{src.name}</b> — {src.detail}
-                        {isFirst ? ` (최근 갱신 ${lastUpdated})` : ''}
+                        {isFirst && lastUpdated ? ` (최근 갱신 ${lastUpdated})` : ''}
                       </li>
                     )
                   })}

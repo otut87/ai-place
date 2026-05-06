@@ -12,6 +12,14 @@ import * as seed from './data'
 
 // --- Supabase 쿼리 헬퍼 ---
 
+/**
+ * Phase 2 / P1-3 (codex review 2026-04-30): DB 실패 vs 빈 결과 구분.
+ * - DB error / null client → return null (caller 가 seed fallback)
+ * - 정상 응답이지만 0건 → return [] (정상, fallback 안 함)
+ *
+ * 기존엔 두 케이스를 모두 null 로 묶어서 caller 가 [] 로 fallback → DB 장애 시
+ * sitemap.xml / llms.txt 가 "빈 사이트" 200 응답으로 나가는 회귀 발생.
+ */
 async function supabasePlaces(city: string, category: string): Promise<Place[] | null> {
   try {
     const supabase = getReadClient()
@@ -24,8 +32,11 @@ async function supabasePlaces(city: string, category: string): Promise<Place[] |
       .eq('status', 'active')
       .not('google_place_id', 'is', null)
 
-    if (error || !data || data.length === 0) return null
-    return data.map(row => dbPlaceToPlace(row as Parameters<typeof dbPlaceToPlace>[0]))
+    if (error) {
+      console.error('[data.supabase] supabasePlaces error:', error.message)
+      return null
+    }
+    return (data ?? []).map(row => dbPlaceToPlace(row as Parameters<typeof dbPlaceToPlace>[0]))
   } catch (err) {
     console.error('[data.supabase] supabasePlaces failed:', err)
     return null
@@ -62,8 +73,11 @@ async function supabaseAllPlaces(): Promise<Place[] | null> {
       .eq('status', 'active')
       .not('google_place_id', 'is', null)
 
-    if (error || !data || data.length === 0) return null
-    return data.map(row => dbPlaceToPlace(row as Parameters<typeof dbPlaceToPlace>[0]))
+    if (error) {
+      console.error('[data.supabase] supabaseAllPlaces error:', error.message)
+      return null
+    }
+    return (data ?? []).map(row => dbPlaceToPlace(row as Parameters<typeof dbPlaceToPlace>[0]))
   } catch (err) {
     console.error('[data.supabase] supabaseAllPlaces failed:', err)
     return null
@@ -107,10 +121,15 @@ async function supabaseCategories(): Promise<Category[] | null> {
 // --- Public API (data.ts와 동일 시그니처) ---
 
 export async function getPlaces(city: string, category: string): Promise<Place[]> {
-  return (await supabasePlaces(city, category)) ?? []
+  // Phase 2 / P1-3: DB 장애 시 seed 폴백. cities/categories 와 동일 패턴.
+  const result = await supabasePlaces(city, category)
+  if (result !== null) return result
+  console.error('[data.supabase] getPlaces: DB unavailable — falling back to seed', { city, category })
+  return seed.getPlaces(city, category)
 }
 
 export async function getPlaceBySlug(city: string, category: string, slug: string): Promise<Place | undefined> {
+  // 단일 row 조회는 404 가 정상 케이스 — DB 폴백 적용 안 함 (잘못된 페이지 노출 방지).
   return (await supabasePlaceBySlug(city, category, slug)) ?? undefined
 }
 
@@ -139,7 +158,12 @@ export async function getSectorForCategory(categorySlug: string) {
 }
 
 export async function getAllPlaces(): Promise<Place[]> {
-  return (await supabaseAllPlaces()) ?? []
+  // Phase 2 / P1-3: DB 장애 시 seed 폴백. sitemap.xml / llms.txt 가 빈 사이트로
+  // 송출되는 회귀 차단. cities/categories 와 동일 패턴.
+  const result = await supabaseAllPlaces()
+  if (result !== null) return result
+  console.error('[data.supabase] getAllPlaces: DB unavailable — falling back to seed')
+  return seed.getAllPlaces()
 }
 
 /** 업체 ReviewSummary 배열 업서트 — 특정 소스 요약을 새로 갱신. */

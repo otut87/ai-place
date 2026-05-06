@@ -14,7 +14,6 @@ import { getSiteStats } from '@/lib/site-stats'
 import { generateCollectionPage, generateBlogItemList } from '@/lib/jsonld'
 import { generateBreadcrumbList } from '@/lib/seo'
 import { safeJsonLd } from '@/lib/utils'
-import { readCityCookieServer, CITY_ALL } from '@/lib/geo/city-cookie'
 import { searchBlogPosts } from '@/lib/blog/search'
 import { pageNumbers } from '@/lib/blog/pagination'
 import type { BlogPostSummary } from '@/lib/types'
@@ -22,7 +21,14 @@ import '@/styles/aip.css'
 import '@/styles/home-wrap.css'
 import '@/styles/blog-index-remix.css'
 
-// 쿠키 기반 city 컨텍스트 + 동적 필터/페이지네이션 — 정적 캐싱 비활성.
+// Phase 2 / P1-1 (codex review 2026-04-30) — 쿠키 의존 제거.
+//   기존: 쿠키 city 가 본문 필터에 영향 + canonical 은 항상 /blog → 같은 canonical
+//   URL 이 사용자별로 다른 본문을 노출. 검색엔진/LLM 이 단일 문서로 해석 못함.
+//   현재: city 필터는 URL 쿼리만 신뢰. /blog 는 쿠키 영향 없는 전역 인덱스.
+//   쿠키는 헤더 city picker UX 로만 사용 (별도 컴포넌트, server side filter 와 분리).
+//
+// dynamic='force-dynamic' 은 검색·페이지네이션 렌더 비용 때문에 유지 — caching 부재가
+// canonical 신호와 충돌하진 않음.
 export const dynamic = 'force-dynamic'
 
 const PAGE_SIZE = 20
@@ -108,22 +114,20 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
   const sortMode = raw.sort === 'popular' ? 'popular' : raw.sort === 'cited' ? 'cited' : 'recent'
 
   // 전체 글 풀 (POST_POOL_LIMIT — 현재 규모 기준 충분히 여유). 인기글은 viewCount 정렬용으로 별도.
-  const [recent, popular, cities, sectors, stats, cookieCity] = await Promise.all([
+  const [recent, popular, cities, sectors, stats] = await Promise.all([
     getRecentBlogPosts(POST_POOL_LIMIT),
     getPopularBlogPosts(20),
     getCities(),
     getSectors(),
     getSiteStats(),
-    readCityCookieServer(),
   ])
 
-  // 쿠키 동기화 — URL ?city= 가 없으면 쿠키 도시를 디폴트로 적용 ('all' 은 필터 미적용).
-  const effectiveCity =
-    urlCityFilter || (cookieCity !== CITY_ALL && cities.some(c => c.slug === cookieCity)
-      ? cookieCity
-      : '')
-  // 헤더 칩의 active 표시는 effectiveCity 기준.
-  const cityFilter = effectiveCity
+  // Phase 2 / P1-1: city 필터는 URL 쿼리만 신뢰 (쿠키 의존 제거).
+  //   쿠키 도시는 헤더 picker UX 로만 — 본문 필터에는 영향 없음.
+  //   결과: /blog 는 모든 사용자에게 동일 본문, canonical=/blog 와 일관.
+  const cityFilter = urlCityFilter && cities.some(c => c.slug === urlCityFilter)
+    ? urlCityFilter
+    : ''
 
   const all: BlogPostSummary[] = recent
 
@@ -225,7 +229,8 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
   })
 
   const docId = 'aip-blog-index'
-  const lastPublished = recent[0]?.publishedAt?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)
+  // Phase 2 / P1-5: 가짜 freshness 제거. 글이 0건이면 null — 표시 안 함.
+  const lastPublished: string | null = recent[0]?.publishedAt?.slice(0, 10) ?? null
   const draftCount = Math.max(0, stats.totalCategories - stats.activeCategories)
 
   // 유형별 카운트가 0인 것은 legend 에서 제외
@@ -255,10 +260,14 @@ export default async function BlogHomePage({ searchParams }: BlogHomeProps) {
               <span>
                 doc-id <b>{docId}</b>
               </span>
-              <span>·</span>
-              <span>
-                last published <b>{lastPublished}</b>
-              </span>
+              {lastPublished && (
+                <>
+                  <span>·</span>
+                  <span>
+                    last published <b>{lastPublished}</b>
+                  </span>
+                </>
+              )}
               <span>·</span>
               <span>
                 posts <b>{stats.totalBlogPosts}</b>

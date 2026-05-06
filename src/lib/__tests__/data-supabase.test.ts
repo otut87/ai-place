@@ -164,18 +164,35 @@ describe('Supabase 성공 시', () => {
   })
 })
 
-// ===== 3. Supabase 실패 시 빈 배열 (DB가 유일한 Place 소스) =====
-describe('Supabase 실패 시', () => {
-  it('getPlaces → Supabase 에러 시 빈 배열', async () => {
+// ===== 3. Supabase 실패 vs 빈 결과 구분 (Phase 2 / P1-3) =====
+//
+// 기존엔 places 만 빈 배열 fallback 이어서 Supabase 장애 시 sitemap.xml /
+// llms.txt 가 "빈 사이트" 200 응답으로 송출되는 회귀 발생 가능. P1-3 fix 후로는
+// DB error 와 진짜 0건을 구분 — error 시에만 seed fallback, 정상 0건은 [] 그대로.
+describe('Supabase error vs empty 구분 + seed fallback', () => {
+  it('getPlaces → DB error 시 seed 폴백 (빈 사이트 회귀 차단)', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: null, error: { message: 'connection refused' } }))
 
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { getPlaces } = await import('@/lib/data.supabase')
     const result = await getPlaces('cheonan', 'dermatology')
+
+    // seed 가 천안 피부과 데이터를 가지고 있어야 fallback 효과 검증 가능
+    expect(result.length).toBeGreaterThan(0)
+    expect(consoleSpy).toHaveBeenCalled()
+    consoleSpy.mockRestore()
+  })
+
+  it('getPlaces → DB 정상 응답 + 0건 (해당 city/category 등록 0건) → []', async () => {
+    mockFrom.mockReturnValueOnce(createChainMock({ data: [], error: null }))
+
+    const { getPlaces } = await import('@/lib/data.supabase')
+    const result = await getPlaces('asan', 'orthopedics')   // 등록 안 된 조합
 
     expect(result).toEqual([])
   })
 
-  it('getCities → Supabase 에러 시 시드 폴백 (cities는 시드 유지)', async () => {
+  it('getCities → DB error 시 시드 폴백 (기존 동작 회귀 가드)', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: null, error: { message: 'timeout' } }))
 
     const { getCities } = await import('@/lib/data.supabase')
@@ -184,8 +201,20 @@ describe('Supabase 실패 시', () => {
     expect(result[0].slug).toBe('cheonan')
   })
 
-  it('getAllPlaces → Supabase 에러 시 빈 배열', async () => {
+  it('getAllPlaces → DB error 시 seed 폴백 (sitemap.xml / llms.txt 보호)', async () => {
     mockFrom.mockReturnValueOnce(createChainMock({ data: null, error: { message: 'service unavailable' } }))
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { getAllPlaces } = await import('@/lib/data.supabase')
+    const result = await getAllPlaces()
+
+    expect(result.length).toBeGreaterThan(0)
+    expect(consoleSpy).toHaveBeenCalled()
+    consoleSpy.mockRestore()
+  })
+
+  it('getAllPlaces → DB 정상 + 0건 → [] (운영 초기 진짜 0건 케이스 보전)', async () => {
+    mockFrom.mockReturnValueOnce(createChainMock({ data: [], error: null }))
 
     const { getAllPlaces } = await import('@/lib/data.supabase')
     const result = await getAllPlaces()

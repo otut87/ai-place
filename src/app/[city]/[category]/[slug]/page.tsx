@@ -16,6 +16,7 @@ import { PlaceTabs } from './_components/place-tabs'
 import {
   getPlaceBySlug,
   getPlaces,
+  getAllPlaces,
   getCities,
   getCategories,
   getSchemaTypeForCategory,
@@ -90,18 +91,15 @@ function buildHoursRows(openingHours: string[] | undefined): Array<{ day: string
 }
 
 export async function generateStaticParams() {
-  const cities = await getCities()
-  const categories = await getCategories()
-  const params: Array<{ city: string; category: string; slug: string }> = []
-  for (const city of cities) {
-    for (const cat of categories) {
-      const places = await getPlaces(city.slug, cat.slug)
-      for (const place of places) {
-        params.push({ city: city.slug, category: cat.slug, slug: place.slug })
-      }
-    }
-  }
-  return params
+  // Phase 2 / P1-4 (codex review 2026-04-30): N×M DB 쿼리 폭증 차단.
+  //   기존엔 10도시 × 83카테고리 = 830 DB calls during build. 도시 늘면 그대로 비례.
+  //   getAllPlaces() 1회로 전체 slug 셋을 메모리에 로드 후 필터링 — DB 호출 1회로 끝.
+  const places = await getAllPlaces()
+  return places.map(place => ({
+    city: place.city,
+    category: place.category,
+    slug: place.slug,
+  }))
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -167,7 +165,10 @@ export default async function ProfilePage({ params }: Props) {
   const startingPriceService = place.services?.find(s => s.priceRange)
   const district = extractDistrict(place.address)
   const docId = `aip-${city}-${category}-${slug}`
-  const lastUpdated = place.lastUpdated ?? new Date().toISOString().slice(0, 10)
+  // Phase 2 / P1-5 (codex review 2026-04-30): 가짜 freshness 제거.
+  //   place.lastUpdated 가 없으면 표시 안 함 (이전엔 new Date() 폴백으로 매 요청 "오늘 갱신"
+  //   처럼 보였음 — 실제 변경 없는데 freshness 신호 위조). null 시 표시처에서 falsy 분기.
+  const lastUpdated: string | null = place.lastUpdated ? place.lastUpdated.slice(0, 10) : null
   const hoursRows = buildHoursRows(place.openingHours)
 
   // WHY card 합성: description + strengths/recommendedFor 우선 노출
@@ -265,12 +266,17 @@ export default async function ProfilePage({ params }: Props) {
               <span>
                 doc-id <b>{docId}</b>
               </span>
-              <span>·</span>
-              <span>
-                {/* T-255 — `<time>` semantic + 한글 "최종 업데이트" 라벨로
-                    validate-pages SEO 게이트(time tag) 통과. */}
-                최종 업데이트 <time dateTime={lastUpdated}><b>{lastUpdated}</b></time>
-              </span>
+              {/* T-255 — `<time>` semantic + 한글 "최종 업데이트" 라벨로
+                  validate-pages SEO 게이트(time tag) 통과.
+                  Phase 2 / P1-5: lastUpdated 없으면 표시 자체 생략 (가짜 freshness 회피). */}
+              {lastUpdated && (
+                <>
+                  <span>·</span>
+                  <span>
+                    최종 업데이트 <time dateTime={lastUpdated}><b>{lastUpdated}</b></time>
+                  </span>
+                </>
+              )}
               <span>·</span>
               <span>
                 schema <b>{schemaBadges}</b>
@@ -375,11 +381,13 @@ export default async function ProfilePage({ params }: Props) {
                     <dd className="accent-dd">{startingPriceService?.priceRange ? startingPriceService.priceRange : '문의'}</dd>
                     <span className="sub">{startingPriceService?.name ?? '상담 후 확정'}</span>
                   </div>
-                  <div className="kf">
-                    <dt>업데이트</dt>
-                    <dd style={{ fontSize: 18, lineHeight: 1.2 }}>{lastUpdated.slice(5).replace('-', '/')}</dd>
-                    <span className="sub">{lastUpdated.slice(0, 4)}년 갱신</span>
-                  </div>
+                  {lastUpdated && (
+                    <div className="kf">
+                      <dt>업데이트</dt>
+                      <dd style={{ fontSize: 18, lineHeight: 1.2 }}>{lastUpdated.slice(5).replace('-', '/')}</dd>
+                      <span className="sub">{lastUpdated.slice(0, 4)}년 갱신</span>
+                    </div>
+                  )}
                 </dl>
 
                 {/* WHY card */}
@@ -438,7 +446,7 @@ export default async function ProfilePage({ params }: Props) {
                 </div>
 
                 <div className="foot">
-                  last reviewed {lastUpdated}
+                  {lastUpdated ? `last reviewed ${lastUpdated}` : 'last reviewed: —'}
                   <br />
                   source: Google Places + 업체 직접 제공
                 </div>
@@ -756,7 +764,7 @@ export default async function ProfilePage({ params }: Props) {
                   {sourcesConfig.sources.map((src, idx) => (
                     <li key={src.name}>
                       <b>{src.name}</b> — {src.detail}
-                      {idx === 0 ? ` (최근 갱신 ${lastUpdated})` : ''}
+                      {idx === 0 && lastUpdated ? ` (최근 갱신 ${lastUpdated})` : ''}
                     </li>
                   ))}
                 </ul>
@@ -773,7 +781,7 @@ export default async function ProfilePage({ params }: Props) {
                   <br />
                   contact: {SITE_BRAND.email} · doc-id: {docId}
                   <br />
-                  last reviewed: {lastUpdated}
+                  last reviewed: {lastUpdated ?? '—'}
                 </div>
               </div>
             </div>
