@@ -141,6 +141,87 @@ describe('getOwnerDailyTrendDaily', () => {
   })
 })
 
+describe('fetchOwnerStatsBundle (T-269)', () => {
+  it('placeIds 빈 배열 → RPC 호출 없이 빈 bundle 반환', async () => {
+    const { fetchOwnerStatsBundle } = await import('@/lib/owner/bot-stats-daily')
+    const b = await fetchOwnerStatsBundle([], 30, new Date('2026-05-06T12:00:00Z'))
+    expect(b.snapshot).toEqual([])
+    expect(b.todayRows).toEqual([])
+    expect(b.days).toBe(30)
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('snapshot RPC + today RPC 1회씩만 호출 (중복 제거)', async () => {
+    rpcResponses.owner_bot_visits_daily_select = {
+      data: [{ date: '2026-05-05', place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 4, last_visited_at: null }],
+      error: null,
+    }
+    rpcResponses.bot_visits_today_owner = {
+      data: [{ place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 7, last_visited_at: null }],
+      error: null,
+    }
+
+    const { fetchOwnerStatsBundle } = await import('@/lib/owner/bot-stats-daily')
+    const b = await fetchOwnerStatsBundle(['p1'], 7, new Date('2026-05-06T12:00:00Z'))
+
+    expect(b.snapshot).toHaveLength(1)
+    expect(b.todayRows).toHaveLength(1)
+    expect(mockRpc).toHaveBeenCalledTimes(2)  // snapshot + today, 각 1회.
+  })
+})
+
+describe('getOwnerBotSummaryFromBundle (T-269)', () => {
+  it('bundle snapshot+today 동기 aggregate', async () => {
+    const { getOwnerBotSummaryFromBundle } = await import('@/lib/owner/bot-stats-daily')
+    const r = getOwnerBotSummaryFromBundle({
+      snapshot: [
+        { date: '2026-05-05', place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 5, last_visited_at: null },
+      ],
+      todayRows: [
+        { place_id: 'p1', bot_id: 'chatgpt-user', page_type: 'detail', visits: 2, last_visited_at: null },
+      ],
+      fromIso: '2026-04-06T00:00:00Z', toIso: '2026-05-06T12:00:00Z',
+      days: 30, fromKey: '2026-04-06', todayKey: '2026-05-06',
+    }, ['p1'])
+    expect(r.aiTraining.total).toBe(5)
+    expect(r.aiTraining.direct).toBe(5)
+    expect(r.aiSearch.total).toBe(2)
+    expect(r.aiSearch.direct).toBe(2)
+  })
+
+  it('snapshot null → 빈 bucket', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { getOwnerBotSummaryFromBundle } = await import('@/lib/owner/bot-stats-daily')
+    const r = getOwnerBotSummaryFromBundle({
+      snapshot: null,
+      todayRows: [],
+      fromIso: 'a', toIso: 'b', days: 30, fromKey: '2026-04-06', todayKey: '2026-05-06',
+    }, ['p1'])
+    expect(r.aiSearch.total).toBe(0)
+    consoleSpy.mockRestore()
+  })
+})
+
+describe('getOwnerDailyTrendFromBundle (T-269)', () => {
+  it('일자 버킷 + snapshot/today 누적', async () => {
+    const { getOwnerDailyTrendFromBundle } = await import('@/lib/owner/bot-stats-daily')
+    const rows = getOwnerDailyTrendFromBundle({
+      snapshot: [
+        { date: '2026-05-05', place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 4, last_visited_at: null },
+      ],
+      todayRows: [
+        { place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 7, last_visited_at: null },
+      ],
+      fromIso: 'a', toIso: 'b', days: 7, fromKey: '2026-04-30', todayKey: '2026-05-06',
+    })
+    expect(rows).toHaveLength(7)
+    const total = rows.reduce((s, r) => s + r.total, 0)
+    expect(total).toBe(11)
+    const today = rows[rows.length - 1]
+    expect(today.aiTraining.chatgpt).toBe(7)
+  })
+})
+
 describe('listOwnerBotVisitsDaily', () => {
   it('placeIds 빈 → []', async () => {
     const { listOwnerBotVisitsDaily } = await import('@/lib/owner/bot-stats-daily')
