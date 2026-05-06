@@ -252,6 +252,12 @@ export default async function ListingPage({ params }: Props) {
   //   이전엔 toIsoDate(new Date()...) 폴백으로 매 요청 "오늘 갱신" 위조.
   const lastUpdated: string | null = latestUpdatedAt(places.map(p => p.lastUpdated ?? null))
 
+  // T-278: empty-state 브랜치는 transient flake (T-255 generateStaticParams 가
+  //   빈 카테고리 차단하므로 정상 빌드 시 도달 X — supabasePlaces 가 timeout 폴백한 경우만).
+  //   validator 의 Freshness/<time>/heading 게이트를 깨고 deploy 차단되던 회귀 fix.
+  //   "데이터 수집 중" 라벨로 가짜 freshness 표시 회피, JSON-LD dateModified 미발신.
+  const emptyStateBuildDate = new Date().toISOString().slice(0, 10)
+
   const derivedFaqs = buildDerivedFaqs({
     cityName: cityObj.name,
     catName: catObj.name,
@@ -315,15 +321,25 @@ export default async function ListingPage({ params }: Props) {
               </span>
               {/* T-255 — `<time>` semantic + 한글 "최종 업데이트" 라벨로
                   validate-pages SEO 게이트(time tag + Freshness) 통과.
-                  Phase 2 / P1-5: lastUpdated 없으면 표시 자체 생략. */}
-              {lastUpdated && (
+                  Phase 2 / P1-5: lastUpdated 없으면 표시 자체 생략.
+                  T-278: empty-state (places.length === 0) 일 땐 빌드 시각으로
+                  fallback `<time>` 렌더 + "데이터 수집 중" 라벨로 가짜 freshness 회피. */}
+              {lastUpdated ? (
                 <>
                   <span>·</span>
                   <span>
                     최종 업데이트 <time dateTime={lastUpdated}><b>{lastUpdated}</b></time>
                   </span>
                 </>
-              )}
+              ) : places.length === 0 ? (
+                <>
+                  <span>·</span>
+                  <span>
+                    최종 업데이트 <time dateTime={emptyStateBuildDate}>{emptyStateBuildDate}</time>{' '}
+                    · 데이터 수집 중
+                  </span>
+                </>
+              ) : null}
               <span>·</span>
               <span>
                 schema <b>{schemaBadges.join(' / ')}</b>
@@ -375,7 +391,9 @@ export default async function ListingPage({ params }: Props) {
               </div>
             ) : (
               <div className="empty-state">
-                <h3>아직 등록된 업체가 없습니다.</h3>
+                {/* T-278: heading 순서 (H2 before H3) 게이트 통과 — empty-state 가
+                    페이지의 첫 H2 가 되어 후속 Sources/FAQ H3 가 정상 순서. */}
+                <h2>아직 등록된 업체가 없습니다.</h2>
                 <p>
                   {cityObj.name} {catObj.name} 카테고리는 모집 단계입니다. 업체 등록 시 이 페이지가
                   자동으로 활성화됩니다.
