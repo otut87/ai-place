@@ -110,6 +110,7 @@ export async function GET(req: Request) {
     revalidatePath('/admin/blog')
     revalidatePath('/sitemap.xml')
     revalidatePath('/feed.xml')
+    revalidatePath('/llms.txt')
   }
 
   return NextResponse.json({
