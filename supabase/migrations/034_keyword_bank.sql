@@ -169,3 +169,10 @@ comment on function pick_target_query(text, text, text, text) is
 
 -- Supabase REST 의 service_role 은 기본적으로 function 호출 가능하지만 명시.
 grant execute on function pick_target_query(text, text, text, text) to service_role;
+
+-- T-276 (057): PostgreSQL 기본 동작상 함수 생성 시 PUBLIC 에 EXECUTE 자동 부여.
+-- SECURITY DEFINER + RLS bypass 가능한 keyword_bank 발급 함수가 anon REST RPC 로 노출되면
+-- 큐 고갈/중복 issue. PUBLIC/anon/authenticated 회수 후 service_role 만 호출 가능.
+revoke execute on function pick_target_query(text, text, text, text) from public;
+revoke execute on function pick_target_query(text, text, text, text) from anon;
+revoke execute on function pick_target_query(text, text, text, text) from authenticated;

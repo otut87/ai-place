@@ -10,8 +10,12 @@
 
 -- ── 1. bot_id → bot_group 매핑 함수 ───────────────────────────────────
 -- src/lib/seo/bot-detection.ts AI_BOT_PATTERNS 의 27개 봇 ID 와 동기화.
+-- T-276 (057): SET search_path = '' — Function Search Path Mutable advisor 경고 회피.
+-- 외부 객체 참조 없는 순수 함수라 빈 search_path 안전.
 CREATE OR REPLACE FUNCTION public.bot_group_of(p_bot_id text)
-RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
+RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE
+SET search_path = ''
+AS $$
   SELECT CASE p_bot_id
     -- ai-training (11)
     WHEN 'gptbot' THEN 'ai-training'
