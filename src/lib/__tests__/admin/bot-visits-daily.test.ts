@@ -256,6 +256,62 @@ describe('dailyVisitTrendDaily', () => {
   })
 })
 
+describe('aggregateAiBotSummaryDaily', () => {
+  it('crawler-other(googleother) 제외, AI + search 만 합산', async () => {
+    state.snapshot = [
+      { date: '2026-05-05', bot_id: 'gptbot', bot_group: 'ai-training', status: 200, visits: 100, unique_paths: 30, last_visited_at: null },
+      { date: '2026-05-05', bot_id: 'googlebot', bot_group: 'search', status: 200, visits: 50, unique_paths: 20, last_visited_at: null },
+      { date: '2026-05-05', bot_id: 'googleother', bot_group: 'crawler-other', status: 200, visits: 9999, unique_paths: 1000, last_visited_at: null },
+    ]
+    state.todaySummary = [
+      { bot_id: 'claudebot', bot_group: 'ai-training', status: 200, visits: 20, unique_paths: 10, last_visited_at: null },
+      { bot_id: 'googleother', bot_group: 'crawler-other', status: 200, visits: 5000, unique_paths: 500, last_visited_at: null },
+    ]
+    const { aggregateAiBotSummaryDaily } = await import('@/lib/admin/bot-visits-daily')
+    const r = await aggregateAiBotSummaryDaily(7)
+    expect(r.totalVisits).toBe(170)                 // 100 + 50 + 20
+    const ids = r.byBot.map((b) => b.botId)
+    expect(ids).toContain('gptbot')
+    expect(ids).toContain('googlebot')
+    expect(ids).toContain('claudebot')
+    expect(ids).not.toContain('googleother')
+  })
+
+  it('byBot 은 visits desc 정렬', async () => {
+    state.snapshot = [
+      { date: '2026-05-05', bot_id: 'claudebot', bot_group: 'ai-training', status: 200, visits: 10, unique_paths: 5, last_visited_at: null },
+      { date: '2026-05-05', bot_id: 'gptbot', bot_group: 'ai-training', status: 200, visits: 100, unique_paths: 30, last_visited_at: null },
+    ]
+    const { aggregateAiBotSummaryDaily } = await import('@/lib/admin/bot-visits-daily')
+    const r = await aggregateAiBotSummaryDaily(7)
+    expect(r.byBot[0].botId).toBe('gptbot')
+    expect(r.byBot[1].botId).toBe('claudebot')
+  })
+
+  it('byDay 길이 = days, 오늘 버킷에 today RPC 누적', async () => {
+    state.todaySummary = [
+      { bot_id: 'gptbot', bot_group: 'ai-training', status: 200, visits: 7, unique_paths: 3, last_visited_at: null },
+    ]
+    const { aggregateAiBotSummaryDaily } = await import('@/lib/admin/bot-visits-daily')
+    const r = await aggregateAiBotSummaryDaily(14)
+    expect(r.byDay).toHaveLength(14)
+    expect(r.byDay[r.byDay.length - 1]).toBe(7)     // 오늘
+    expect(r.byDay[0]).toBe(0)                       // 14일 전 = 데이터 없음
+  })
+
+  it('admin null → 0/[]/zeros 안전 폴백', async () => {
+    const { getAdminClient } = await import('@/lib/supabase/admin-client')
+    // fetchSnapshot + fetchTodaySummary 각자 getAdminClient() 호출 → 두 번 null 강제.
+    vi.mocked(getAdminClient).mockReturnValueOnce(null).mockReturnValueOnce(null)
+    const { aggregateAiBotSummaryDaily } = await import('@/lib/admin/bot-visits-daily')
+    const r = await aggregateAiBotSummaryDaily(7)
+    expect(r.totalVisits).toBe(0)
+    expect(r.byBot).toEqual([])
+    expect(r.byDay).toHaveLength(7)
+    expect(r.byDay.every((n) => n === 0)).toBe(true)
+  })
+})
+
 describe('getLastAggregatedAt', () => {
   it('snapshot 의 최신 last_visited_at 반환', async () => {
     state.snapshot = [

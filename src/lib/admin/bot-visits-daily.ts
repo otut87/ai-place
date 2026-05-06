@@ -11,11 +11,23 @@
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { AI_BOT_PATTERNS, type BotGroup } from '@/lib/seo/bot-detection'
 import type {
+  AiBotSummary,
   BotAggregate,
   BotStatusAggregate,
   BotGroupSummary,
   DailyTrendRow,
 } from '@/lib/admin/bot-visits'
+
+// 홈/마케팅 합산 기준 — bot-visits.ts 와 동일 (ai-training + ai-search + search).
+// crawler-other (googleother 등 R&D batch) 만 제외.
+const HOME_TRACKED_GROUPS: ReadonlySet<BotGroup> = new Set([
+  'ai-training',
+  'ai-search',
+  'search',
+])
+const HOME_TRACKED_BOT_IDS = new Set(
+  AI_BOT_PATTERNS.filter((p) => HOME_TRACKED_GROUPS.has(p.group)).map((p) => p.id),
+)
 
 // ── 공용 타입 ─────────────────────────────────────────────────────────
 interface DailyRow {
@@ -313,6 +325,51 @@ export async function dailyVisitTrendDaily(days = 14): Promise<DailyTrendRow[]> 
   }
 
   return Array.from(buckets.values())
+}
+
+/**
+ * aggregateAiBotSummary 의 daily 버전 — 홈 sparkline + 30일 AI 방문 metric 용.
+ * 1.17M+ rows 위에서 paginate 5중 round-trip 대신 snapshot select + 1 RPC 로 압축.
+ *
+ * 필터: AI 봇(ai-training + ai-search) + 정규 검색(search). crawler-other 제외.
+ * byDay: 길이 = days, 오래된 → 최신 (KST 기준). 데이터 없는 날은 0.
+ */
+export async function aggregateAiBotSummaryDaily(days = 30): Promise<AiBotSummary> {
+  const [snap, today] = await Promise.all([fetchSnapshot(days), fetchTodaySummary()])
+
+  const aiSnap = snap.filter((r) => HOME_TRACKED_BOT_IDS.has(r.bot_id))
+  const aiToday = today.filter((r) => HOME_TRACKED_BOT_IDS.has(r.bot_id))
+
+  // per-bot 합산 (visits + lastVisitAt)
+  const byBotMap = new Map<string, { visits: number; lastVisitAt: string | null }>()
+  for (const r of [...aiSnap, ...aiToday]) {
+    const e = byBotMap.get(r.bot_id) ?? { visits: 0, lastVisitAt: null }
+    e.visits += r.visits
+    if (r.last_visited_at && (!e.lastVisitAt || r.last_visited_at > e.lastVisitAt)) {
+      e.lastVisitAt = r.last_visited_at
+    }
+    byBotMap.set(r.bot_id, e)
+  }
+  const byBot: BotAggregate[] = Array.from(byBotMap.entries())
+    .map(([botId, v]) => ({ botId, visits: v.visits, lastVisitAt: v.lastVisitAt }))
+    .sort((a, b) => b.visits - a.visits)
+
+  // 일자별 — KST 키 N 일치 버킷, snapshot 은 date 키, today 는 todayKey 단일 누적.
+  const todayKey = todayKstKey()
+  const buckets = new Map<string, number>()
+  for (let i = days - 1; i >= 0; i--) {
+    buckets.set(addDaysKst(todayKey, -i), 0)
+  }
+  for (const r of aiSnap) {
+    if (buckets.has(r.date)) buckets.set(r.date, (buckets.get(r.date) ?? 0) + r.visits)
+  }
+  let todayVisits = 0
+  for (const r of aiToday) todayVisits += r.visits
+  if (buckets.has(todayKey)) buckets.set(todayKey, (buckets.get(todayKey) ?? 0) + todayVisits)
+  const byDay = Array.from(buckets.values())
+
+  const totalVisits = byBot.reduce((s, b) => s + b.visits, 0)
+  return { totalVisits, byBot, byDay }
 }
 
 /** 최종 사전집계 시각 (cron 모니터링용). bot_visits_daily 에서 가장 최근 last_visited_at. */

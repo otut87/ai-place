@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SiteFooter } from '@/components/site/site-footer'
 import { getAllPlaces, getCities, getCategories } from '@/lib/data.supabase'
-import { aggregateAiBotSummary } from '@/lib/admin/bot-visits'
+import { aggregateAiBotSummaryDaily } from '@/lib/admin/bot-visits-daily'
 import { buildSparkline } from '@/lib/sparkline'
 import {
   generateWebSite,
@@ -106,7 +106,7 @@ async function loadStats() {
     getAllPlaces(),
     getCities(),
     getCategories(),
-    aggregateAiBotSummary(30),
+    aggregateAiBotSummaryDaily(30),
   ])
   const activePlaces = places.filter(p => p.rating != null)
   const avgRating =
