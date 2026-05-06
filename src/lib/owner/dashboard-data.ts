@@ -9,18 +9,20 @@ import { scorePlaceAeo, type AeoGrade, type AeoRuleResult } from '@/lib/owner/pl
 import { getMeasurementWindow, type MeasurementWindow } from '@/lib/owner/measurement-window'
 import { countMentionsByPlace } from '@/lib/owner/place-mentions'
 import {
+  listOwnerBotVisits,
+  fetchOwnerPathMap,
   type OwnerBotSummary, type OwnerDailyTrendRow, type OwnerBotVisit,
 } from '@/lib/owner/bot-stats'
 // T-264: getOwnerBotSummary / getOwnerDailyTrend 는 raw bot_visits 5중 페이지네이션 →
 // 1.17M rows 위에서 5+ 라운드트립으로 hang. *Daily 버전이 053 사전집계 + today RPC 로
 // <100ms 안에 동일 결과 반환.
-// T-265: listOwnerBotVisits 도 paths IN (수천) 으로 raw 1.17M 에서 path 인덱스 부재 →
-// 수만 row 스캔으로 수십초 hang. 054 RPC + (path, visited_at) composite 인덱스로 교체.
 // T-269: getOwnerBotSummaryDaily/getOwnerDailyTrendDaily 가 같은 RPC 두 개를 각자 호출하던 중복
 // 발사 제거 — fetchOwnerStatsBundle 1회 후 bundle 을 두 aggregator 에 전달.
+// T-270: listOwnerBotVisitsDaily 의 owner_recent_bot_visits RPC 가 8초 hang (plan 미스).
+// 054 (path, visited_at desc) 인덱스 + 작은 paths 셋(보통 < 50개)이라 raw .order().limit()
+// 가 충분히 빠름 → bot-stats.ts:listOwnerBotVisits 사용. RPC dispatch 오버헤드 회피.
 import {
   fetchOwnerStatsBundle, getOwnerBotSummaryFromBundle, getOwnerDailyTrendFromBundle,
-  listOwnerBotVisitsDaily,
 } from '@/lib/owner/bot-stats-daily'
 import { detectOwnerTodos, type OwnerTodo } from '@/lib/owner/todos'
 import type { FAQ, PlaceImage, ReviewSummary, Service } from '@/lib/types'
@@ -235,13 +237,18 @@ export async function loadOwnerDashboard(
   const placeIds = ownerRows.map((r) => r.id)
   debugTiming.placeIds_count = placeIds.length
 
-  // 2. 병렬 로드 — 모두 daily 사전집계 / RPC 기반 (T-264 + T-265 + T-269).
+  // T-270: listOwnerBotVisits 가 pathMap 받으면 fetchOwnerPathMap 재호출 안 함. listOwnerPlaces
+  // 결과 받은 직후에만 호출 가능 (placeIds 의존). 다른 7개 함수와 병렬로 묶음.
+  const pathMap = await timed('fetchOwnerPathMap', fetchOwnerPathMap(placeIds))
+
+  // 2. 병렬 로드 — 모두 daily 사전집계 / RPC 기반 (T-264 + T-269 + T-270).
   // T-269: bot stats bundle 1회 fetch (snapshot RPC + today RPC) → summary / trend 둘에 prop drill.
+  // T-270: listOwnerBotVisits raw .order().limit() 으로 복원 — owner_recent_bot_visits RPC 8초 회피.
   const [fullPlaces, mentionMap, statsBundle, recentBotVisits, billing, sectorMap] = await Promise.all([
     timed('loadFullPlacesForOwner', loadFullPlacesForOwner(placeIds)),
     timed('countMentionsByPlace', countMentionsByPlace(placeIds)),
     timed('fetchOwnerStatsBundle', fetchOwnerStatsBundle(placeIds, trendDays, now)),
-    timed('listOwnerBotVisitsDaily', listOwnerBotVisitsDaily(placeIds, 10, trendDays, now)),
+    timed('listOwnerBotVisits', listOwnerBotVisits(placeIds, 10, trendDays, now, pathMap)),
     timed('loadBillingState', loadBillingState(user.id, now, user.email)),
     timed('loadSectorMap', loadSectorMap()),
   ])

@@ -25,13 +25,17 @@ const mockBundle = vi.fn()
 const mockBotSummaryFromBundle = vi.fn()
 const mockDailyTrendFromBundle = vi.fn()
 const mockRecentVisits = vi.fn()
-vi.mock('@/lib/owner/bot-stats', () => ({}))
+const mockFetchPathMap = vi.fn(async (..._a: unknown[]) => new Map())
+vi.mock('@/lib/owner/bot-stats', () => ({
+  // T-270: raw .order().limit() 사용 — owner_recent_bot_visits RPC plan 미스 회피.
+  listOwnerBotVisits: (...a: unknown[]) => mockRecentVisits(...a),
+  fetchOwnerPathMap: (...a: unknown[]) => mockFetchPathMap(...a),
+}))
 vi.mock('@/lib/owner/bot-stats-daily', () => ({
   // T-269: dashboard-data 가 RPC 1회 fetchOwnerStatsBundle + bundle prop drill 두 aggregator.
   fetchOwnerStatsBundle: (...a: unknown[]) => mockBundle(...a),
   getOwnerBotSummaryFromBundle: (...a: unknown[]) => mockBotSummaryFromBundle(...a),
   getOwnerDailyTrendFromBundle: (...a: unknown[]) => mockDailyTrendFromBundle(...a),
-  listOwnerBotVisitsDaily: (...a: unknown[]) => mockRecentVisits(...a),
 }))
 
 const mockDetectTodos = vi.fn()
