@@ -198,29 +198,43 @@ export interface LoadOwnerDashboardOptions {
   trendDays?: number
 }
 
+// T-268: 임시 timing 로깅. /owner ~10초 hang 의 함수별 병목 식별 — 사용자 측정 후 제거.
+async function timed<T>(label: string, promise: Promise<T>): Promise<T> {
+  const start = Date.now()
+  try {
+    const r = await promise
+    console.log(`[owner-timing] ${label}: ${Date.now() - start}ms`)
+    return r
+  } catch (e) {
+    console.log(`[owner-timing] ${label}: ${Date.now() - start}ms (FAILED)`)
+    throw e
+  }
+}
+
 export async function loadOwnerDashboard(
   now: Date = new Date(),
   opts: LoadOwnerDashboardOptions = {},
 ): Promise<OwnerDashboardData> {
-  const user = await requireOwnerUser()
+  const dashStart = Date.now()
+  const user = await timed('requireOwnerUser', requireOwnerUser())
   const trendDays = opts.trendDays ?? 30
 
   // 1. 오너 업체 목록 (owner_id / owner_email / customer_id 매칭)
-  const ownerRows = await listOwnerPlaces()
+  const ownerRows = await timed('listOwnerPlaces', listOwnerPlaces())
   const placeIds = ownerRows.map((r) => r.id)
+  console.log(`[owner-timing] placeIds.length = ${placeIds.length}`)
 
   // 2. 병렬 로드 — 모두 daily 사전집계 / RPC 기반 (T-264 + T-265).
-  // 기존 fetchOwnerPathMap 사전 호출은 listOwnerBotVisits 가 paths IN 으로 raw bot_visits 를
-  // 두드릴 때 prop drill 용이었음. 054 RPC 로 server-side INNER JOIN 처리 후 불필요.
   const [fullPlaces, mentionMap, botSummary, dailyTrend, recentBotVisits, billing, sectorMap] = await Promise.all([
-    loadFullPlacesForOwner(placeIds),
-    countMentionsByPlace(placeIds),
-    getOwnerBotSummaryDaily(placeIds, trendDays, now),
-    getOwnerDailyTrendDaily(placeIds, trendDays, now),
-    listOwnerBotVisitsDaily(placeIds, 10, trendDays, now),
-    loadBillingState(user.id, now, user.email),
-    loadSectorMap(),
+    timed('loadFullPlacesForOwner', loadFullPlacesForOwner(placeIds)),
+    timed('countMentionsByPlace', countMentionsByPlace(placeIds)),
+    timed('getOwnerBotSummaryDaily', getOwnerBotSummaryDaily(placeIds, trendDays, now)),
+    timed('getOwnerDailyTrendDaily', getOwnerDailyTrendDaily(placeIds, trendDays, now)),
+    timed('listOwnerBotVisitsDaily', listOwnerBotVisitsDaily(placeIds, 10, trendDays, now)),
+    timed('loadBillingState', loadBillingState(user.id, now, user.email)),
+    timed('loadSectorMap', loadSectorMap()),
   ])
+  console.log(`[owner-timing] TOTAL loadOwnerDashboard: ${Date.now() - dashStart}ms`)
 
   // 3. 각 place 에 대해 AEO 점수 계산.
   const places: OwnerPlaceSummary[] = []
