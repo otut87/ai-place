@@ -47,7 +47,7 @@ export default async function OwnerContentPage({ searchParams }: Params) {
   // T-259 R6 follow-up — 카드 미등록 owner 는 콘텐츠 발행이 시작되지 않으므로 페이지 진입 차단.
   //   blog enqueue cron 이 status='active' places 만 대상이라 cascade 로 빈 상태가 되지만,
   //   "왜 콘텐츠가 없지?" 가 아닌 명확한 카드 등록 안내가 필요.
-  const hasCard = await hasActiveBillingKey(user.id)
+  const hasCard = await hasActiveBillingKey(user.id, user.email)
   if (!hasCard) {
     return (
       <div className="content-page">

@@ -36,22 +36,28 @@ export async function listOwnerPlaces(): Promise<OwnerPlaceRow[]> {
   if (!supabase) return []
 
   // 매칭 우선순위: owner_id → owner_email → customer_id (회원가입 시 연결된 customers row 기준).
-  const results = new Map<string, OwnerPlaceRow>()
+  // T-267: 기존 sequential 4 round trip (places×3 + customers×1) → 병렬 1 round group + 추가 1.
+  // customers 조회는 places 와 의존성 없으므로 places 두 쿼리와 병렬화.
   const cols = 'id, slug, name, city, category, status, description, phone, opening_hours, tags, images, updated_at'
 
-  const byOwnerId = await supabase.from('places').select(cols).eq('owner_id', user.id)
-  if (byOwnerId.error) console.error('[listOwnerPlaces] owner_id 조회 실패:', byOwnerId.error)
-  for (const row of (byOwnerId.data ?? []) as unknown as OwnerPlaceRow[]) results.set(row.id, row)
+  const [byOwnerId, byEmail, customerRow] = await Promise.all([
+    supabase.from('places').select(cols).eq('owner_id', user.id),
+    user.email
+      ? supabase.from('places').select(cols).eq('owner_email', user.email)
+      : Promise.resolve({ data: [] as unknown[], error: null }),
+    supabase.from('customers').select('id').eq('user_id', user.id).maybeSingle(),
+  ])
 
-  if (user.email) {
-    const byEmail = await supabase.from('places').select(cols).eq('owner_email', user.email)
-    if (byEmail.error) console.error('[listOwnerPlaces] owner_email 조회 실패:', byEmail.error)
-    for (const row of (byEmail.data ?? []) as unknown as OwnerPlaceRow[]) results.set(row.id, row)
-  }
+  if (byOwnerId.error) console.error('[listOwnerPlaces] owner_id 조회 실패:', byOwnerId.error)
+  if (byEmail.error) console.error('[listOwnerPlaces] owner_email 조회 실패:', byEmail.error)
+
+  const results = new Map<string, OwnerPlaceRow>()
+  for (const row of (byOwnerId.data ?? []) as unknown as OwnerPlaceRow[]) results.set(row.id, row)
+  for (const row of (byEmail.data ?? []) as unknown as OwnerPlaceRow[]) results.set(row.id, row)
 
   // customer_id 경로 — 과거 owner_id/owner_email 이 비어있는 케이스 대비.
-  const { data: customer } = await supabase.from('customers').select('id').eq('user_id', user.id).maybeSingle()
-  const cid = (customer as { id: string } | null)?.id
+  // customer 가 있을 때만 추가 1회 round trip (위 병렬 결과 받은 후).
+  const cid = (customerRow.data as { id: string } | null)?.id
   if (cid) {
     const byCustomer = await supabase.from('places').select(cols).eq('customer_id', cid)
     if (byCustomer.error) console.error('[listOwnerPlaces] customer_id 조회 실패:', byCustomer.error)

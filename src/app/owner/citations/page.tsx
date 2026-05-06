@@ -40,7 +40,7 @@ export default async function OwnerCitationsPage({ searchParams }: Params) {
 
   // T-259 R6 follow-up — 카드 미등록 owner 는 AI 인용 데이터에 접근 불가.
   //   파일럿 자체가 카드 등록 시점부터 시작이고, 그 전까진 봇 방문 데이터도 의미 없음.
-  const hasCard = await hasActiveBillingKey(user.id)
+  const hasCard = await hasActiveBillingKey(user.id, user.email)
   if (!hasCard) {
     return (
       <div className="cit-page">

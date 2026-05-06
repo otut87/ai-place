@@ -341,6 +341,18 @@ describe('hasActiveBillingKey', () => {
     const { hasActiveBillingKey } = await import('@/lib/actions/owner-billing')
     expect(await hasActiveBillingKey('user-1')).toBe(false)
   })
+
+  it('T-267: ADMIN_EMAILS 운영자 계정 → 카드 0장이어도 true (게이트 우회)', async () => {
+    state.existingActiveCards = []
+    const { hasActiveBillingKey } = await import('@/lib/actions/owner-billing')
+    expect(await hasActiveBillingKey('user-1', 'support@dedo.kr')).toBe(true)
+  })
+
+  it('T-267: 일반 owner 이메일 + 카드 0장 → false (정상 게이트)', async () => {
+    state.existingActiveCards = []
+    const { hasActiveBillingKey } = await import('@/lib/actions/owner-billing')
+    expect(await hasActiveBillingKey('user-1', 'owner@x.com')).toBe(false)
+  })
 })
 
 // T-259 R6 — 카드 등록 시 R6 로 보류된 places 가 active 로 자동 전환되는지.

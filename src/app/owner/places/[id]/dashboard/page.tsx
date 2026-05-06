@@ -115,7 +115,7 @@ export default async function OwnerPlaceDashboardPage({ params }: Props) {
   // T-259 R6 follow-up — 카드 미등록 owner 는 업체 dashboard(AI 크롤러 추이/정보 완성도/크롤러 로그)
   //   진입 차단. 카드 등록 전엔 발행/노출이 시작되지 않아 모든 데이터가 0 → "왜 비어있지?" 가 아니라
   //   카드 등록 안내로 명확화. 업체 편집은 카드 없어도 가능하므로 secondary CTA 로 노출.
-  const hasCard = await hasActiveBillingKey(user.id)
+  const hasCard = await hasActiveBillingKey(user.id, user.email)
   if (!hasCard) {
     return (
       <div className="pd-page">

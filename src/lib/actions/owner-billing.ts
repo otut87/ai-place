@@ -10,6 +10,7 @@ import { requireOwnerForAction } from '@/lib/owner/auth'
 import { getAdminClient } from '@/lib/supabase/admin-client'
 import { tossAdapter } from '@/lib/billing/toss'
 import { STANDARD_PLAN_AMOUNT, STANDARD_PLAN_NAME } from '@/lib/billing/types'
+import { isAdminEmail } from '@/lib/auth/admin-emails'
 
 export type IssueBillingKeyResult =
   | { success: true; billingKeyId: string; subscriptionId: string }
@@ -327,8 +328,14 @@ export async function setPrimaryBillingKeyAction(
  *
  * customer 에 active billing_key 가 1개 이상 있는지 확인.
  * /owner/places/new 접근 차단, registerOwnerPlaceAction 서버 검증에 사용.
+ *
+ * T-267: ADMIN_EMAILS 운영자 계정은 결제 게이트 우회 — userEmail 인자가 admin 이면
+ * billing_keys 조회 없이 true 반환. 모든 호출 site (owner/citations, owner/content,
+ * owner/places/[id]/dashboard) 가 user.email 을 함께 넘기도록 변경.
  */
-export async function hasActiveBillingKey(userId: string): Promise<boolean> {
+export async function hasActiveBillingKey(userId: string, userEmail?: string | null): Promise<boolean> {
+  if (userEmail && isAdminEmail(userEmail)) return true
+
   const admin = getAdminClient()
   if (!admin) return false
 
