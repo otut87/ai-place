@@ -64,6 +64,8 @@ export interface OwnerDashboardData {
   /** T-266: 관리자 계정 여부 — true 면 owner page 에서 결제 게이트(BillingBanner/
    *  PilotEndingBanner)를 노출하지 않음. 데이터 게이트는 loadBillingState 가 이미 우회. */
   isAdmin: boolean
+  /** T-268: 함수별 elapsed ms — admin 진단 용. 일반 owner 에는 빈 객체. */
+  debugTiming?: Record<string, number>
 }
 
 interface PlaceDbRow {
@@ -198,16 +200,19 @@ export interface LoadOwnerDashboardOptions {
   trendDays?: number
 }
 
-// T-268: 임시 timing 로깅. /owner ~10초 hang 의 함수별 병목 식별 — 사용자 측정 후 제거.
-async function timed<T>(label: string, promise: Promise<T>): Promise<T> {
-  const start = Date.now()
-  try {
-    const r = await promise
-    console.log(`[owner-timing] ${label}: ${Date.now() - start}ms`)
-    return r
-  } catch (e) {
-    console.log(`[owner-timing] ${label}: ${Date.now() - start}ms (FAILED)`)
-    throw e
+// T-268: 임시 timing 측정. /owner ~10초 hang 의 함수별 병목 식별 — 사용자 측정 후 제거.
+function makeTimed(timing: Record<string, number>) {
+  return async function timed<T>(label: string, promise: Promise<T>): Promise<T> {
+    const start = Date.now()
+    try {
+      const r = await promise
+      timing[label] = Date.now() - start
+      return r
+    } catch (e) {
+      timing[label] = Date.now() - start
+      timing[`${label}_FAILED`] = 1
+      throw e
+    }
   }
 }
 
@@ -215,6 +220,9 @@ export async function loadOwnerDashboard(
   now: Date = new Date(),
   opts: LoadOwnerDashboardOptions = {},
 ): Promise<OwnerDashboardData> {
+  const debugTiming: Record<string, number> = {}
+  const timed = makeTimed(debugTiming)
+
   const dashStart = Date.now()
   const user = await timed('requireOwnerUser', requireOwnerUser())
   const trendDays = opts.trendDays ?? 30
@@ -222,7 +230,7 @@ export async function loadOwnerDashboard(
   // 1. 오너 업체 목록 (owner_id / owner_email / customer_id 매칭)
   const ownerRows = await timed('listOwnerPlaces', listOwnerPlaces())
   const placeIds = ownerRows.map((r) => r.id)
-  console.log(`[owner-timing] placeIds.length = ${placeIds.length}`)
+  debugTiming.placeIds_count = placeIds.length
 
   // 2. 병렬 로드 — 모두 daily 사전집계 / RPC 기반 (T-264 + T-265).
   const [fullPlaces, mentionMap, botSummary, dailyTrend, recentBotVisits, billing, sectorMap] = await Promise.all([
@@ -234,7 +242,7 @@ export async function loadOwnerDashboard(
     timed('loadBillingState', loadBillingState(user.id, now, user.email)),
     timed('loadSectorMap', loadSectorMap()),
   ])
-  console.log(`[owner-timing] TOTAL loadOwnerDashboard: ${Date.now() - dashStart}ms`)
+  debugTiming.TOTAL_loadOwnerDashboard = Date.now() - dashStart
 
   // 3. 각 place 에 대해 AEO 점수 계산.
   const places: OwnerPlaceSummary[] = []
@@ -320,6 +328,7 @@ export async function loadOwnerDashboard(
     ? null
     : Math.round(places.reduce((s, p) => s + p.aeoScore, 0) / places.length)
 
+  const isAdmin = isAdminEmail(user.email)
   return {
     user,
     places,
@@ -331,6 +340,7 @@ export async function loadOwnerDashboard(
     billing,
     averageAeoScore,
     trendDays,
-    isAdmin: isAdminEmail(user.email),
+    isAdmin,
+    debugTiming: isAdmin ? debugTiming : undefined,
   }
 }
