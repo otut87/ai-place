@@ -18,6 +18,7 @@ import {
   type OwnerBotBucket, type OwnerBotSummary,
   type OwnerBotVisit,
   type OwnerDailyTrendRow,
+  type OwnerPathMap,
   type StatsPeriodInput,
   resolveStatsPeriod,
 } from '@/lib/owner/bot-stats'
@@ -129,15 +130,88 @@ async function fetchOwnerDailySnapshot(
   return out
 }
 
-async function fetchOwnerToday(placeIds: string[]): Promise<OwnerTodayRow[]> {
+/** 오늘 KST 자정 ISO. */
+function todayKstStartIso(now: Date = new Date()): string {
+  const y = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric' })
+  const m = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul', month: '2-digit' })
+  const d = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul', day: '2-digit' })
+  // KST 00:00 = UTC 15:00 of previous day. ISO with +09:00 offset.
+  return `${y}-${m}-${d}T00:00:00+09:00`
+}
+
+/**
+ * 오늘 봇 방문을 paths IN 으로 raw 조회 후 client-side 에서 (place_id, bot_id, page_type) 별
+ * 집계. 054 (path, visited_at desc) 인덱스 + paths 작은 셋 (≈ 수십) 이라 빠름.
+ *
+ * T-271/272: bot_visits_today_owner RPC 가 INNER JOIN 으로 5초 걸리는 것 회피.
+ */
+async function fetchOwnerToday(
+  placeIds: string[],
+  pathMap?: Map<string, { pageType: string; placeIds: string[] }>,
+  now: Date = new Date(),
+): Promise<OwnerTodayRow[]> {
   const admin = getAdminClient()
   if (!admin || placeIds.length === 0) return []
-  const { data, error } = await admin.rpc('bot_visits_today_owner', { p_place_ids: placeIds })
-  if (error) {
-    console.error('[bot-stats-daily] bot_visits_today_owner RPC 실패:', error.message)
-    return []
+
+  // pathMap 미전달 시 RPC 폴백 (테스트 호환).
+  if (!pathMap) {
+    const { data, error } = await admin.rpc('bot_visits_today_owner', { p_place_ids: placeIds })
+    if (error) {
+      console.error('[bot-stats-daily] bot_visits_today_owner RPC 실패:', error.message)
+      return []
+    }
+    return (data ?? []) as OwnerTodayRow[]
   }
-  return (data ?? []) as OwnerTodayRow[]
+
+  const paths = Array.from(pathMap.keys())
+  if (paths.length === 0) return []
+
+  const startIso = todayKstStartIso(now)
+
+  // PAGE 1000 우회 페이지네이션 — 1일치라 보통 1 round trip.
+  const PAGE = 1000, MAX = 50_000
+  const visits: Array<{ bot_id: string; path: string; visited_at: string }> = []
+  for (let from = 0; from < MAX; from += PAGE) {
+    const { data, error } = await admin
+      .from('bot_visits')
+      .select('bot_id, path, visited_at')
+      .in('path', paths)
+      .gte('visited_at', startIso)
+      .range(from, from + PAGE - 1)
+    if (from === 0 && (error || !data)) {
+      console.error('[bot-stats-daily] today bot_visits select 실패:', error?.message)
+      return []
+    }
+    if (error || !data) break
+    visits.push(...(data as Array<{ bot_id: string; path: string; visited_at: string }>))
+    if (data.length < PAGE) break
+  }
+
+  // (place_id, bot_id, page_type) 별 집계.
+  const acc = new Map<string, OwnerTodayRow>()
+  for (const v of visits) {
+    const info = pathMap.get(v.path)
+    if (!info) continue
+    for (const placeId of info.placeIds) {
+      const key = `${placeId}|${v.bot_id}|${info.pageType}`
+      const existing = acc.get(key)
+      if (existing) {
+        existing.visits += 1
+        if (!existing.last_visited_at || v.visited_at > existing.last_visited_at) {
+          existing.last_visited_at = v.visited_at
+        }
+      } else {
+        acc.set(key, {
+          place_id: placeId,
+          bot_id: v.bot_id,
+          page_type: info.pageType,
+          visits: 1,
+          last_visited_at: v.visited_at,
+        })
+      }
+    }
+  }
+  return Array.from(acc.values())
 }
 
 // ── 통합 fetch (T-269: 중복 RPC 제거) ──────────────────────────────────
@@ -146,12 +220,15 @@ async function fetchOwnerToday(placeIds: string[]): Promise<OwnerTodayRow[]> {
  * getOwnerBotSummaryFromBundle / getOwnerDailyTrendFromBundle 두 함수에 prop drill 하면
  * 같은 RPC 가 중복으로 두 번 발사되는 문제 해결.
  *
+ * T-272: pathMap 전달 시 today 도 raw select (paths IN). RPC dispatch 회피.
+ *
  * placeIds 빈 배열이면 RPC 호출 없이 빈 bundle 반환.
  */
 export async function fetchOwnerStatsBundle(
   placeIds: string[],
   period: StatsPeriodInput = 30,
   now: Date = new Date(),
+  pathMap?: OwnerPathMap,
 ): Promise<OwnerStatsRpcBundle> {
   const { fromIso, toIso, days } = resolveStatsPeriod(period, now)
   const todayKey = todayKstKey(now)
@@ -166,7 +243,7 @@ export async function fetchOwnerStatsBundle(
     fromKey <= yesterdayKey
       ? fetchOwnerDailySnapshot(placeIds, fromKey, yesterdayKey)
       : Promise.resolve([]),
-    fetchOwnerToday(placeIds),
+    fetchOwnerToday(placeIds, pathMap, now),
   ])
 
   return { snapshot, todayRows, fromIso, toIso, days, fromKey, todayKey }

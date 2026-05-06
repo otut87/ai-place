@@ -239,15 +239,14 @@ export async function loadOwnerDashboard(
 
   // T-270: listOwnerBotVisits 가 pathMap 받으면 fetchOwnerPathMap 재호출 안 함. listOwnerPlaces
   // 결과 받은 직후에만 호출 가능 (placeIds 의존). 다른 7개 함수와 병렬로 묶음.
+  // T-272: fetchOwnerStatsBundle 도 pathMap 받아서 today RPC 대신 raw select.
   const pathMap = await timed('fetchOwnerPathMap', fetchOwnerPathMap(placeIds))
 
-  // 2. 병렬 로드 — 모두 daily 사전집계 / RPC 기반 (T-264 + T-269 + T-270).
-  // T-269: bot stats bundle 1회 fetch (snapshot RPC + today RPC) → summary / trend 둘에 prop drill.
-  // T-270: listOwnerBotVisits raw .order().limit() 으로 복원 — owner_recent_bot_visits RPC 8초 회피.
+  // 2. 병렬 로드 — 모두 daily 사전집계 / raw select 기반 (T-264 + T-269 + T-270 + T-272).
   const [fullPlaces, mentionMap, statsBundle, recentBotVisits, billing, sectorMap] = await Promise.all([
     timed('loadFullPlacesForOwner', loadFullPlacesForOwner(placeIds)),
     timed('countMentionsByPlace', countMentionsByPlace(placeIds)),
-    timed('fetchOwnerStatsBundle', fetchOwnerStatsBundle(placeIds, trendDays, now)),
+    timed('fetchOwnerStatsBundle', fetchOwnerStatsBundle(placeIds, trendDays, now, pathMap)),
     timed('listOwnerBotVisits', listOwnerBotVisits(placeIds, 10, trendDays, now, pathMap)),
     timed('loadBillingState', loadBillingState(user.id, now, user.email)),
     timed('loadSectorMap', loadSectorMap()),

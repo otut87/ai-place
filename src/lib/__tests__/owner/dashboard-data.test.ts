@@ -242,8 +242,8 @@ describe('loadOwnerDashboard', () => {
     const { loadOwnerDashboard } = await import('@/lib/owner/dashboard-data')
     const d = await loadOwnerDashboard(new Date(), { trendDays: 7 })
     expect(d.trendDays).toBe(7)
-    // T-269: bundle fetch 가 trendDays 인자로 호출됨.
-    expect(mockBundle).toHaveBeenCalledWith([], 7, expect.any(Date))
+    // T-269/272: bundle fetch 가 (placeIds, trendDays, now, pathMap) 인자로 호출됨.
+    expect(mockBundle).toHaveBeenCalledWith([], 7, expect.any(Date), expect.any(Map))
   })
 
   it('places 조회 에러 → fullPlaces 빈 map (AEO 는 기본 입력으로 계산)', async () => {
