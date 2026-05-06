@@ -93,10 +93,11 @@ export interface OwnerStatsRpcBundle {
   todayKey: string
 }
 
-// ── snapshot fetch (어제까지 사전집계) — 054 RPC 로 페이지네이션 제거 ─────
-// 기존 PostgREST .range() 페이지네이션은 1000-row cap 때문에 owner 의 daily_owner row 수만큼
-// 라운드트립 (5 places × 27 bots × 5 pageType × 30일 = 20K rows → 21회). RPC 는 max_rows 영향
-// 없어 한 번에 모든 row 반환.
+// ── snapshot fetch (어제까지 사전집계) ─────────────────────────────────
+// T-271: 054 RPC owner_bot_visits_daily_select 가 같은 supabase 인스턴스에서 raw SELECT 보다
+// 3-5초 더 느림 (RPC dispatch 또는 PostgreSQL prepared plan 미스 의심). 4 places × 27 bots
+// × 5 pageType × 30일 = max 16K rows 인데 sparse 라 실측 ~1-2K rows. PostgREST 1000-row
+// cap 페이지네이션 1-2 round trip 으로 RPC 보다 명확히 빠름.
 async function fetchOwnerDailySnapshot(
   placeIds: string[],
   fromDate: string,                // YYYY-MM-DD
@@ -106,16 +107,26 @@ async function fetchOwnerDailySnapshot(
   if (!admin) return null
   if (placeIds.length === 0) return []
 
-  const { data, error } = await admin.rpc('owner_bot_visits_daily_select', {
-    p_place_ids: placeIds,
-    p_from_date: fromDate,
-    p_to_date: toDate,
-  })
-  if (error) {
-    console.error('[bot-stats-daily] owner_bot_visits_daily_select RPC 실패:', error.message)
-    return null
+  const PAGE = 1000
+  const MAX = 50_000
+  const out: OwnerDailyRow[] = []
+  for (let from = 0; from < MAX; from += PAGE) {
+    const { data, error } = await admin
+      .from('bot_visits_daily_owner')
+      .select('date, place_id, bot_id, page_type, visits, last_visited_at')
+      .in('place_id', placeIds)
+      .gte('date', fromDate)
+      .lte('date', toDate)
+      .range(from, from + PAGE - 1)
+    if (from === 0 && (error || !data)) {
+      console.error('[bot-stats-daily] bot_visits_daily_owner select 실패:', error?.message)
+      return null
+    }
+    if (error || !data) break
+    out.push(...(data as OwnerDailyRow[]))
+    if (data.length < PAGE) break
   }
-  return (data ?? []) as OwnerDailyRow[]
+  return out
 }
 
 async function fetchOwnerToday(placeIds: string[]): Promise<OwnerTodayRow[]> {

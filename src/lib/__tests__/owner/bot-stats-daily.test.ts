@@ -12,10 +12,10 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// RPC 이름별로 분기 — bot_visits_today_owner / owner_bot_visits_daily_select / owner_recent_bot_visits.
+// RPC 이름별로 분기 — bot_visits_today_owner / owner_recent_bot_visits.
+// T-271: snapshot 은 RPC 가 아닌 raw select (.from().select().in().gte().lte().range()).
 const rpcResponses: Record<string, { data: unknown; error: unknown }> = {
   bot_visits_today_owner: { data: [], error: null },
-  owner_bot_visits_daily_select: { data: [], error: null },
   owner_recent_bot_visits: { data: [], error: null },
 }
 
@@ -23,17 +23,38 @@ const mockRpc = vi.fn(async (name: string) => {
   return rpcResponses[name] ?? { data: [], error: null }
 })
 
+// Snapshot raw select mock — range() 호출 시 페이지네이션 결과 반환.
+let snapshotRawData: unknown[] = []
+let snapshotRawError: { message: string } | null = null
+const mockSnapshotRange = vi.fn((from: number, to: number) => {
+  if (snapshotRawError) return Promise.resolve({ data: null, error: snapshotRawError })
+  return Promise.resolve({ data: snapshotRawData.slice(from, to + 1), error: null })
+})
+
 vi.mock('@/lib/supabase/admin-client', () => ({
   getAdminClient: vi.fn(() => ({
     rpc: mockRpc,
+    from: vi.fn(() => ({
+      select: () => ({
+        in: () => ({
+          gte: () => ({
+            lte: () => ({
+              range: mockSnapshotRange,
+            }),
+          }),
+        }),
+      }),
+    })),
   })),
 }))
 
 beforeEach(() => {
   rpcResponses.bot_visits_today_owner = { data: [], error: null }
-  rpcResponses.owner_bot_visits_daily_select = { data: [], error: null }
   rpcResponses.owner_recent_bot_visits = { data: [], error: null }
+  snapshotRawData = []
+  snapshotRawError = null
   mockRpc.mockClear()
+  mockSnapshotRange.mockClear()
 })
 
 describe('getOwnerBotSummaryDaily', () => {
@@ -46,14 +67,11 @@ describe('getOwnerBotSummaryDaily', () => {
   })
 
   it('snapshot rows + today RPC 누적 — direct(detail)/mention 분류 + 엔진 매핑', async () => {
-    rpcResponses.owner_bot_visits_daily_select = {
-      data: [
-        // 어제까지 사전집계: GPTBot detail 5회, ClaudeBot blog 3회
-        { date: '2026-05-05', place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 5, last_visited_at: '2026-05-05T10:00:00Z' },
-        { date: '2026-05-05', place_id: 'p1', bot_id: 'claudebot', page_type: 'blog', visits: 3, last_visited_at: '2026-05-05T11:00:00Z' },
-      ],
-      error: null,
-    }
+    snapshotRawData = [
+      // 어제까지 사전집계: GPTBot detail 5회, ClaudeBot blog 3회
+      { date: '2026-05-05', place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 5, last_visited_at: '2026-05-05T10:00:00Z' },
+      { date: '2026-05-05', place_id: 'p1', bot_id: 'claudebot', page_type: 'blog', visits: 3, last_visited_at: '2026-05-05T11:00:00Z' },
+    ]
     rpcResponses.bot_visits_today_owner = {
       data: [
         // 오늘 RPC: ChatGPT-User detail 2회, PerplexityBot compare 1회
@@ -79,8 +97,8 @@ describe('getOwnerBotSummaryDaily', () => {
     expect(r.aiSearch.byEngine.perplexity).toBe(1)
   })
 
-  it('snapshot RPC 에러 → 빈 bucket fallback', async () => {
-    rpcResponses.owner_bot_visits_daily_select = { data: null, error: { message: 'down' } }
+  it('snapshot raw 에러 → 빈 bucket fallback', async () => {
+    snapshotRawError = { message: 'down' }
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { getOwnerBotSummaryDaily } = await import('@/lib/owner/bot-stats-daily')
@@ -91,17 +109,15 @@ describe('getOwnerBotSummaryDaily', () => {
   })
 
   it('미식별 bot_id 는 무시 (fallback 안 함)', async () => {
-    rpcResponses.owner_bot_visits_daily_select = {
-      data: [
-        { date: '2026-05-05', place_id: 'p1', bot_id: 'unknown-bot', page_type: 'detail', visits: 100, last_visited_at: null },
-      ],
-      error: null,
-    }
+    snapshotRawData = [
+      { date: '2026-05-05', place_id: 'p1', bot_id: 'unknown-bot', page_type: 'detail', visits: 100, last_visited_at: null },
+    ]
 
     const { getOwnerBotSummaryDaily } = await import('@/lib/owner/bot-stats-daily')
     const r = await getOwnerBotSummaryDaily(['p1'], 30, new Date('2026-05-06T12:00:00Z'))
     expect(r.aiSearch.total).toBe(0)
     expect(r.aiTraining.total).toBe(0)
+    void snapshotRawError  // suppress unused var lint
   })
 })
 
@@ -116,13 +132,10 @@ describe('getOwnerDailyTrendDaily', () => {
   })
 
   it('snapshot 일자별 누적 + today RPC 는 today key 로 집계', async () => {
-    rpcResponses.owner_bot_visits_daily_select = {
-      data: [
-        { date: '2026-05-05', place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 4, last_visited_at: null },
-        { date: '2026-05-04', place_id: 'p1', bot_id: 'claudebot', page_type: 'detail', visits: 2, last_visited_at: null },
-      ],
-      error: null,
-    }
+    snapshotRawData = [
+      { date: '2026-05-05', place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 4, last_visited_at: null },
+      { date: '2026-05-04', place_id: 'p1', bot_id: 'claudebot', page_type: 'detail', visits: 2, last_visited_at: null },
+    ]
     rpcResponses.bot_visits_today_owner = {
       data: [
         { place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 7, last_visited_at: null },
@@ -151,11 +164,8 @@ describe('fetchOwnerStatsBundle (T-269)', () => {
     expect(mockRpc).not.toHaveBeenCalled()
   })
 
-  it('snapshot RPC + today RPC 1회씩만 호출 (중복 제거)', async () => {
-    rpcResponses.owner_bot_visits_daily_select = {
-      data: [{ date: '2026-05-05', place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 4, last_visited_at: null }],
-      error: null,
-    }
+  it('snapshot raw + today RPC 정상 fetch (T-271)', async () => {
+    snapshotRawData = [{ date: '2026-05-05', place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 4, last_visited_at: null }]
     rpcResponses.bot_visits_today_owner = {
       data: [{ place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 7, last_visited_at: null }],
       error: null,
@@ -166,7 +176,9 @@ describe('fetchOwnerStatsBundle (T-269)', () => {
 
     expect(b.snapshot).toHaveLength(1)
     expect(b.todayRows).toHaveLength(1)
-    expect(mockRpc).toHaveBeenCalledTimes(2)  // snapshot + today, 각 1회.
+    // snapshot 은 raw select (mockSnapshotRange), today 만 RPC.
+    expect(mockSnapshotRange).toHaveBeenCalled()
+    expect(mockRpc).toHaveBeenCalledTimes(1)
   })
 })
 
