@@ -164,6 +164,27 @@ describe('fetchOwnerStatsBundle (T-269)', () => {
     expect(mockRpc).not.toHaveBeenCalled()
   })
 
+  it('range 모드 ({from,to}) — toKey != todayKey 면 today RPC skip (T-274)', async () => {
+    snapshotRawData = [
+      { date: '2026-04-15', place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 3, last_visited_at: null },
+    ]
+    rpcResponses.bot_visits_today_owner = {
+      data: [{ place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 99, last_visited_at: null }],
+      error: null,
+    }
+
+    const { fetchOwnerStatsBundle } = await import('@/lib/owner/bot-stats-daily')
+    // 과거 윈도우만 (today 이전 종료) → today RPC/raw 호출 안 됨, todayRows 빈 배열.
+    const b = await fetchOwnerStatsBundle(
+      ['p1'],
+      { from: new Date('2026-04-10T00:00:00+09:00'), to: new Date('2026-04-20T00:00:00+09:00') },
+      new Date('2026-05-06T12:00:00+09:00'),
+    )
+    expect(b.snapshot).toHaveLength(1)
+    expect(b.todayRows).toEqual([])
+    expect(b.toKey).not.toBe(b.todayKey)
+  })
+
   it('snapshot raw + today RPC 정상 fetch (T-271)', async () => {
     snapshotRawData = [{ date: '2026-05-05', place_id: 'p1', bot_id: 'gptbot', page_type: 'detail', visits: 4, last_visited_at: null }]
     rpcResponses.bot_visits_today_owner = {
