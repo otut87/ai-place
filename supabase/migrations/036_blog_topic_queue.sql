@@ -114,8 +114,11 @@ grant execute on function pop_blog_topic(int) to service_role;
 
 -- ============================================================
 -- 4) 관리자 대시보드 — 최근 N일 토픽 큐 상태 집계 뷰 (읽기 편의)
+-- T-275 (056): security_invoker=true — RLS 우회 방지. CREATE OR REPLACE 가 옵션을
+-- reset 하므로 정의에 명시. 056 마이그레이션이 ALTER 로 동일 적용 (idempotent).
 -- ============================================================
-create or replace view blog_topic_queue_summary as
+create or replace view blog_topic_queue_summary
+with (security_invoker = true) as
 select
   planned_date,
   status,
