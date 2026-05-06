@@ -116,10 +116,11 @@ const AI_TRAINING_ENGINE_MAP: Record<string, AiTrainingEngine> = {
   'meta-externalagent':  'other',
 }
 
-const AI_SEARCH_ENGINE_KEYS: AiSearchEngine[] = ['chatgpt', 'claude', 'perplexity', 'other']
-const AI_TRAINING_ENGINE_KEYS: AiTrainingEngine[] = ['chatgpt', 'claude', 'gemini', 'other']
+// T-264: bot-stats-daily.ts 에서 재사용하기 위해 export 로 변경. 같은 enum/매핑을 두 모듈이 공유.
+export const AI_SEARCH_ENGINE_KEYS: AiSearchEngine[] = ['chatgpt', 'claude', 'perplexity', 'other']
+export const AI_TRAINING_ENGINE_KEYS: AiTrainingEngine[] = ['chatgpt', 'claude', 'gemini', 'other']
 
-const ID_TO_GROUP = new Map(AI_BOT_PATTERNS.map((p) => [p.id, p.group]))
+export const ID_TO_GROUP = new Map(AI_BOT_PATTERNS.map((p) => [p.id, p.group]))
 const ID_TO_LABEL = new Map(AI_BOT_PATTERNS.map((p) => [p.id, p.label]))
 
 export function mapBotToEngine(botId: string, group: BotGroup): string {

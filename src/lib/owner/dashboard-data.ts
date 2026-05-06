@@ -8,10 +8,16 @@ import { scorePlaceAeo, type AeoGrade, type AeoRuleResult } from '@/lib/owner/pl
 import { getMeasurementWindow, type MeasurementWindow } from '@/lib/owner/measurement-window'
 import { countMentionsByPlace } from '@/lib/owner/place-mentions'
 import {
-  getOwnerBotSummary, getOwnerDailyTrend, listOwnerBotVisits,
+  listOwnerBotVisits,
   fetchOwnerPathMap,
   type OwnerBotSummary, type OwnerDailyTrendRow, type OwnerBotVisit,
 } from '@/lib/owner/bot-stats'
+// T-264: getOwnerBotSummary / getOwnerDailyTrend 는 raw bot_visits 5중 페이지네이션 →
+// 1.17M rows 위에서 5+ 라운드트립으로 hang. *Daily 버전이 053 사전집계 + today RPC 로
+// <100ms 안에 동일 결과 반환. listOwnerBotVisits 는 .order().limit() 이라 빠르므로 유지.
+import {
+  getOwnerBotSummaryDaily, getOwnerDailyTrendDaily,
+} from '@/lib/owner/bot-stats-daily'
 import { detectOwnerTodos, type OwnerTodo } from '@/lib/owner/todos'
 import type { FAQ, PlaceImage, ReviewSummary, Service } from '@/lib/types'
 
@@ -190,13 +196,15 @@ export async function loadOwnerDashboard(
   const placeIds = ownerRows.map((r) => r.id)
 
   // 2. 병렬 로드
-  // Phase 1 / A3: pathMap 1회 fetch 후 3개 통계 함수에 prop drill (기존 3회 중복 제거).
+  // T-264: botSummary / dailyTrend 는 053 일별 사전집계 reader 로 교체 — bot_visits 1.17M
+  // 페이지네이션 5+ 라운드트립 hang 해소. listOwnerBotVisits 는 raw .order().limit() 이라
+  // 빠르므로 유지하고, 그 함수만 fetchOwnerPathMap 에 의존.
   const pathMap = await fetchOwnerPathMap(placeIds)
   const [fullPlaces, mentionMap, botSummary, dailyTrend, recentBotVisits, billing, sectorMap] = await Promise.all([
     loadFullPlacesForOwner(placeIds),
     countMentionsByPlace(placeIds),
-    getOwnerBotSummary(placeIds, trendDays, now, pathMap),
-    getOwnerDailyTrend(placeIds, trendDays, now, pathMap),
+    getOwnerBotSummaryDaily(placeIds, trendDays, now),
+    getOwnerDailyTrendDaily(placeIds, trendDays, now),
     listOwnerBotVisits(placeIds, 10, trendDays, now, pathMap),
     loadBillingState(user.id, now),
     loadSectorMap(),

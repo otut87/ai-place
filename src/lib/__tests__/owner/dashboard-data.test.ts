@@ -26,11 +26,14 @@ const mockDailyTrend = vi.fn()
 const mockRecentVisits = vi.fn()
 const mockFetchPathMap = vi.fn(async (..._a: unknown[]) => new Map())
 vi.mock('@/lib/owner/bot-stats', () => ({
-  getOwnerBotSummary: (...a: unknown[]) => mockBotSummary(...a),
-  getOwnerDailyTrend: (...a: unknown[]) => mockDailyTrend(...a),
   listOwnerBotVisits: (...a: unknown[]) => mockRecentVisits(...a),
-  // Phase 1 / A3: dashboard-data.ts 가 fetchOwnerPathMap 1회 호출 후 prop drill
+  // T-264: dashboard-data.ts 가 fetchOwnerPathMap 1회 호출 후 listOwnerBotVisits 에만 prop drill.
+  // botSummary / dailyTrend 는 053 일별 사전집계(bot-stats-daily) 가 path 매핑 SQL-side 처리.
   fetchOwnerPathMap: (...a: unknown[]) => mockFetchPathMap(...a),
+}))
+vi.mock('@/lib/owner/bot-stats-daily', () => ({
+  getOwnerBotSummaryDaily: (...a: unknown[]) => mockBotSummary(...a),
+  getOwnerDailyTrendDaily: (...a: unknown[]) => mockDailyTrend(...a),
 }))
 
 const mockDetectTodos = vi.fn()
@@ -233,8 +236,8 @@ describe('loadOwnerDashboard', () => {
     const { loadOwnerDashboard } = await import('@/lib/owner/dashboard-data')
     const d = await loadOwnerDashboard(new Date(), { trendDays: 7 })
     expect(d.trendDays).toBe(7)
-    // Phase 1 / A3: 4번째 인자로 pathMap (Map) prop drill 추가
-    expect(mockBotSummary).toHaveBeenCalledWith([], 7, expect.any(Date), expect.any(Map))
+    // T-264: bot-stats-daily 의 *Daily 함수는 pathMap 인자 없음 (SQL-side 매핑).
+    expect(mockBotSummary).toHaveBeenCalledWith([], 7, expect.any(Date))
   })
 
   it('places 조회 에러 → fullPlaces 빈 map (AEO 는 기본 입력으로 계산)', async () => {
