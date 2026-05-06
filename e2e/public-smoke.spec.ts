@@ -39,10 +39,11 @@ test('/check 진단 입력 페이지 렌더', async ({ page }) => {
   await expect(page.getByLabel('진단할 페이지 URL')).toBeVisible()
 })
 
-test('robots.txt 200 + User-agent', async ({ request }) => {
+test('robots.txt 200 + User-Agent', async ({ request }) => {
   const r = await request.get('/robots.txt')
   expect(r.status()).toBe(200)
-  expect(await r.text()).toContain('User-agent')
+  // RFC 9309 상 필드명은 case-insensitive — 대소문자에 fragile 하지 않게 regex 매치.
+  expect(await r.text()).toMatch(/user-agent/i)
 })
 
 test('sitemap.xml 200 + xml content-type', async ({ request }) => {
